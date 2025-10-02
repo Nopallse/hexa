@@ -11,7 +11,7 @@ jobs:
 
     steps:
     - name: Deploy to production server
-      uses: appleboy/ssh-action@v1.0.3
+      uses: appleboy/ssh-action@v1.0.9
       with:
         host: ${{ secrets.SERVER_HOST }}
         username: ${{ secrets.SERVER_USER }}
@@ -20,29 +20,34 @@ jobs:
         port: 22
         timeout: 300s
         script: |
+          # Stop script if any command fails
+          set -e
+
           echo "🚀 Starting deployment..."
-          
+
           # Navigate to project directory
           cd /www/wwwroot/hexa
-          
-          # Reset any local changes and pull latest code
-          echo "📥 Pulling latest code..."
-          git reset --hard
-          git pull origin main
-          
-          # Install frontend dependencies and build
-          echo "🔨 Building frontend..."
+
+          # Pull latest code safely
+          echo "📥 Updating code from repository..."
+          git fetch
+          git checkout main
+          git reset --hard origin/main
+
+          # Build frontend
+          echo "🔨 Installing frontend dependencies and building..."
           cd fe
+          npm ci
           npm run build
-          
-          # Install backend dependencies (production only)
+
+          # Install backend dependencies
           echo "📦 Installing backend dependencies..."
           cd ../be
           npm ci --production --silent
-          
-          # Restart PM2 processes
-          echo "🔄 Restarting services..."
+
+          # Restart PM2 process for this app only
+          echo "🔄 Restarting PM2 process..."
           cd ..
-          pm2 restart all
-          
+          pm2 reload hexa
+
           echo "✅ Deployment completed successfully!"
