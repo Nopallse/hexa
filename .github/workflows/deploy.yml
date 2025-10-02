@@ -44,10 +44,5 @@ jobs:
           echo "📦 Installing backend dependencies..."
           cd ../be
           npm ci --production --silent
-
-          # Restart PM2 process for this app only
-          echo "🔄 Restarting PM2 process..."
-          cd ..
-          pm2 reload hexa
-
-          echo "✅ Deployment completed successfully!"
+          pm2 restart all
+          
