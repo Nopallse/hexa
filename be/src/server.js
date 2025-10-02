@@ -4,6 +4,8 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
 const path = require('path');
+const distPath = path.join(__dirname, "../../fe/dist");
+
 require('dotenv').config();
 
 const logger = require('./utils/logger');
@@ -68,37 +70,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
-  res.send(`
-    <!DOCTYPE html>
-    <html>
-    <head>
-      <title>Hexa Crochet API</title>
-      <style>
-        body { font-family: Arial, sans-serif; text-align: center; padding: 50px; }
-        .container { max-width: 600px; margin: 0 auto; }
-        .api-link { display: inline-block; margin: 10px; padding: 10px 20px; background: #007bff; color: white; text-decoration: none; border-radius: 5px; }
-        .api-link:hover { background: #0056b3; }
-        .status { color: #28a745; font-weight: bold; }
-      </style>
-    </head>
-    <body>
-      <div class="container">
-        <h1>🧶 Hexa Crochet API</h1>
-        <p>Welcome to Hexa Crochet E-commerce API</p>
-        <p class="status">✅ PostgreSQL Local Database</p>
-        <div>
-          <a href="/api-docs" class="api-link">📚 API Documentation</a>
-          <a href="/health" class="api-link">🏥 Health Check</a>
-        </div>
-        <p>API Base URL: <code>/api</code></p>
-        <p>Database: PostgreSQL (localhost:5432/hexa)</p>
-      </div>
-    </body>
-    </html>
-  `);
-});
 
 // Swagger API Documentation
 app.use('/api-docs', swaggerMiddleware, swaggerSetup);
@@ -114,6 +85,11 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/admin/users', userRoutes);
 
+app.use(express.static(distPath));
+
+app.get("*", (req, res) => {
+  res.sendFile(path.join(distPath, "index.html"));
+});
 // 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
