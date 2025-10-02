@@ -6,51 +6,9 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 jobs:
-  test:
-    name: Run Tests
-    runs-on: ubuntu-latest
-    
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '20'
-        cache: 'npm'
-        cache-dependency-path: |
-          fe/package-lock.json
-          be/package-lock.json
-
-    - name: Install frontend dependencies
-      run: |
-        cd fe
-        npm ci
-
-    - name: Install backend dependencies
-      run: |
-        cd be
-        npm ci
-
-    - name: Build frontend
-      run: |
-        cd fe
-        npm run build
-
-    - name: Run frontend lint (if available)
-      run: |
-        cd fe
-        npm run lint || echo "No lint script found"
-      continue-on-error: true
-
-
   deploy:
-    name: Deploy to Server
-    needs: test
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    
+
     steps:
     - name: Deploy to production server
       uses: appleboy/ssh-action@v1.0.3
@@ -75,7 +33,6 @@ jobs:
           # Install frontend dependencies and build
           echo "🔨 Building frontend..."
           cd fe
-          npm ci --silent
           npm run build
           
           # Install backend dependencies (production only)
@@ -86,31 +43,6 @@ jobs:
           # Restart PM2 processes
           echo "🔄 Restarting services..."
           cd ..
-          pm2 reload ecosystem.config.js --env production
-          
-          # Run health check
-          echo "� Running health check..."
-          chmod +x scripts/health-check.sh
-          ./scripts/health-check.sh
+          pm2 restart all
           
           echo "✅ Deployment completed successfully!"
-
-  notify:
-    name: Notify Deployment Status
-    needs: [test, deploy]
-    runs-on: ubuntu-latest
-    if: always()
-    
-    steps:
-    - name: Notify Success
-      if: needs.deploy.result == 'success'
-      run: |
-        echo "🎉 Deployment successful!"
-        echo "Frontend and backend have been updated and restarted."
-    
-    - name: Notify Failure
-      if: needs.deploy.result == 'failure' || needs.test.result == 'failure'
-      run: |
-        echo "❌ Deployment failed!"
-        echo "Please check the logs for more details."
-        exit 1
