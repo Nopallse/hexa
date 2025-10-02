@@ -33,7 +33,7 @@ app.use(helmet({
 // CORS configuration
 app.use(cors({
   origin: [
-    process.env.CORS_ORIGIN || 'http://localhost:3000',
+    process.env.CORS_ORIGIN || 'https://hexacrochet.my.id',
     'https://probable-grouse-firstly.ngrok-free.app',
     'http://localhost:5173' // Vite dev server
   ],

@@ -27,7 +27,7 @@ info:
     url: https://opensource.org/licenses/MIT
 
 servers:
-  - url: http://localhost:3000
+  - url: https://hexacrochet.my.id
     description: Development server
   - url: https://api.hexacrochet.com
     description: Production server

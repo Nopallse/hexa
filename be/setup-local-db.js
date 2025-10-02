@@ -92,8 +92,8 @@ RATE_LIMIT_MAX_REQUESTS=100`;
     console.log('🎉 Local PostgreSQL database setup completed!');
     console.log('\n📋 Next steps:');
     console.log('1. Start the server: npm run dev');
-    console.log('2. Check health: http://localhost:3000/health');
-    console.log('3. View API docs: http://localhost:3000/api-docs');
+    console.log('2. Check health: https://hexacrochet.my.id/health');
+    console.log('3. View API docs: https://hexacrochet.my.id/api-docs');
     console.log('\n🔗 Database connection: postgresql://postgres:@localhost:5432/hexa');
 
   } catch (error) {

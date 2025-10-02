@@ -253,7 +253,7 @@ const variantsByColor = groupBy(variants, v => v.variant_options.find(o => o.opt
 
 Add to `.env`:
 ```env
-VITE_IMAGE_BASE_URL=http://localhost:3000/uploads
+VITE_IMAGE_BASE_URL=https://hexacrochet.my.id/uploads
 ```
 
 Production:

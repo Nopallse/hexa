@@ -129,7 +129,7 @@ const imageUrl = `${process.env.VITE_IMAGE_BASE_URL}/${category.image}`;
 ### ✅ **Multi-Environment**
 ```javascript
 // Development
-const BASE_URL = "http://localhost:3000/uploads";
+const BASE_URL = "https://hexacrochet.my.id/uploads";
 
 // Staging
 const BASE_URL = "https://staging-cdn.example.com";
@@ -146,13 +146,13 @@ const BASE_URL = "https://cdn.example.com";
 UPLOAD_DIR=./uploads
 
 # Public URL for uploaded files (optional)
-PUBLIC_URL=http://localhost:3000/uploads
+PUBLIC_URL=https://hexacrochet.my.id/uploads
 ```
 
 ### Frontend (.env)
 ```env
 # Base URL untuk construct image URLs
-VITE_IMAGE_BASE_URL=http://localhost:3000/uploads
+VITE_IMAGE_BASE_URL=https://hexacrochet.my.id/uploads
 
 # Atau untuk production
 # VITE_IMAGE_BASE_URL=https://cdn.hexacrochet.com

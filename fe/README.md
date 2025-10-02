@@ -84,7 +84,7 @@ cp .env.example .env
 
 Edit file `.env` sesuai dengan konfigurasi backend:
 ```env
-VITE_API_URL=http://localhost:3000
+VITE_API_URL=https://hexacrochet.my.id
 VITE_APP_NAME=Hexa Crochet
 ```
 

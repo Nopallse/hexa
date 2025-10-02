@@ -3,7 +3,7 @@
  * Handles image URL construction from filenames
  */
 
-const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'http://localhost:3000/uploads';
+const IMAGE_BASE_URL = import.meta.env.VITE_IMAGE_BASE_URL || 'https://hexacrochet.my.id/uploads';
 
 /**
  * Get full image URL from filename

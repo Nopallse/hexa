@@ -14,7 +14,7 @@ echo "🌐 API Health Check:"
 sleep 5
 
 # Check if API is responding
-API_URL="http://localhost:3000"
+API_URL="https://hexacrochet.my.id"
 HEALTH_ENDPOINT="$API_URL/api/health"
 
 # Try to curl the health endpoint

@@ -1,1 +1,0 @@
-const g="http://localhost:3000/uploads";function r(t,e="/images/placeholder.png"){return t?t.startsWith("http://")||t.startsWith("https://")?t:`${g}/${t}`:e}function o(t){return r(t,"/images/category-placeholder.png")}function a(t){return r(t,"/images/product-placeholder.png")}export{o as a,a as g};
