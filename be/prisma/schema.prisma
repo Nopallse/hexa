@@ -1,0 +1,263 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  full_name     String
+  email         String   @unique
+  password      String?  // For local authentication
+  phone         String?
+  role          String   @default("user") // user, admin
+  refresh_token String?  // Store refresh token for session management
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  addresses    Address[]
+  cart_items   CartItem[]
+  orders       Order[]
+  transactions Transaction[]
+
+  @@map("users")
+}
+
+model Currency {
+  id            String   @id @default(uuid())
+  code          String   @unique // IDR, USD, EUR, etc.
+  name          String   // Indonesian Rupiah, US Dollar, etc.
+  symbol        String   // Rp, $, €, etc.
+  is_active     Boolean  @default(true)
+  is_base       Boolean  @default(false) // Only one can be base (IDR)
+  decimal_places Int     @default(0) // IDR: 0, USD: 2
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  // Relations
+  exchange_rates_from ExchangeRate[] @relation("from_currency")
+  exchange_rates_to   ExchangeRate[] @relation("to_currency")
+
+  @@map("currencies")
+}
+
+model ExchangeRate {
+  id               String   @id @default(uuid())
+  from_currency_id String
+  to_currency_id   String
+  rate             Decimal  @db.Decimal(18, 6) // High precision for rates
+  source           String   @default("manual") // manual, api, system
+  created_at       DateTime @default(now())
+  updated_at       DateTime @updatedAt
+
+  // Relations
+  from_currency Currency @relation("from_currency", fields: [from_currency_id], references: [id], onDelete: Cascade)
+  to_currency   Currency @relation("to_currency", fields: [to_currency_id], references: [id], onDelete: Cascade)
+
+  @@unique([from_currency_id, to_currency_id])
+  @@index([from_currency_id, to_currency_id])
+  @@map("exchange_rates")
+}
+
+model Category {
+  id          String    @id @default(uuid())
+  name        String
+  description String?
+  image       String?   // Store image filename only, not full URL
+  deleted_at  DateTime?
+  created_at  DateTime  @default(now())
+
+  // Relations
+  products Product[]
+
+  @@map("categories")
+}
+
+model Product {
+  id            String    @id @default(uuid())
+  category_id   String
+  name          String
+  description   String?
+  price         Decimal   @db.Decimal(10, 2)
+  currency_code String    @default("IDR") // Base currency: IDR, USD, EUR, etc.
+  stock         Int       @default(0)
+  deleted_at    DateTime?
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+
+  // Relations
+  category        Category          @relation(fields: [category_id], references: [id], onDelete: Cascade)
+  product_variants ProductVariant[]
+  product_images  ProductImage[]
+
+  @@map("products")
+}
+
+model ProductVariant {
+  id             String   @id @default(uuid())
+  product_id     String
+  sku            String   @unique
+  variant_name   String
+  price          Decimal  @db.Decimal(10, 2)
+  currency_code  String   @default("IDR") // Base currency: IDR, USD, EUR, etc.
+  stock          Int      @default(0)
+  image          String?  // Optional: variant-specific image (e.g., for color variants)
+  affects_image  Boolean  @default(false) // True if this variant type needs different image (e.g., color)
+  created_at     DateTime @default(now())
+
+  // Relations
+  product        Product         @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  variant_options VariantOption[]
+  cart_items     CartItem[]
+  order_items    OrderItem[]
+
+  @@map("product_variants")
+}
+
+model VariantOption {
+  id           String   @id @default(uuid())
+  variant_id   String
+  option_name  String   // warna, ukuran, dll
+  option_value String   // Merah Muda, S, M, L, dll
+  created_at   DateTime @default(now())
+
+  // Relations
+  variant ProductVariant @relation(fields: [variant_id], references: [id], onDelete: Cascade)
+
+  @@map("variant_options")
+}
+
+model ProductImage {
+  id         String   @id @default(uuid())
+  product_id String
+  image_name String   // Store filename only, not full URL
+  is_primary Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  // Relations
+  product Product @relation(fields: [product_id], references: [id], onDelete: Cascade)
+
+  @@map("product_images")
+}
+
+model Address {
+  id           String   @id @default(uuid())
+  user_id      String
+  address_line String
+  city         String
+  province     String
+  postal_code  String
+  is_primary   Boolean  @default(false)
+  created_at   DateTime @default(now())
+
+  // Relations
+  user   User    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  orders Order[]
+
+  @@map("addresses")
+}
+
+model CartItem {
+  id                String   @id @default(uuid())
+  user_id           String
+  product_variant_id String
+  quantity          Int
+  created_at        DateTime @default(now())
+
+  // Relations
+  user            User           @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  product_variant ProductVariant @relation(fields: [product_variant_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, product_variant_id])
+  @@map("cart_items")
+}
+
+model Order {
+  id             String   @id @default(uuid())
+  user_id        String
+  address_id     String
+  status         String   @default("pending") // pending, processing, shipped, delivered, cancelled
+  total_amount   Decimal  @db.Decimal(15, 2)
+  currency_code  String   @default("IDR") // Currency used at order time (snapshot)
+  exchange_rate  Decimal? @db.Decimal(10, 4) // Exchange rate at order time (if not IDR)
+  shipping_cost  Decimal  @db.Decimal(15, 2)
+  payment_status String   @default("unpaid") // unpaid, paid, refunded
+  created_at     DateTime @default(now())
+
+  // Relations
+  user         User         @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  address      Address      @relation(fields: [address_id], references: [id])
+  order_items  OrderItem[]
+  payments     Payment[]
+  shipping     Shipping?
+  transactions Transaction[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id                 String   @id @default(uuid())
+  order_id           String
+  product_variant_id String
+  quantity           Int
+  price              Decimal  @db.Decimal(15, 2) // Snapshot price in order currency
+  currency_code      String   @default("IDR") // Currency snapshot
+  base_price         Decimal  @db.Decimal(15, 2) // Original price in IDR for record
+
+  // Relations
+  order           Order          @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product_variant ProductVariant @relation(fields: [product_variant_id], references: [id])
+
+  @@map("order_items")
+}
+
+model Payment {
+  id                String    @id @default(uuid())
+  order_id          String
+  payment_method    String    // transfer, e-wallet, COD
+  payment_status    String    @default("pending") // pending, paid, failed, refunded
+  payment_date      DateTime?
+  amount            Decimal   @db.Decimal(15, 2)
+  currency_code     String    @default("IDR") // Payment currency
+  payment_reference String?
+
+  // Relations
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("payments")
+}
+
+model Shipping {
+  id                  String    @id @default(uuid())
+  order_id            String    @unique
+  courier             String    // JNE, J&T, SiCepat, dll
+  tracking_number     String?
+  shipping_status     String    @default("pending") // pending, shipped, in_transit, delivered
+  estimated_delivery  DateTime?
+  shipped_at          DateTime?
+  delivered_at        DateTime?
+
+  // Relations
+  order Order @relation(fields: [order_id], references: [id], onDelete: Cascade)
+
+  @@map("shipping")
+}
+
+model Transaction {
+  id               String    @id @default(uuid())
+  user_id          String
+  order_id         String?
+  status           String    // success, failed, pending
+  message          String?
+  transaction_date DateTime  @default(now())
+
+  // Relations
+  user  User   @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  order Order? @relation(fields: [order_id], references: [id])
+
+  @@map("transactions")
+}

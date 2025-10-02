@@ -1,0 +1,1190 @@
+# Additional Swagger Documentation for Hexa Crochet API
+# This file contains the remaining endpoints not covered in the main swagger.yaml
+
+paths:
+  /api/products:
+    get:
+      tags:
+        - Products
+      summary: Get all products with filtering and pagination
+      description: Retrieve products with optional filtering, searching, and pagination
+      security: []
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: category
+          in: query
+          description: Filter by category ID
+          schema:
+            type: string
+            format: uuid
+        - name: search
+          in: query
+          description: Search in product name and description
+          schema:
+            type: string
+        - name: min_price
+          in: query
+          description: Minimum price filter
+          schema:
+            type: number
+            format: float
+            minimum: 0
+        - name: max_price
+          in: query
+          description: Maximum price filter
+          schema:
+            type: number
+            format: float
+            minimum: 0
+        - name: sort
+          in: query
+          description: Sort field
+          schema:
+            type: string
+            enum: [name, price, created_at]
+            default: created_at
+      responses:
+        '200':
+          description: Products retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Product'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Products
+      summary: Create new product
+      description: Create a new product (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - category_id
+                - name
+                - price
+                - stock
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                name:
+                  type: string
+                  example: Boneka Beruang Rajutan
+                description:
+                  type: string
+                  example: Boneka beruang lucu dengan ukuran 25cm
+                price:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  example: 75000
+                stock:
+                  type: integer
+                  minimum: 0
+                  example: 10
+                is_active:
+                  type: boolean
+                  default: true
+      responses:
+        '201':
+          description: Product created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Product created successfully
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/products/{id}:
+    get:
+      tags:
+        - Products
+      summary: Get product by ID
+      description: Retrieve detailed information about a specific product
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Product retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/ProductDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Products
+      summary: Update product
+      description: Update an existing product (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                category_id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                description:
+                  type: string
+                price:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                stock:
+                  type: integer
+                  minimum: 0
+                is_active:
+                  type: boolean
+      responses:
+        '200':
+          description: Product updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Product updated successfully
+                  data:
+                    $ref: '#/components/schemas/Product'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Products
+      summary: Delete product
+      description: Delete a product (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Product deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Product deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/cart:
+    get:
+      tags:
+        - Cart
+      summary: Get user's cart
+      description: Retrieve all items in the user's shopping cart
+      responses:
+        '200':
+          description: Cart retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/CartItem'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Cart
+      summary: Add item to cart
+      description: Add a product variant to the user's cart
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - product_variant_id
+                - quantity
+              properties:
+                product_variant_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 2
+      responses:
+        '201':
+          description: Item added to cart successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Item added to cart successfully
+                  data:
+                    $ref: '#/components/schemas/CartItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Cart
+      summary: Clear entire cart
+      description: Remove all items from the user's cart
+      responses:
+        '200':
+          description: Cart cleared successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Cart cleared successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/cart/{id}:
+    put:
+      tags:
+        - Cart
+      summary: Update cart item quantity
+      description: Update the quantity of an item in the cart
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - quantity
+              properties:
+                quantity:
+                  type: integer
+                  minimum: 1
+                  example: 3
+      responses:
+        '200':
+          description: Cart item updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Cart item updated successfully
+                  data:
+                    $ref: '#/components/schemas/CartItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Cart
+      summary: Remove item from cart
+      description: Remove a specific item from the cart
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Item removed from cart successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Item removed from cart successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders:
+    get:
+      tags:
+        - Orders
+      summary: Get user's orders
+      description: Retrieve all orders for the authenticated user
+      parameters:
+        - name: page
+          in: query
+          description: Page number
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+        - name: limit
+          in: query
+          description: Items per page
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+        - name: status
+          in: query
+          description: Filter by order status
+          schema:
+            type: string
+            enum: [pending, processing, shipped, delivered, cancelled]
+      responses:
+        '200':
+          description: Orders retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Order'
+                  pagination:
+                    $ref: '#/components/schemas/Pagination'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Orders
+      summary: Create new order (checkout)
+      description: Create a new order from cart items (checkout process)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address_id
+                - shipping_cost
+              properties:
+                address_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                shipping_cost:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  example: 15000
+      responses:
+        '201':
+          description: Order created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Order created successfully
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                        format: uuid
+                      total_amount:
+                        type: number
+                        format: decimal
+                      shipping_cost:
+                        type: number
+                        format: decimal
+                      status:
+                        type: string
+                        enum: [pending, processing, shipped, delivered, cancelled]
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/{id}:
+    get:
+      tags:
+        - Orders
+      summary: Get order by ID
+      description: Retrieve detailed information about a specific order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Order retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Orders
+      summary: Cancel order
+      description: Cancel a pending order
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Order cancelled successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Order cancelled successfully
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/{id}/status:
+    put:
+      tags:
+        - Orders
+      summary: Update order status
+      description: Update the status of an order (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - status
+              properties:
+                status:
+                  type: string
+                  enum: [pending, processing, shipped, delivered, cancelled]
+                  example: processing
+      responses:
+        '200':
+          description: Order status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Order status updated successfully
+                  data:
+                    $ref: '#/components/schemas/Order'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/addresses:
+    get:
+      tags:
+        - Addresses
+      summary: Get user's addresses
+      description: Retrieve all addresses for the authenticated user
+      responses:
+        '200':
+          description: Addresses retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Address'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Addresses
+      summary: Add new address
+      description: Add a new address for the user
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - address_line
+                - city
+                - province
+                - postal_code
+              properties:
+                address_line:
+                  type: string
+                  example: Jl. Contoh No. 123
+                city:
+                  type: string
+                  example: Jakarta
+                province:
+                  type: string
+                  example: DKI Jakarta
+                postal_code:
+                  type: string
+                  example: 12345
+                is_primary:
+                  type: boolean
+                  default: false
+      responses:
+        '201':
+          description: Address added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Address added successfully
+                  data:
+                    $ref: '#/components/schemas/Address'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/addresses/{id}:
+    put:
+      tags:
+        - Addresses
+      summary: Update address
+      description: Update an existing address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                address_line:
+                  type: string
+                city:
+                  type: string
+                province:
+                  type: string
+                postal_code:
+                  type: string
+                is_primary:
+                  type: boolean
+      responses:
+        '200':
+          description: Address updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Address updated successfully
+                  data:
+                    $ref: '#/components/schemas/Address'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Addresses
+      summary: Delete address
+      description: Delete an address
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Address deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Address deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments:
+    post:
+      tags:
+        - Payments
+      summary: Create payment
+      description: Create a payment for an order
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+                - payment_method
+                - amount
+              properties:
+                order_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                payment_method:
+                  type: string
+                  enum: [transfer, e-wallet, COD]
+                  example: transfer
+                amount:
+                  type: number
+                  format: decimal
+                  minimum: 0
+                  example: 165000
+                payment_reference:
+                  type: string
+                  example: TRF123456789
+      responses:
+        '201':
+          description: Payment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Payment created successfully
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/{orderId}:
+    get:
+      tags:
+        - Payments
+      summary: Get payment info for order
+      description: Retrieve payment information for a specific order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Payment info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                        format: uuid
+                      total_amount:
+                        type: number
+                        format: decimal
+                      shipping_cost:
+                        type: number
+                        format: decimal
+                      payment_status:
+                        type: string
+                        enum: [unpaid, paid, refunded]
+                      payments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/{id}/verify:
+    put:
+      tags:
+        - Payments
+      summary: Verify payment
+      description: Verify a payment (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_status
+              properties:
+                payment_status:
+                  type: string
+                  enum: [paid, failed, refunded]
+                  example: paid
+                payment_date:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Payment status updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Payment status updated successfully
+                  data:
+                    $ref: '#/components/schemas/Payment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/shipping/{orderId}:
+    get:
+      tags:
+        - Shipping
+      summary: Get shipping info for order
+      description: Retrieve shipping information for a specific order
+      parameters:
+        - name: orderId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Shipping info retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                        format: uuid
+                      order_status:
+                        type: string
+                        enum: [pending, processing, shipped, delivered, cancelled]
+                      shipping:
+                        $ref: '#/components/schemas/Shipping'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/shipping:
+    post:
+      tags:
+        - Shipping
+      summary: Create shipping info
+      description: Create shipping information for an order (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+                - courier
+              properties:
+                order_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                courier:
+                  type: string
+                  example: JNE
+                tracking_number:
+                  type: string
+                  example: JNE123456789
+                estimated_delivery:
+                  type: string
+                  format: date-time
+      responses:
+        '201':
+          description: Shipping info created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Shipping info created successfully
+                  data:
+                    $ref: '#/components/schemas/Shipping'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/shipping/{id}:
+    put:
+      tags:
+        - Shipping
+      summary: Update shipping info
+      description: Update shipping information (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                courier:
+                  type: string
+                tracking_number:
+                  type: string
+                shipping_status:
+                  type: string
+                  enum: [pending, shipped, in_transit, delivered]
+                estimated_delivery:
+                  type: string
+                  format: date-time
+                shipped_at:
+                  type: string
+                  format: date-time
+                delivered_at:
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Shipping info updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Shipping info updated successfully
+                  data:
+                    $ref: '#/components/schemas/Shipping'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'

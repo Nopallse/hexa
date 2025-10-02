@@ -1,0 +1,209 @@
+import {
+  Card,
+  CardContent,
+  Typography,
+  Stack,
+  FormControl,
+  FormLabel,
+  RadioGroup,
+  FormControlLabel,
+  Radio,
+  Alert,
+  Button,
+  useTheme,
+  Box,
+  Skeleton,
+} from '@mui/material';
+import {
+  Add as AddIcon,
+  LocationOn as LocationIcon,
+} from '@mui/icons-material';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Address } from '@/features/addresses/types';
+import { addressApi } from '@/features/addresses/services/addressApi';
+
+interface AddressSelectorProps {
+  selectedAddress: string | null;
+  onAddressSelect: (addressId: string) => void;
+}
+
+export default function AddressSelector({ selectedAddress, onAddressSelect }: AddressSelectorProps) {
+  const theme = useTheme();
+  const navigate = useNavigate();
+  
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Fetch addresses from API
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await addressApi.getAddresses();
+
+        if (response.success) {
+          setAddresses(response.data);
+          
+          // Auto-select primary address
+          const primaryAddress = response.data.find(addr => addr.is_primary);
+          if (primaryAddress) {
+            onAddressSelect(primaryAddress.id);
+          }
+        } else {
+          setError('Gagal memuat alamat');
+        }
+      } catch (err: any) {
+        console.error('Error fetching addresses:', err);
+        setError(err.response?.data?.error || 'Gagal memuat alamat');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAddresses();
+  }, [onAddressSelect]);
+
+  const handleAddAddress = () => {
+    navigate('/addresses/add', { state: { returnTo: '/checkout' } });
+  };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardContent>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+            Alamat Pengiriman
+          </Typography>
+          <Stack spacing={2}>
+            {[...Array(2)].map((_, index) => (
+              <Skeleton key={index} variant="rectangular" height={80} sx={{ borderRadius: 2 }} />
+            ))}
+          </Stack>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (addresses.length === 0) {
+    return (
+      <Card>
+        <CardContent>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+            Alamat Pengiriman
+          </Typography>
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Anda belum memiliki alamat pengiriman. Silakan tambahkan alamat terlebih dahulu.
+          </Alert>
+          <Button
+            variant="contained"
+            startIcon={<AddIcon />}
+            onClick={handleAddAddress}
+            fullWidth
+          >
+            Tambah Alamat
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardContent>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+          <Typography variant="h6" fontWeight={600}>
+            Alamat Pengiriman
+          </Typography>
+          <Button
+            variant="outlined"
+            size="small"
+            startIcon={<AddIcon />}
+            onClick={handleAddAddress}
+          >
+            Tambah Alamat
+          </Button>
+        </Box>
+
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+            {error}
+          </Alert>
+        )}
+
+        <FormControl component="fieldset" fullWidth>
+          <RadioGroup
+            value={selectedAddress || ''}
+            onChange={(e) => onAddressSelect(e.target.value)}
+          >
+            {addresses.map((address) => (
+              <FormControlLabel
+                key={address.id}
+                value={address.id}
+                control={<Radio />}
+                label={
+                  <Box
+                    sx={{
+                      p: 2,
+                      border: selectedAddress === address.id 
+                        ? `2px solid ${theme.palette.primary.main}` 
+                        : `1px solid ${theme.palette.grey[300]}`,
+                      borderRadius: 2,
+                      backgroundColor: selectedAddress === address.id 
+                        ? theme.palette.primary.light + '10' 
+                        : 'transparent',
+                      transition: 'all 0.2s ease',
+                      width: '100%',
+                    }}
+                  >
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <LocationIcon 
+                        color="primary" 
+                        sx={{ mt: 0.5, flexShrink: 0 }} 
+                      />
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          {address.address_line}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary">
+                          {address.city}, {address.province} {address.postal_code}
+                        </Typography>
+                        {address.is_primary && (
+                          <Box
+                            sx={{
+                              display: 'inline-block',
+                              backgroundColor: theme.palette.primary.main,
+                              color: 'white',
+                              px: 1,
+                              py: 0.5,
+                              borderRadius: 1,
+                              fontSize: '0.75rem',
+                              fontWeight: 600,
+                              mt: 1,
+                            }}
+                          >
+                            Utama
+                          </Box>
+                        )}
+                      </Box>
+                    </Stack>
+                  </Box>
+                }
+                sx={{
+                  width: '100%',
+                  margin: 0,
+                  '& .MuiFormControlLabel-label': {
+                    width: '100%',
+                  },
+                }}
+              />
+            ))}
+          </RadioGroup>
+        </FormControl>
+      </CardContent>
+    </Card>
+  );
+}

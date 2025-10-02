@@ -1,0 +1,283 @@
+{
+  "projectName": "Hexa Crochet E-commerce API",
+  "description": "Backend API untuk toko e-commerce Hexa Crochet yang menjual produk rajutan (crochet) dengan menggunakan Express.js, Prisma ORM, dan Supabase PostgreSQL",
+  "techStack": {
+    "runtime": "Node.js",
+    "framework": "Express.js",
+    "database": "Supabase (PostgreSQL)",
+    "orm": "Prisma",
+    "authentication": "Supabase Auth"
+  },
+  "databaseSchema": {
+    "users": {
+      "description": "Menyimpan data pengguna yang terintegrasi dengan Supabase Auth",
+      "fields": {
+        "id": "UUID - Primary key, reference ke auth.users",
+        "full_name": "Nama lengkap pengguna",
+        "email": "Email pengguna (unique)",
+        "phone": "Nomor telepon",
+        "role": "Role pengguna (user/admin)",
+        "created_at": "Timestamp pembuatan",
+        "updated_at": "Timestamp update terakhir"
+      }
+    },
+    "categories": {
+      "description": "Kategori produk rajutan (misal: Boneka, Tas, Aksesoris, dll)",
+      "fields": {
+        "id": "UUID - Primary key",
+        "name": "Nama kategori",
+        "description": "Deskripsi kategori",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "products": {
+      "description": "Produk rajutan utama",
+      "fields": {
+        "id": "UUID - Primary key",
+        "category_id": "UUID - Foreign key ke categories",
+        "name": "Nama produk",
+        "description": "Deskripsi produk",
+        "price": "Harga dasar produk",
+        "stock": "Stok tersedia",
+        "is_active": "Status aktif produk",
+        "created_at": "Timestamp pembuatan",
+        "updated_at": "Timestamp update terakhir"
+      }
+    },
+    "product_variants": {
+      "description": "Varian produk (misal: warna, ukuran berbeda)",
+      "fields": {
+        "id": "UUID - Primary key",
+        "product_id": "UUID - Foreign key ke products",
+        "sku": "Stock Keeping Unit (unique)",
+        "variant_name": "Nama varian",
+        "price": "Harga varian (bisa berbeda dari produk utama)",
+        "stock": "Stok varian",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "variant_options": {
+      "description": "Opsi detail varian (contoh: option_name='warna', option_value='Merah Muda')",
+      "fields": {
+        "id": "UUID - Primary key",
+        "variant_id": "UUID - Foreign key ke product_variants",
+        "option_name": "Nama opsi (warna, ukuran, dll)",
+        "option_value": "Nilai opsi",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "product_images": {
+      "description": "Gambar produk, bisa multiple per produk",
+      "fields": {
+        "id": "UUID - Primary key",
+        "product_id": "UUID - Foreign key ke products",
+        "image_url": "URL gambar (Supabase Storage)",
+        "is_primary": "Flag gambar utama",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "addresses": {
+      "description": "Alamat pengiriman pengguna",
+      "fields": {
+        "id": "UUID - Primary key",
+        "user_id": "UUID - Foreign key ke users",
+        "address_line": "Alamat lengkap",
+        "city": "Kota",
+        "province": "Provinsi",
+        "postal_code": "Kode pos",
+        "is_primary": "Flag alamat utama",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "cart_items": {
+      "description": "Item di keranjang belanja pengguna",
+      "fields": {
+        "id": "UUID - Primary key",
+        "user_id": "UUID - Foreign key ke users",
+        "product_variant_id": "UUID - Foreign key ke product_variants",
+        "quantity": "Jumlah item",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "orders": {
+      "description": "Pesanan yang dibuat pengguna",
+      "fields": {
+        "id": "UUID - Primary key",
+        "user_id": "UUID - Foreign key ke users",
+        "address_id": "UUID - Foreign key ke addresses",
+        "status": "Status pesanan (pending, processing, shipped, delivered, cancelled)",
+        "total_amount": "Total harga pesanan",
+        "shipping_cost": "Biaya pengiriman",
+        "payment_status": "Status pembayaran (unpaid, paid, refunded)",
+        "created_at": "Timestamp pembuatan"
+      }
+    },
+    "order_items": {
+      "description": "Detail item dalam pesanan",
+      "fields": {
+        "id": "UUID - Primary key",
+        "order_id": "UUID - Foreign key ke orders",
+        "product_variant_id": "UUID - Foreign key ke product_variants",
+        "quantity": "Jumlah item dipesan",
+        "price": "Harga saat pemesanan (snapshot)"
+      }
+    },
+    "payments": {
+      "description": "Record pembayaran pesanan",
+      "fields": {
+        "id": "UUID - Primary key",
+        "order_id": "UUID - Foreign key ke orders",
+        "payment_method": "Metode pembayaran (transfer, e-wallet, COD)",
+        "payment_status": "Status pembayaran",
+        "payment_date": "Tanggal pembayaran",
+        "amount": "Jumlah dibayar",
+        "payment_reference": "Referensi/nomor transaksi"
+      }
+    },
+    "shipping": {
+      "description": "Informasi pengiriman pesanan",
+      "fields": {
+        "id": "UUID - Primary key",
+        "order_id": "UUID - Foreign key ke orders",
+        "courier": "Nama kurir (JNE, J&T, SiCepat, dll)",
+        "tracking_number": "Nomor resi",
+        "shipping_status": "Status pengiriman",
+        "estimated_delivery": "Estimasi pengiriman",
+        "shipped_at": "Waktu dikirim",
+        "delivered_at": "Waktu diterima"
+      }
+    },
+    "transactions": {
+      "description": "Log transaksi sistem",
+      "fields": {
+        "id": "UUID - Primary key",
+        "user_id": "UUID - Foreign key ke users",
+        "order_id": "UUID - Foreign key ke orders",
+        "status": "Status transaksi",
+        "message": "Pesan/catatan transaksi",
+        "transaction_date": "Tanggal transaksi"
+      }
+    }
+  },
+  "apiEndpoints": {
+    "authentication": {
+      "POST /api/auth/register": "Register pengguna baru",
+      "POST /api/auth/login": "Login pengguna",
+      "POST /api/auth/logout": "Logout pengguna",
+      "GET /api/auth/me": "Get user profile"
+    },
+    "categories": {
+      "GET /api/categories": "Dapatkan semua kategori",
+      "GET /api/categories/:id": "Dapatkan kategori by ID",
+      "POST /api/categories": "Buat kategori baru (admin)",
+      "PUT /api/categories/:id": "Update kategori (admin)",
+      "DELETE /api/categories/:id": "Hapus kategori (admin)"
+    },
+    "products": {
+      "GET /api/products": "Dapatkan semua produk dengan filter & pagination",
+      "GET /api/products/:id": "Dapatkan detail produk",
+      "POST /api/products": "Buat produk baru (admin)",
+      "PUT /api/products/:id": "Update produk (admin)",
+      "DELETE /api/products/:id": "Hapus produk (admin)"
+    },
+    "cart": {
+      "GET /api/cart": "Dapatkan keranjang user",
+      "POST /api/cart": "Tambah item ke keranjang",
+      "PUT /api/cart/:id": "Update quantity item",
+      "DELETE /api/cart/:id": "Hapus item dari keranjang"
+    },
+    "orders": {
+      "GET /api/orders": "Dapatkan orders user",
+      "GET /api/orders/:id": "Dapatkan detail order",
+      "POST /api/orders": "Buat order baru (checkout)",
+      "PUT /api/orders/:id/status": "Update status order (admin)",
+      "DELETE /api/orders/:id": "Cancel order"
+    },
+    "addresses": {
+      "GET /api/addresses": "Dapatkan alamat user",
+      "POST /api/addresses": "Tambah alamat baru",
+      "PUT /api/addresses/:id": "Update alamat",
+      "DELETE /api/addresses/:id": "Hapus alamat"
+    },
+    "payments": {
+      "POST /api/payments": "Buat pembayaran",
+      "GET /api/payments/:orderId": "Dapatkan info pembayaran order",
+      "PUT /api/payments/:id/verify": "Verifikasi pembayaran (admin)"
+    },
+    "shipping": {
+      "GET /api/shipping/:orderId": "Dapatkan info pengiriman",
+      "POST /api/shipping": "Buat info pengiriman (admin)",
+      "PUT /api/shipping/:id": "Update tracking info (admin)"
+    }
+  },
+  "businessLogic": {
+    "checkout": [
+      "Validasi items di cart",
+      "Cek stok produk",
+      "Hitung total amount + shipping cost",
+      "Buat order baru dengan status 'pending'",
+      "Buat order_items dari cart_items",
+      "Kurangi stok produk",
+      "Kosongkan cart",
+      "Return order ID untuk pembayaran"
+    ],
+    "payment": [
+      "User upload bukti pembayaran atau pilih payment gateway",
+      "Admin verifikasi pembayaran",
+      "Update payment_status di orders",
+      "Trigger notifikasi ke user",
+      "Update order status ke 'processing'"
+    ],
+    "shipping": [
+      "Admin input resi & courier",
+      "Update order status ke 'shipped'",
+      "Kirim notifikasi tracking ke user",
+      "Update status saat delivered"
+    ],
+    "inventory": [
+      "Real-time stock management",
+      "Prevent overselling dengan transaction lock",
+      "Update stock di product dan product_variants"
+    ]
+  },
+  "middleware": [
+    "Authentication (Supabase JWT verification)",
+    "Authorization (role-based access control)",
+    "Error handling",
+    "Request validation (express-validator)",
+    "Rate limiting",
+    "CORS",
+    "Logging"
+  ],
+  "environment": {
+    "required": [
+      "DATABASE_URL - Supabase PostgreSQL connection string",
+      "SUPABASE_URL - Supabase project URL",
+      "SUPABASE_ANON_KEY - Supabase anonymous key",
+      "SUPABASE_SERVICE_ROLE_KEY - Supabase service role key",
+      "JWT_SECRET - Secret untuk JWT",
+      "PORT - Port server",
+      "NODE_ENV - Environment (development/production)"
+    ]
+  },
+  "notes": {
+    "prisma": [
+      "Gunakan Prisma Client untuk query database",
+      "Prisma Schema harus sync dengan Supabase schema",
+      "Jalankan 'prisma generate' setelah schema changes",
+      "Gunakan transactions untuk operasi kompleks (checkout, dll)"
+    ],
+    "supabase": [
+      "Auth users di auth.users schema, profile di public.users",
+      "Gunakan Supabase Storage untuk product images",
+      "Row Level Security (RLS) bisa diaktifkan untuk extra security",
+      "Real-time subscriptions bisa digunakan untuk notifikasi"
+    ],
+    "crochet": [
+      "Produk handmade sehingga stok terbatas",
+      "Setiap produk bisa punya multiple varian (warna, ukuran)",
+      "Pre-order system bisa ditambahkan untuk produk custom",
+      "Review & rating system bisa ditambahkan di future"
+    ]
+  }
+}

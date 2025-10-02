@@ -1,0 +1,417 @@
+{
+    "project": {
+      "name": "hexa-crochet-frontend",
+      "description": "E-commerce frontend untuk toko rajutan Hexa Crochet",
+      "framework": "React",
+      "bundler": "Vite",
+      "language": "TypeScript",
+      "ui_library": "Material UI (MUI)",
+      "state_management": "Zustand",
+      "primary_color": "#9682db"
+    },
+    "structure": {
+      "src": {
+        "app": {
+          "description": "Core app setup (routing, providers, MUI theme, global contexts)",
+          "files": [
+            "App.tsx",
+            "routes.tsx",
+            "providers.tsx",
+            "theme.ts"
+          ]
+        },
+        "features": {
+          "auth": {
+            "components": ["LoginForm.tsx", "RegisterForm.tsx", "ForgotPasswordForm.tsx"],
+            "pages": ["LoginPage.tsx", "RegisterPage.tsx", "ForgotPasswordPage.tsx"],
+            "services": ["authApi.ts"],
+            "types": ["auth.ts"]
+          },
+          "home": {
+            "components": ["HeroSection.tsx", "FeaturedProducts.tsx", "CategoryGrid.tsx", "Testimonials.tsx"],
+            "pages": ["HomePage.tsx"]
+          },
+          "products": {
+            "components": [
+              "ProductCard.tsx",
+              "ProductGrid.tsx",
+              "ProductFilter.tsx",
+              "ProductSort.tsx",
+              "ProductDetailInfo.tsx",
+              "ProductImageGallery.tsx",
+              "VariantSelector.tsx",
+              "AddToCartButton.tsx"
+            ],
+            "pages": ["ProductListPage.tsx", "ProductDetailPage.tsx"],
+            "services": ["productApi.ts"],
+            "types": ["product.ts"]
+          },
+          "categories": {
+            "components": ["CategoryCard.tsx", "CategoryList.tsx"],
+            "pages": ["CategoryPage.tsx"],
+            "services": ["categoryApi.ts"],
+            "types": ["category.ts"]
+          },
+          "cart": {
+            "components": [
+              "CartItem.tsx",
+              "CartSummary.tsx",
+              "CartDrawer.tsx",
+              "EmptyCart.tsx"
+            ],
+            "pages": ["CartPage.tsx"],
+            "services": ["cartApi.ts"],
+            "types": ["cart.ts"]
+          },
+          "checkout": {
+            "components": [
+              "CheckoutStepper.tsx",
+              "ShippingAddressForm.tsx",
+              "OrderSummary.tsx",
+              "PaymentMethodSelector.tsx",
+              "ShippingMethodSelector.tsx"
+            ],
+            "pages": ["CheckoutPage.tsx"],
+            "services": ["checkoutApi.ts"],
+            "types": ["checkout.ts"]
+          },
+          "orders": {
+            "components": [
+              "OrderCard.tsx",
+              "OrderList.tsx",
+              "OrderDetailInfo.tsx",
+              "OrderTimeline.tsx",
+              "TrackingInfo.tsx"
+            ],
+            "pages": ["OrderListPage.tsx", "OrderDetailPage.tsx"],
+            "services": ["orderApi.ts"],
+            "types": ["order.ts"]
+          },
+          "profile": {
+            "components": ["ProfileForm.tsx", "PasswordChangeForm.tsx"],
+            "pages": ["ProfilePage.tsx", "AccountSettingsPage.tsx"],
+            "services": ["profileApi.ts"],
+            "types": ["profile.ts"]
+          },
+          "addresses": {
+            "components": ["AddressCard.tsx", "AddressList.tsx", "AddressForm.tsx"],
+            "pages": ["AddressListPage.tsx", "AddAddressPage.tsx", "EditAddressPage.tsx"],
+            "services": ["addressApi.ts"],
+            "types": ["address.ts"]
+          },
+          "admin": {
+            "dashboard": {
+              "components": ["StatsCard.tsx", "SalesChart.tsx", "RecentOrders.tsx", "TopProducts.tsx"],
+              "pages": ["DashboardPage.tsx"]
+            },
+            "products": {
+              "components": [
+                "ProductTable.tsx",
+                "ProductForm.tsx",
+                "VariantForm.tsx",
+                "ImageUploader.tsx",
+                "StockManager.tsx"
+              ],
+              "pages": ["ProductListPage.tsx", "CreateProductPage.tsx", "EditProductPage.tsx"],
+              "services": ["adminProductApi.ts"]
+            },
+            "categories": {
+              "components": ["CategoryTable.tsx", "CategoryForm.tsx"],
+              "pages": ["CategoryListPage.tsx", "CreateCategoryPage.tsx", "EditCategoryPage.tsx"],
+              "services": ["adminCategoryApi.ts"]
+            },
+            "orders": {
+              "components": [
+                "OrderTable.tsx",
+                "OrderDetailDrawer.tsx",
+                "StatusUpdateDialog.tsx",
+                "ShippingForm.tsx"
+              ],
+              "pages": ["OrderManagementPage.tsx", "OrderDetailPage.tsx"],
+              "services": ["adminOrderApi.ts"]
+            },
+            "payments": {
+              "components": ["PaymentTable.tsx", "PaymentVerificationDialog.tsx"],
+              "pages": ["PaymentListPage.tsx"],
+              "services": ["adminPaymentApi.ts"]
+            },
+            "users": {
+              "components": ["UserTable.tsx", "UserDetailDialog.tsx"],
+              "pages": ["UserListPage.tsx"],
+              "services": ["adminUserApi.ts"]
+            }
+          }
+        },
+        "components": {
+          "ui": [
+            "Button.tsx",
+            "Card.tsx",
+            "Input.tsx",
+            "Select.tsx",
+            "Modal.tsx",
+            "Dialog.tsx",
+            "Drawer.tsx",
+            "Badge.tsx",
+            "Chip.tsx",
+            "Loading.tsx",
+            "EmptyState.tsx",
+            "ErrorBoundary.tsx"
+          ],
+          "layout": {
+            "customer": ["CustomerLayout.tsx", "Header.tsx", "Footer.tsx", "MobileNav.tsx"],
+            "admin": ["AdminLayout.tsx", "AdminSidebar.tsx", "AdminHeader.tsx"]
+          },
+          "common": [
+            "Breadcrumb.tsx",
+            "Pagination.tsx",
+            "SearchBar.tsx",
+            "ImageUpload.tsx",
+            "ConfirmDialog.tsx",
+            "Notification.tsx"
+          ]
+        },
+        "store": {
+          "authStore.ts": "Authentication state, user info, role management",
+          "cartStore.ts": "Shopping cart items, total, quantity management",
+          "uiStore.ts": "UI states (sidebar, modals, notifications, theme)",
+          "checkoutStore.ts": "Checkout process state (address, payment, shipping)",
+          "productStore.ts": "Product filters, sorting, pagination state"
+        },
+        "hooks": [
+          "useAuth.ts",
+          "useCart.ts",
+          "useProducts.ts",
+          "useOrders.ts",
+          "useDebounce.ts",
+          "useLocalStorage.ts",
+          "useMediaQuery.ts",
+          "useNotification.ts"
+        ],
+        "services": {
+        "axiosInstance.ts": "Axios config dengan base URL backend Express",
+        "interceptors.ts": "Request/response interceptors untuk JWT token dan error handling",
+        "uploadService.ts": "Layanan upload gambar via endpoint backend"
+        },
+        "types": {
+          "global.ts": "Global TypeScript types",
+          "api.ts": "API response types",
+          "enum.ts": "Enums (OrderStatus, PaymentStatus, etc.)"
+        },
+        "utils": [
+          "formatters.ts",
+          "validators.ts",
+          "currency.ts",
+          "dateHelpers.ts",
+          "routeGuard.ts",
+          "constants.ts"
+        ],
+        "assets": {
+          "images": ["logo.svg", "hero-bg.jpg", "placeholder.png"],
+          "icons": ["Material UI icons"],
+          "fonts": ["Custom fonts if any"]
+        }
+      }
+    },
+    "roles": {
+      "admin": {
+        "description": "Administrator dengan akses penuh ke admin panel",
+        "routes": ["/admin/*"],
+        "sidebar_menu": [
+          "Dashboard",
+          "Produk",
+          "Kategori",
+          "Pesanan",
+          "Pembayaran",
+          "Pengguna"
+        ]
+      },
+      "user": {
+        "description": "Customer biasa yang bisa belanja",
+        "routes": ["/", "/products/*", "/cart", "/checkout", "/orders/*", "/profile/*"],
+        "navbar_menu": [
+          "Beranda",
+          "Produk",
+          "Kategori",
+          "Keranjang",
+          "Pesanan Saya",
+          "Profil"
+        ]
+      }
+    },
+    "theme": {
+      "primary": {
+        "main": "#9682db",
+        "light": "#c4b5e8",
+        "dark": "#6a58a3",
+        "contrastText": "#ffffff"
+      },
+      "secondary": {
+        "main": "#f8bbd0",
+        "light": "#ffeeff",
+        "dark": "#c48b9f"
+      },
+      "typography": {
+        "fontFamily": "'Inter', 'Roboto', 'Arial', sans-serif",
+        "h1": "2.5rem",
+        "h2": "2rem",
+        "body1": "1rem"
+      },
+      "spacing": 8,
+      "borderRadius": 8
+    },
+    "pages": {
+      "public": {
+        "/": "HomePage - Hero, featured products, categories",
+        "/login": "LoginPage - User login",
+        "/register": "RegisterPage - User registration",
+        "/products": "ProductListPage - All products with filters",
+        "/products/:id": "ProductDetailPage - Product details, variants, add to cart",
+        "/categories": "CategoryPage - Browse by category",
+        "/categories/:id": "Category products listing"
+      },
+      "protected_user": {
+        "/cart": "CartPage - Shopping cart management",
+        "/checkout": "CheckoutPage - Multi-step checkout process",
+        "/orders": "OrderListPage - User order history",
+        "/orders/:id": "OrderDetailPage - Order details & tracking",
+        "/profile": "ProfilePage - User profile & settings",
+        "/addresses": "AddressListPage - Manage shipping addresses",
+        "/addresses/add": "AddAddressPage - Add new address",
+        "/addresses/:id/edit": "EditAddressPage - Edit address"
+      },
+      "protected_admin": {
+        "/admin": "DashboardPage - Admin dashboard with stats",
+        "/admin/products": "ProductListPage - Manage products",
+        "/admin/products/create": "CreateProductPage - Add new product",
+        "/admin/products/:id/edit": "EditProductPage - Edit product",
+        "/admin/categories": "CategoryListPage - Manage categories",
+        "/admin/orders": "OrderManagementPage - Manage all orders",
+        "/admin/orders/:id": "OrderDetailPage - Order details & status update",
+        "/admin/payments": "PaymentListPage - Payment verification",
+        "/admin/users": "UserListPage - User management"
+      }
+    },
+    "state_management": {
+      "authStore": {
+        "user": "Current user object",
+        "isAuthenticated": "Boolean",
+        "role": "'admin' | 'user'",
+        "actions": ["login", "logout", "register", "updateProfile"]
+      },
+      "cartStore": {
+        "items": "CartItem[]",
+        "totalItems": "number",
+        "totalPrice": "number",
+        "actions": ["addItem", "removeItem", "updateQuantity", "clearCart", "syncWithServer"]
+      },
+      "uiStore": {
+        "sidebarOpen": "boolean (admin)",
+        "cartDrawerOpen": "boolean (customer)",
+        "notification": "{ message, type, open }",
+        "loading": "boolean",
+        "actions": ["toggleSidebar", "showNotification", "setLoading"]
+      },
+      "checkoutStore": {
+        "step": "number (0-3)",
+        "shippingAddress": "Address object",
+        "paymentMethod": "string",
+        "shippingMethod": "string",
+        "actions": ["nextStep", "prevStep", "setAddress", "setPayment", "reset"]
+      }
+    },
+    "api_integration": {
+      "base_url": "process.env.VITE_API_URL",
+      "endpoints": {
+        "auth": "/api/auth/*",
+        "products": "/api/products/*",
+        "cart": "/api/cart/*",
+        "orders": "/api/orders/*",
+        "addresses": "/api/addresses/*",
+        "categories": "/api/categories/*",
+        "payments": "/api/payments/*",
+        "shipping": "/api/shipping/*"
+      },
+      "interceptors": {
+        "request": "Tambahkan JWT token (dari backend) ke headers Authorization",
+        "response": "Handle 401 (redirect ke login), tampilkan error notifications"
+        }
+    },
+    "form_validation": {
+      "library": "React Hook Form + Zod",
+      "patterns": [
+        "Email validation",
+        "Phone number (Indonesian format)",
+        "Password strength (min 8 chars)",
+        "Required fields",
+        "Numeric validation for prices"
+      ]
+    },
+    "responsive_breakpoints": {
+      "xs": "0-600px (mobile)",
+      "sm": "600-960px (tablet)",
+      "md": "960-1280px (small laptop)",
+      "lg": "1280-1920px (desktop)",
+      "xl": "1920px+ (large desktop)"
+    },
+    "environment_variables": {
+      "VITE_API_URL": "Backend API URL",
+      "VITE_APP_NAME": "Hexa Crochet"
+    },
+    "dependencies": {
+      "core": [
+        "react",
+        "react-dom",
+        "react-router-dom",
+        "typescript",
+        "vite"
+      ],
+      "ui": [
+        "@mui/material",
+        "@mui/icons-material",
+        "@emotion/react",
+        "@emotion/styled"
+      ],
+      "state": [
+        "zustand"
+      ],
+      "forms": [
+        "react-hook-form",
+        "zod"
+      ],
+      "api": ["axios"],
+      "utils": [
+        "date-fns",
+        "numeral",
+        "react-hot-toast"
+      ]
+    },
+    "notes": {
+      "mui_customization": [
+        "Primary color #9682db digunakan di theme.ts",
+        "Custom theme untuk buttons, cards, inputs",
+        "Consistent spacing menggunakan MUI spacing unit (8px)",
+        "Typography scale yang konsisten"
+      ],
+      "zustand_patterns": [
+        "Separate stores untuk concern yang berbeda",
+        "Persist cart ke localStorage",
+        "Actions menggunakan async/await untuk API calls",
+        "Selectors untuk derived state"
+      ],
+      "performance": [
+        "Lazy loading untuk routes",
+        "Image optimization dengan lazy loading",
+        "Pagination untuk product lists",
+        "Debounce untuk search input",
+        "Memoization untuk expensive calculations"
+      ],
+      "ux_considerations": [
+        "Loading states untuk semua async operations",
+        "Error handling dengan user-friendly messages",
+        "Optimistic updates untuk better UX",
+        "Breadcrumbs untuk navigation",
+        "Empty states untuk kosong data",
+        "Confirmation dialogs untuk destructive actions"
+      ]
+    }
+  }

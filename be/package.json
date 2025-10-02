@@ -1,0 +1,55 @@
+{
+  "name": "hexa-crochet-api",
+  "version": "1.0.0",
+  "description": "Backend API untuk toko e-commerce Hexa Crochet yang menjual produk rajutan",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:seed": "node prisma/seed.js",
+    "setup": "node setup-local-db.js",
+    "setup:local": "node setup-local-db.js",
+    "test:api": "node test-api.js",
+    "swagger": "node start-with-swagger.js",
+    "fix:email": "node fix-email-normalization.js"
+  },
+  "keywords": [
+    "e-commerce",
+    "crochet",
+    "api",
+    "express",
+    "prisma",
+    "supabase"
+  ],
+  "author": "Hexa Crochet",
+  "license": "MIT",
+  "dependencies": {
+    "@paypal/paypal-server-sdk": "^1.1.0",
+    "axios": "^1.12.2",
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.1.5",
+    "express-validator": "^7.0.1",
+    "helmet": "^7.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.0",
+    "multer": "^1.4.5-lts.1",
+    "node-cache": "^5.1.2",
+    "pg": "^8.16.3",
+    "swagger-ui-express": "^5.0.1",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "yamljs": "^0.3.0"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.7.1",
+    "nodemon": "^3.0.2",
+    "prisma": "^5.7.1"
+  }
+}

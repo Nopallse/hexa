@@ -1,0 +1,1281 @@
+openapi: 3.0.3
+info:
+  title: Hexa Crochet E-commerce API
+  description: |
+    Backend API untuk toko e-commerce Hexa Crochet yang menjual produk rajutan (crochet) dengan menggunakan Express.js, Prisma ORM, dan Supabase PostgreSQL.
+    
+    ## Fitur Utama
+    - Authentication dengan Supabase Auth
+    - Manajemen produk dan kategori
+    - Shopping cart dan checkout
+    - Order management
+    - Payment processing
+    - Shipping tracking
+    - Address management
+    
+    ## Authentication
+    API menggunakan Supabase Auth dengan JWT tokens. Setiap request yang memerlukan autentikasi harus menyertakan header:
+    ```
+    Authorization: Bearer <access_token>
+    ```
+  version: 1.0.0
+  contact:
+    name: Hexa Crochet Team
+    email: support@hexacrochet.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:3000
+    description: Development server
+  - url: https://api.hexacrochet.com
+    description: Production server
+
+security:
+  - BearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags:
+        - Health
+      summary: Health check endpoint
+      description: Check if the API is running and healthy
+      security: []
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: OK
+                  timestamp:
+                    type: string
+                    format: date-time
+                  uptime:
+                    type: number
+                    example: 1234.567
+
+  /api/auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Create a new user account
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+                - full_name
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  minLength: 6
+                  example: password123
+                full_name:
+                  type: string
+                  example: John Doe
+                phone:
+                  type: string
+                  example: 081234567890
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: User registered successfully
+                  user:
+                    $ref: '#/components/schemas/User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: Login user
+      description: Authenticate user and get access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: user@example.com
+                password:
+                  type: string
+                  example: password123
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Login successful
+                  user:
+                    $ref: '#/components/schemas/User'
+                  session:
+                    $ref: '#/components/schemas/Session'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Logout current user and invalidate session
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Logout successful
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/auth/me:
+    get:
+      tags:
+        - Authentication
+      summary: Get current user profile
+      description: Get profile information of the authenticated user
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  user:
+                    $ref: '#/components/schemas/UserProfile'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/categories:
+    get:
+      tags:
+        - Categories
+      summary: Get all categories
+      description: Retrieve all product categories
+      security: []
+      responses:
+        '200':
+          description: Categories retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Category'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    post:
+      tags:
+        - Categories
+      summary: Create new category
+      description: Create a new product category (admin only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  example: Boneka Rajutan
+                description:
+                  type: string
+                  example: Berbagai macam boneka rajutan lucu dan menggemaskan
+      responses:
+        '201':
+          description: Category created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Category created successfully
+                  data:
+                    $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/categories/{id}:
+    get:
+      tags:
+        - Categories
+      summary: Get category by ID
+      description: Retrieve a specific category with its products
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Category retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    $ref: '#/components/schemas/CategoryWithProducts'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    put:
+      tags:
+        - Categories
+      summary: Update category
+      description: Update an existing category (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  example: Boneka Rajutan Updated
+                description:
+                  type: string
+                  example: Updated description
+      responses:
+        '200':
+          description: Category updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Category updated successfully
+                  data:
+                    $ref: '#/components/schemas/Category'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+    delete:
+      tags:
+        - Categories
+      summary: Delete category
+      description: Delete a category (admin only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Category deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Category deleted successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/paypal/create:
+    post:
+      tags:
+        - Payments
+      summary: Create PayPal payment
+      description: Create a new PayPal payment for an order
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - order_id
+              properties:
+                order_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '201':
+          description: PayPal payment created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: PayPal payment created successfully
+                  data:
+                    type: object
+                    properties:
+                      paypal_order_id:
+                        type: string
+                        example: 2X12345678901234567
+                      approval_url:
+                        type: string
+                        example: https://www.sandbox.paypal.com/checkoutnow?token=2X12345678901234567
+                      order_id:
+                        type: string
+                        format: uuid
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/paypal/capture:
+    post:
+      tags:
+        - Payments
+      summary: Capture PayPal payment
+      description: Capture a PayPal payment after user approval
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - paypal_order_id
+              properties:
+                paypal_order_id:
+                  type: string
+                  example: 2X12345678901234567
+      responses:
+        '200':
+          description: PayPal payment captured successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: PayPal payment captured successfully
+                  data:
+                    type: object
+                    properties:
+                      capture_id:
+                        type: string
+                        example: 1A12345678901234567
+                      order_id:
+                        type: string
+                        format: uuid
+                      status:
+                        type: string
+                        example: COMPLETED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/paypal/webhook:
+    post:
+      tags:
+        - Payments
+      summary: PayPal webhook handler
+      description: Handle PayPal webhook events
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                  example: 8PT597110X687430LKGECATA
+                event_type:
+                  type: string
+                  example: PAYMENT.CAPTURE.COMPLETED
+                resource:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: 1A12345678901234567
+                    amount:
+                      type: object
+                      properties:
+                        currency_code:
+                          type: string
+                          example: USD
+                        value:
+                          type: string
+                          example: 10.00
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Webhook processed successfully
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/payments/paypal/refund:
+    post:
+      tags:
+        - Payments
+      summary: Refund PayPal payment
+      description: Process a refund for a PayPal payment (Admin only)
+      security:
+        - BearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - payment_id
+              properties:
+                payment_id:
+                  type: string
+                  format: uuid
+                  example: 123e4567-e89b-12d3-a456-426614174000
+                amount:
+                  type: number
+                  format: decimal
+                  example: 50.00
+                  description: Partial refund amount (optional, full refund if not provided)
+                reason:
+                  type: string
+                  example: Customer requested refund
+      responses:
+        '200':
+          description: Refund processed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  message:
+                    type: string
+                    example: Refund processed successfully
+                  data:
+                    type: object
+                    properties:
+                      refund_id:
+                        type: string
+                        example: 1B12345678901234567
+                      status:
+                        type: string
+                        example: COMPLETED
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/payment-methods:
+    get:
+      tags:
+        - Orders
+      summary: Get available payment methods
+      description: Get list of available payment methods
+      security: []
+      responses:
+        '200':
+          description: Payment methods retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: paypal
+                        name:
+                          type: string
+                          example: PayPal
+                        description:
+                          type: string
+                          example: Pay securely with PayPal
+                        icon:
+                          type: string
+                          example: 💳
+                        available:
+                          type: boolean
+                          example: true
+                        requires_approval:
+                          type: boolean
+                          example: true
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+  /api/orders/{id}/payment-status:
+    get:
+      tags:
+        - Orders
+      summary: Get order payment status
+      description: Get payment status for a specific order
+      security:
+        - BearerAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+      responses:
+        '200':
+          description: Order payment status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: object
+                    properties:
+                      order_id:
+                        type: string
+                        format: uuid
+                      payment_status:
+                        type: string
+                        enum: [unpaid, paid, failed, refunded]
+                        example: paid
+                      total_amount:
+                        type: number
+                        format: decimal
+                        example: 150000
+                      shipping_cost:
+                        type: number
+                        format: decimal
+                        example: 15000
+                      payments:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/Payment'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalServerError'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    User:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        full_name:
+          type: string
+          example: John Doe
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+
+    UserProfile:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        email:
+          type: string
+          format: email
+          example: user@example.com
+        full_name:
+          type: string
+          example: John Doe
+        phone:
+          type: string
+          example: 081234567890
+        role:
+          type: string
+          enum: [user, admin]
+          example: user
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Session:
+      type: object
+      properties:
+        access_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        refresh_token:
+          type: string
+          example: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+
+    Category:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        name:
+          type: string
+          example: Boneka Rajutan
+        description:
+          type: string
+          example: Berbagai macam boneka rajutan lucu
+        created_at:
+          type: string
+          format: date-time
+
+    CategoryWithProducts:
+      allOf:
+        - $ref: '#/components/schemas/Category'
+        - type: object
+          properties:
+            products:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  name:
+                    type: string
+                  price:
+                    type: number
+                    format: decimal
+                  stock:
+                    type: integer
+                  created_at:
+                    type: string
+                    format: date-time
+
+    Product:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+          example: 123e4567-e89b-12d3-a456-426614174000
+        name:
+          type: string
+          example: Boneka Beruang Rajutan
+        description:
+          type: string
+          example: Boneka beruang lucu dengan ukuran 25cm
+        price:
+          type: number
+          format: decimal
+          example: 75000
+        stock:
+          type: integer
+          example: 10
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        category:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            name:
+              type: string
+        product_images:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              image_url:
+                type: string
+              is_primary:
+                type: boolean
+        product_variants:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              sku:
+                type: string
+              variant_name:
+                type: string
+              price:
+                type: number
+                format: decimal
+              stock:
+                type: integer
+
+    ProductDetail:
+      allOf:
+        - $ref: '#/components/schemas/Product'
+        - type: object
+          properties:
+            category:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                description:
+                  type: string
+            product_variants:
+              type: array
+              items:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    format: uuid
+                  sku:
+                    type: string
+                  variant_name:
+                    type: string
+                  price:
+                    type: number
+                    format: decimal
+                  stock:
+                    type: integer
+                  variant_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          format: uuid
+                        option_name:
+                          type: string
+                        option_value:
+                          type: string
+
+    CartItem:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        product_variant_id:
+          type: string
+          format: uuid
+        quantity:
+          type: integer
+          example: 2
+        created_at:
+          type: string
+          format: date-time
+        product_variant:
+          type: object
+          properties:
+            id:
+              type: string
+              format: uuid
+            sku:
+              type: string
+            variant_name:
+              type: string
+            price:
+              type: number
+              format: decimal
+            stock:
+              type: integer
+            product:
+              type: object
+              properties:
+                id:
+                  type: string
+                  format: uuid
+                name:
+                  type: string
+                product_images:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      image_url:
+                        type: string
+            variant_options:
+              type: array
+              items:
+                type: object
+                properties:
+                  option_name:
+                    type: string
+                  option_value:
+                    type: string
+
+    Order:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        address_id:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [pending, processing, shipped, delivered, cancelled]
+          example: pending
+        total_amount:
+          type: number
+          format: decimal
+          example: 165000
+        shipping_cost:
+          type: number
+          format: decimal
+          example: 15000
+        payment_status:
+          type: string
+          enum: [unpaid, paid, refunded]
+          example: unpaid
+        created_at:
+          type: string
+          format: date-time
+        address:
+          type: object
+          properties:
+            address_line:
+              type: string
+            city:
+              type: string
+            province:
+              type: string
+            postal_code:
+              type: string
+        order_items:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                format: uuid
+              quantity:
+                type: integer
+              price:
+                type: number
+                format: decimal
+              product_variant:
+                type: object
+                properties:
+                  product:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      product_images:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            image_url:
+                              type: string
+                  variant_options:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        option_name:
+                          type: string
+                        option_value:
+                          type: string
+
+    Address:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        user_id:
+          type: string
+          format: uuid
+        address_line:
+          type: string
+          example: Jl. Contoh No. 123
+        city:
+          type: string
+          example: Jakarta
+        province:
+          type: string
+          example: DKI Jakarta
+        postal_code:
+          type: string
+          example: 12345
+        is_primary:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+
+    Payment:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        payment_method:
+          type: string
+          enum: [transfer, e-wallet, COD, paypal]
+          example: transfer
+        payment_status:
+          type: string
+          enum: [pending, paid, failed, refunded]
+          example: pending
+        payment_date:
+          type: string
+          format: date-time
+        amount:
+          type: number
+          format: decimal
+          example: 165000
+        payment_reference:
+          type: string
+          example: TRF123456789
+
+    Shipping:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        order_id:
+          type: string
+          format: uuid
+        courier:
+          type: string
+          example: JNE
+        tracking_number:
+          type: string
+          example: JNE123456789
+        shipping_status:
+          type: string
+          enum: [pending, shipped, in_transit, delivered]
+          example: shipped
+        estimated_delivery:
+          type: string
+          format: date-time
+        shipped_at:
+          type: string
+          format: date-time
+        delivered_at:
+          type: string
+          format: date-time
+
+    Pagination:
+      type: object
+      properties:
+        page:
+          type: integer
+          example: 1
+        limit:
+          type: integer
+          example: 10
+        total:
+          type: integer
+          example: 25
+        pages:
+          type: integer
+          example: 3
+
+    Error:
+      type: object
+      properties:
+        success:
+          type: boolean
+          example: false
+        error:
+          type: string
+          example: Error message
+        details:
+          type: array
+          items:
+            type: object
+            properties:
+              field:
+                type: string
+              message:
+                type: string
+
+  responses:
+    BadRequest:
+      description: Bad request - Invalid input data
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Validation failed
+            details:
+              - field: email
+                message: Invalid email format
+
+    Unauthorized:
+      description: Unauthorized - Missing or invalid token
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Access token required
+
+    Forbidden:
+      description: Forbidden - Insufficient permissions
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Insufficient permissions
+
+    NotFound:
+      description: Not found - Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Resource not found
+
+    InternalServerError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            success: false
+            error: Internal server error
+
+tags:
+  - name: Health
+    description: Health check endpoints
+  - name: Authentication
+    description: User authentication and authorization
+  - name: Categories
+    description: Product category management
+  - name: Products
+    description: Product management
+  - name: Cart
+    description: Shopping cart operations
+  - name: Orders
+    description: Order management
+  - name: Addresses
+    description: User address management
+  - name: Payments
+    description: Payment processing
+  - name: Shipping
+    description: Shipping and delivery tracking
