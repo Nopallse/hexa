@@ -65,7 +65,7 @@ jobs:
           echo "🚀 Starting deployment..."
           
           # Navigate to project directory
-          cd hexa
+          cd /www/wwwroot/hexa
           
           # Reset any local changes and pull latest code
           echo "📥 Pulling latest code..."
