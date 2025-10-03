@@ -33,5 +33,4 @@ jobs:
           cd be 
           npm ci --production
           pm2 restart all
-          cd ../fe
-          npm run build
+       
