@@ -6,157 +6,131 @@ on:
   workflow_dispatch: # Allow manual trigger
 
 jobs:
-  deploy:
+  build_fe:
+    name: Build Frontend
     runs-on: ubuntu-latest
 
     steps:
-    - name: Deploy to production server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.SERVER_HOST }}
-        username: ${{ secrets.SERVER_USER }}
-        key: ${{ secrets.SERVER_SSH_KEY }}
-        passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
-        port: 22
-        timeout: 300s
-        script: |
-          # Stop script if any command fails
-          set -e
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          echo "🚀 Starting deployment..."
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: fe/package-lock.json
 
-          # Navigate to project directory
-          cd hexa
+      - name: Install frontend dependencies
+        working-directory: fe
+        run: npm ci
 
-          name: Deploy to Production
+      - name: Build frontend
+        working-directory: fe
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+        run: npm run build
 
-          on:
-            push:
-              branches: [ main ]
-            workflow_dispatch: # Allow manual trigger
+      - name: Upload fe/dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: fe-dist
+          path: fe/dist
+          if-no-files-found: error
 
-          jobs:
-            build_fe:
-              name: Build Frontend
-              runs-on: ubuntu-latest
+  deploy:
+    name: Deploy to Server
+    needs: build_fe
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
 
-              steps:
-                - name: Checkout code
-                  uses: actions/checkout@v4
+    steps:
+      - name: Download fe/dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: fe-dist
+          path: ./fe-dist
 
-                - name: Setup Node.js
-                  uses: actions/setup-node@v4
-                  with:
-                    node-version: '18'
-                    cache: 'npm'
-                    cache-dependency-path: fe/package-lock.json
+      - name: SSH - Ensure target folders exist
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 300s
+          script: |
+            mkdir -p hexa/fe/dist
 
-                - name: Install frontend dependencies
-                  working-directory: fe
-                  run: npm ci
+      - name: Upload fe/dist to server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          source: ./fe-dist/**
+          target: hexa/fe/dist
+          overwrite: true
 
-                - name: Build frontend
-                  working-directory: fe
-                  env:
-                    NODE_OPTIONS: --max-old-space-size=4096
-                  run: npm run build
+      - name: SSH - Pull backend and restart
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SERVER_HOST }}
+          username: ${{ secrets.SERVER_USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          passphrase: ${{ secrets.SERVER_SSH_PASSPHRASE }}
+          port: 22
+          timeout: 300s
+          script: |
+            set -e
+            echo "🚀 Starting deployment..."
 
-                - name: Upload fe/dist artifact
-                  uses: actions/upload-artifact@v4
-                  with:
-                    name: fe-dist
-                    path: fe/dist
-                    if-no-files-found: error
+            # Navigate to project directory
+            cd hexa
 
-            deploy:
-              name: Deploy to Server
-              needs: build_fe
-              runs-on: ubuntu-latest
-              if: github.ref == 'refs/heads/main'
+            # Reset any local changes and pull latest API code
+            echo "📥 Pulling latest backend code..."
+            git reset --hard
+            git pull origin main
 
-              steps:
-                - name: Download fe/dist artifact
-                  uses: actions/download-artifact@v4
-                  with:
-                    name: fe-dist
-                    path: ./fe-dist
+            # Ensure fe/dist exists (created by uploaded artifact)
+            mkdir -p fe/dist
 
-                - name: SSH - Ensure target folders exist
-                  uses: appleboy/ssh-action@v1.0.3
-                  with:
-                    host: ${{ secrets.SERVER_HOST }}
-                    username: ${{ secrets.SERVER_USER }}
-                    key: ${{ secrets.SERVER_SSH_KEY }}
-                    port: 22
-                    timeout: 300s
-                    script: |
-                      mkdir -p hexa/fe/dist
+            # Install backend dependencies (production only)
+            echo "📦 Installing backend dependencies..."
+            cd be
+            npm ci --production --silent
 
-                - name: Upload fe/dist to server
-                  uses: appleboy/scp-action@v0.1.7
-                  with:
-                    host: ${{ secrets.SERVER_HOST }}
-                    username: ${{ secrets.SERVER_USER }}
-                    key: ${{ secrets.SERVER_SSH_KEY }}
-                    source: ./fe-dist/**
-                    target: hexa/fe/dist
-                    overwrite: true
+            # Restart PM2 processes
+            echo "🔄 Restarting services..."
+            cd ..
+            pm2 reload ecosystem.config.js --env production
 
-                - name: SSH - Pull backend and restart
-                  uses: appleboy/ssh-action@v1.0.3
-                  with:
-                    host: ${{ secrets.SERVER_HOST }}
-                    username: ${{ secrets.SERVER_USER }}
-                    key: ${{ secrets.SERVER_SSH_KEY }}
-                    port: 22
-                    timeout: 300s
-                    script: |
-                      echo "🚀 Starting deployment..."
+            # Run health check
+            echo "🔍 Running health check..."
+            chmod +x scripts/health-check.sh
+            ./scripts/health-check.sh
 
-                      # Navigate to project directory
-                      cd hexa
+            echo "✅ Deployment completed successfully!"
 
-                      # Reset any local changes and pull latest API code
-                      echo "📥 Pulling latest backend code..."
-                      git reset --hard
-                      git pull origin main
+  notify:
+    name: Notify Deployment Status
+    needs: [deploy]
+    runs-on: ubuntu-latest
+    if: always()
 
-                      # Ensure fe/dist exists (created by uploaded artifact)
-                      mkdir -p fe/dist
+    steps:
+      - name: Notify Success
+        if: needs.deploy.result == 'success'
+        run: |
+          echo "🎉 Deployment successful!"
+          echo "Frontend (dist) uploaded and backend restarted."
 
-                      # Install backend dependencies (production only)
-                      echo "📦 Installing backend dependencies..."
-                      cd be
-                      npm ci --production --silent
-
-                      # Restart PM2 processes
-                      echo "🔄 Restarting services..."
-                      cd ..
-                      pm2 reload ecosystem.config.js --env production
-
-                      # Run health check
-                      echo "🔍 Running health check..."
-                      chmod +x scripts/health-check.sh
-                      ./scripts/health-check.sh
-
-                      echo "✅ Deployment completed successfully!"
-
-            notify:
-              name: Notify Deployment Status
-              needs: [deploy]
-              runs-on: ubuntu-latest
-              if: always()
-
-              steps:
-                - name: Notify Success
-                  if: needs.deploy.result == 'success'
-                  run: |
-                    echo "🎉 Deployment successful!"
-                    echo "Frontend (dist) uploaded and backend restarted."
-
-                - name: Notify Failure
-                  if: needs.deploy.result == 'failure'
-                  run: |
-                    echo "❌ Deployment failed!"
-                    echo "Please check the logs for more details."
-                    exit 1
+      - name: Notify Failure
+        if: needs.deploy.result == 'failure'
+        run: |
+          echo "❌ Deployment failed!"
+          echo "Please check the logs for more details."
+          exit 1
