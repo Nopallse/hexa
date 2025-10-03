@@ -15,7 +15,7 @@ sleep 5
 
 # Check if API is responding
 API_URL="https://hexacrochet.my.id"
-HEALTH_ENDPOINT="$API_URL/api/health"
+HEALTH_ENDPOINT="$API_URL/health"
 
 # Try to curl the health endpoint
 if curl -f -s $HEALTH_ENDPOINT > /dev/null; then

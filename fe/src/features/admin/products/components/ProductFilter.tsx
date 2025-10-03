@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Box,
   TextField,
@@ -42,58 +42,49 @@ export default function ProductFilter({
   });
 
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [searchTimeout, setSearchTimeout] = useState<number | null>(null);
 
-  // Memoize onFilterChange untuk mencegah infinite loop
-  const memoizedOnFilterChange = useCallback(onFilterChange, []);
-
-  // Debounce search input
-  useEffect(() => {
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      memoizedOnFilterChange(filters);
-    }, filters.search ? 500 : 0); // Debounce hanya untuk search, filter lain langsung
-
-    setSearchTimeout(timeout);
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-    };
-  }, [filters, memoizedOnFilterChange]);
-
-  // Cleanup timeout on unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeout) clearTimeout(searchTimeout);
-    };
-  }, [searchTimeout]);
-
+  // Handle non-search filter changes immediately
   const handleFilterChange = (field: keyof ProductQueryParams, value: any) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       [field]: value,
-    }));
+    };
+    setFilters(newFilters);
+    
+    // Apply filters immediately for non-search fields
+    if (field !== 'search') {
+      onFilterChange(newFilters);
+    }
   };
 
+  // Handle search with debouncing
   const handleSearchChange = (value: string) => {
-    setFilters(prev => ({
-      ...prev,
+    const newFilters = {
+      ...filters,
       search: value,
-    }));
+    };
+    setFilters(newFilters);
+    
+    // Clear previous timeout
+    const timeoutId = setTimeout(() => {
+      onFilterChange(newFilters);
+    }, 500);
+    
+    // Store timeout ID for cleanup if needed
+    return () => clearTimeout(timeoutId);
   };
 
   const handleClearFilters = () => {
-    setFilters({
+    const clearedFilters: ProductQueryParams = {
       search: '',
       category: '',
       min_price: undefined,
       max_price: undefined,
       sort: 'created_at',
       sortOrder: 'desc',
-    });
+    };
+    setFilters(clearedFilters);
+    onFilterChange(clearedFilters);
   };
 
   const getActiveFiltersCount = () => {

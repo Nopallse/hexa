@@ -1,1 +1,0 @@
-import{X as r}from"./index-DVLSGWYZ.js";const o={getProducts:async s=>(await r.get("/products",{params:s})).data,getProductById:async s=>(await r.get(`/products/${s}`)).data,searchProducts:async(s,t)=>(await r.get("/products",{params:{...t,search:s}})).data,getProductsByCategory:async(s,t)=>(await r.get("/products",{params:{...t,category:s}})).data};export{o as p};

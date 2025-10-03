@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
@@ -34,6 +34,9 @@ export default function ProductListPage() {
   const [rowsPerPage, setRowsPerPage] = useState(10);
   const [total, setTotal] = useState(0);
   const [filters, setFilters] = useState<ProductQueryParams>({});
+
+  // Memoize the filters to prevent unnecessary re-renders
+  const memoizedFilters = useMemo(() => filters, [filters]);
 
   const fetchProducts = async (params?: ProductQueryParams) => {
     try {
@@ -71,8 +74,8 @@ export default function ProductListPage() {
   };
 
   useEffect(() => {
-    fetchProducts(filters);
-  }, [page, rowsPerPage, filters]);
+    fetchProducts(memoizedFilters);
+  }, [page, rowsPerPage, memoizedFilters]);
 
   useEffect(() => {
     fetchCategories();
@@ -97,7 +100,7 @@ export default function ProductListPage() {
         });
         
         // Refresh data
-        await fetchProducts(filters);
+        await fetchProducts(memoizedFilters);
       } else {
         throw new Error(response.message || 'Failed to delete product');
       }
@@ -171,7 +174,7 @@ export default function ProductListPage() {
         onFilterChange={handleFilterChange}
         categories={categories}
         loading={isLoading}
-        initialFilters={filters}
+        initialFilters={memoizedFilters}
       />
 
       {/* Products Table */}
