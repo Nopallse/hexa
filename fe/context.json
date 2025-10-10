@@ -5,9 +5,8 @@
       "framework": "React",
       "bundler": "Vite",
       "language": "TypeScript",
-      "ui_library": "Material UI (MUI)",
-      "state_management": "Zustand",
-      "primary_color": "#9682db"
+      "ui_library": "Ant Design",
+      "state_management": "Zustand"
     },
     "structure": {
       "src": {

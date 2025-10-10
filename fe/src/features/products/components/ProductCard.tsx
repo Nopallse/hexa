@@ -179,9 +179,27 @@ export default function ProductCard({
                 ml: 1,
               }}
             >
-            100 Terjual
+              100 Terjual
             </Typography>
           </Box>
+
+          {/* Pre-order Info */}
+          {product.pre_order && product.pre_order > 0 && (
+            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
+              <Chip
+                label={`Pre-order ${product.pre_order} hari`}
+                size="small"
+                color="warning"
+                variant="outlined"
+                sx={{
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  borderColor: theme.palette.warning.main,
+                  color: theme.palette.warning.main,
+                }}
+              />
+            </Box>
+          )}
         </CardContent>
       </CardActionArea>
     </Card>

@@ -37,6 +37,7 @@ export interface Product {
   price: string | null; // Backend returns as string, null if has variants
   currency_code?: string; // Currency code (e.g., IDR, USD)
   stock: number | null; // null if has variants
+  pre_order: number; // Days for pre-order
   category_id: string;
   created_at: string;
   updated_at: string;
@@ -87,6 +88,7 @@ export interface CreateProductRequest {
   price: number;
   currency_code?: string; // Default: IDR
   stock: number;
+  pre_order: number; // Days for pre-order
 }
 
 export interface UpdateProductRequest {
@@ -96,6 +98,7 @@ export interface UpdateProductRequest {
   price?: number;
   currency_code?: string;
   stock?: number;
+  pre_order?: number; // Days for pre-order
 }
 
 export interface DeletedProductsResponse {

@@ -62,6 +62,7 @@ router.put('/:id', [
   body('name').optional().notEmpty().trim(),
   body('description').optional().trim(),
   body('price').optional().isFloat({ min: 0 }),
+  body('pre_order').optional().isInt({ min: 0 }), 
   body('stock').optional().isInt({ min: 0 })
 ], async (req, res) => {
   const errors = validationResult(req);

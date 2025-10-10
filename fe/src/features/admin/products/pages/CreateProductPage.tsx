@@ -55,7 +55,8 @@ export default function CreateProductPage() {
         name: data.name,
         description: data.description,
         price: data.price,
-        stock: data.stock
+        stock: data.stock,
+        pre_order: data.pre_order
       };
       
       // 1. Create product first (without images)

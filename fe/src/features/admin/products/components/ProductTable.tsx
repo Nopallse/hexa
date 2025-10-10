@@ -142,6 +142,7 @@ export default function ProductTable({
               <TableCell>Kategori</TableCell>
               <TableCell align="right">Harga</TableCell>
               <TableCell align="center">Stok</TableCell>
+              <TableCell align="center">Pre-order</TableCell>
               <TableCell align="center">Info Varian</TableCell>
               <TableCell align="center">Aksi</TableCell>
             </TableRow>
@@ -223,6 +224,15 @@ export default function ProductTable({
                         variant={(product.stock || 0) > 0 ? 'filled' : 'outlined'}
                       />
                     )}
+                  </TableCell>
+
+                  <TableCell align="center">
+                    <Chip 
+                      label={`${product.pre_order || 0} hari`}
+                      size="small"
+                      color={product.pre_order && product.pre_order > 0 ? 'warning' : 'default'}
+                      variant={product.pre_order && product.pre_order > 0 ? 'filled' : 'outlined'}
+                    />
                   </TableCell>
 
                   <TableCell align="center">

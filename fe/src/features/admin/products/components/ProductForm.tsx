@@ -53,6 +53,11 @@ const simpleProductSchema = z.object({
     .int('Stok harus berupa bilangan bulat')
     .min(0, 'Stok tidak boleh negatif')
     .max(99999, 'Stok maksimal 99999'),
+  pre_order: z
+    .number()
+    .int('Pre-order harus berupa bilangan bulat')
+    .min(0, 'Pre-order tidak boleh negatif')
+    .max(365, 'Pre-order maksimal 365 hari'),
 });
 
 // Schema untuk product dengan variant (price & stock tidak required)
@@ -71,6 +76,15 @@ const variantProductSchema = z.object({
     .max(1000, 'Deskripsi maksimal 1000 karakter')
     .optional()
     .or(z.literal('')),
+  price: z
+    .number()
+    .min(0, 'Harga tidak boleh negatif')
+    .max(999999999, 'Harga terlalu besar'),
+  pre_order: z
+    .number()
+    .int('Pre-order harus berupa bilangan bulat')
+    .min(0, 'Pre-order tidak boleh negatif')
+    .max(365, 'Pre-order maksimal 365 hari'),
 });
 
 type ProductFormData = z.infer<typeof simpleProductSchema>;
@@ -82,6 +96,7 @@ interface Product {
   description?: string | null;
   price: number | string | null;
   stock: number | null;
+  pre_order: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;
@@ -142,6 +157,7 @@ export default function ProductForm({
       description: '',
       price: 0,
       stock: 0,
+      pre_order: 0,
     },
   });
 
@@ -157,6 +173,7 @@ export default function ProductForm({
         description: product.description || '',
         price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
         stock: product.stock || 0,
+        pre_order: product.pre_order || 0,
       });
     }
   }, [product, mode, reset]);
@@ -214,10 +231,12 @@ export default function ProductForm({
     if (!hasVariants) {
       submitData.price = data.price;
       submitData.stock = data.stock;
+      submitData.pre_order = data.pre_order;
     } else {
-      // Jika ada variants, set price & stock ke 0 (akan diatur per variant nanti)
-      submitData.price = 0;
-      submitData.stock = 0;
+      // Jika ada variants, gunakan harga default dan stok 0, tapi tetap kirim pre_order
+      submitData.price = data.price; // Harga default untuk generate varian baru
+      submitData.stock = 0; // Stok akan diatur per variant
+      submitData.pre_order = data.pre_order;
     }
 
     await onSubmit(submitData);
@@ -498,25 +517,137 @@ export default function ProductForm({
                     }
                   }}
                 />
+
+                {/* Pre-order */}
+                <TextField
+                  {...register('pre_order', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseInt(value);
+                      return isNaN(numValue) ? 0 : numValue;
+                    }
+                  })}
+                  label="Pre-order (Hari)"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.pre_order}
+                  helperText={errors.pre_order?.message ? String(errors.pre_order.message) : 'Berapa hari produk dibuat setelah order'}
+                  disabled={isLoading}
+                  placeholder="0"
+                  required
+                  InputProps={{
+                    inputProps: { 
+                      min: 0, 
+                      step: 1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
               </Stack>
 
               <Divider sx={{ my: 3 }} />
             </>
           ) : (
-            /* Info untuk mode variant */
-            <Alert severity="info" sx={{ my: 3 }}>
-              <Typography variant="body2">
-                <strong>Mode Varian Aktif!</strong>
-                <br />
-                • Produk akan dibuat tanpa harga & stok default
-                <br />
-                • Setelah produk dibuat, tambahkan varian di halaman detail produk
-                <br />
-                • Contoh varian: <em>Merah - S (Rp 100.000, stok: 10), Biru - M (Rp 120.000, stok: 15)</em>
-                <br />
-                • Setiap varian bisa punya gambar sendiri (opsional untuk warna yang berbeda)
+            /* Mode variant - tampilkan pre_order dan harga default */
+            <>
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mt: 2 }}>
+                Informasi Produk & Harga Default
               </Typography>
-            </Alert>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                {/* Price Default */}
+                <TextField
+                  {...register('price', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? 0 : numValue;
+                    }
+                  })}
+                  label="Harga Default"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.price}
+                  helperText={errors.price?.message ? String(errors.price.message) : 'Harga default untuk generate varian baru'}
+                  disabled={isLoading}
+                  placeholder="0"
+                  required
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">Rp</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: "0.01",
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Stock Display (Read-only) */}
+                <TextField
+                  label="Total Stok Varian"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  disabled={true}
+                  value={product?.product_variants ? 
+                    product.product_variants.reduce((sum, v) => sum + (v.stock || 0), 0) : 0
+                  }
+                  helperText="Total stok dari semua varian (read-only)"
+                  InputProps={{
+                    inputProps: { 
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Pre-order */}
+                <TextField
+                  {...register('pre_order', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseInt(value);
+                      return isNaN(numValue) ? 0 : numValue;
+                    }
+                  })}
+                  label="Pre-order (Hari)"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.pre_order}
+                  helperText={errors.pre_order?.message ? String(errors.pre_order.message) : 'Berapa hari produk dibuat setelah order'}
+                  disabled={isLoading}
+                  placeholder="0"
+                  required
+                  InputProps={{
+                    inputProps: { 
+                      min: 0, 
+                      step: 1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+              </Stack>
+
+              <Alert severity="info" sx={{ my: 3 }}>
+                <Typography variant="body2">
+                  <strong>Mode Varian Aktif!</strong>
+                  <br />
+                  • Harga default akan digunakan saat membuat varian baru
+                  <br />
+                  • Stok ditampilkan dari total semua varian
+                  <br />
+                  • Setelah produk dibuat, tambahkan varian di halaman detail produk
+                  <br />
+                  • Contoh varian: <em>Merah - S (Rp 100.000, stok: 10), Biru - M (Rp 120.000, stok: 15)</em>
+                  <br />
+                  • Setiap varian bisa punya gambar sendiri (opsional untuk warna yang berbeda)
+                </Typography>
+              </Alert>
+
+              <Divider sx={{ my: 3 }} />
+            </>
           )}
 
           {/* Action Buttons */}

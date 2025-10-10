@@ -98,7 +98,7 @@ const getProductById = async (req, res) => {
 // Create new product (admin only)
 const createProduct = async (req, res) => {
   try {
-    const { category_id, name, description, price, stock } = req.body;
+    const { category_id, name, description, price, pre_order, stock } = req.body;
 
     // Check if category exists
     const category = await prisma.category.findUnique({
@@ -118,6 +118,7 @@ const createProduct = async (req, res) => {
         name,
         description,
         price,
+        pre_order,
         stock
       },
       include: {
@@ -150,8 +151,8 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { category_id, name, description, price, stock } = req.body;
-
+    const { category_id, name, description, price, pre_order, stock } = req.body;
+    console.log(req.body);
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
       where: { id }
@@ -185,6 +186,7 @@ const updateProduct = async (req, res) => {
         ...(name && { name }),
         ...(description !== undefined && { description }),
         ...(price && { price }),
+        ...(pre_order && { pre_order }),
         ...(stock !== undefined && { stock })
       },
       include: {

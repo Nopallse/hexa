@@ -480,6 +480,50 @@ export default function ProductDetailPage() {
                   )}
                 </Box>
 
+                <Divider sx={{ mb: 3 }} />
+
+                <Box sx={{ mb: 3 }}>
+                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    Informasi Produksi
+                  </Typography>
+                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                    {product.pre_order && product.pre_order > 0 ? (
+                      <Chip 
+                        label={`Pre-order ${product.pre_order} hari`}
+                        color="warning"
+                        variant="filled"
+                        sx={{ fontWeight: 'bold' }}
+                      />
+                    ) : (
+                      <Chip 
+                        label="Tersedia Langsung"
+                        color="success"
+                        variant="filled"
+                        sx={{ fontWeight: 'bold' }}
+                      />
+                    )}
+                    {product.product_variants && product.product_variants.length > 0 ? (
+                      <Chip 
+                        label={`Total Stok: ${product.total_stock || 0} unit`}
+                        color={(product.total_stock || 0) > 0 ? 'success' : 'error'}
+                        variant={(product.total_stock || 0) > 0 ? 'filled' : 'outlined'}
+                      />
+                    ) : (
+                      <Chip 
+                        label={`Stok: ${product.stock || 0} unit`}
+                        color={(product.stock || 0) > 0 ? 'success' : 'error'}
+                        variant={(product.stock || 0) > 0 ? 'filled' : 'outlined'}
+                      />
+                    )}
+                  </Box>
+                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                    {product.pre_order && product.pre_order > 0 
+                      ? `Produk ini membutuhkan ${product.pre_order} hari untuk dibuat setelah order`
+                      : 'Produk tersedia langsung dan siap dikirim'
+                    }
+                  </Typography>
+                </Box>
+
                 {/* Variant Selection - E-commerce Style */}
                 {hasVariants && Object.keys(variantGroups).length > 0 && (
                   <React.Fragment>

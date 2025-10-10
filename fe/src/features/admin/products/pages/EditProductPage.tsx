@@ -23,6 +23,7 @@ interface Product {
   description?: string | null;
   price: string | null;
   stock: number | null;
+  pre_order: number;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;

@@ -451,6 +451,41 @@ export default function ProductDetailPage() {
                 )}
               </Box>
 
+              <Divider sx={{ mb: 3 }} />
+
+              <Box sx={{ mb: 3 }}>
+                <Typography variant="h6" fontWeight="bold" gutterBottom>
+                  Informasi Produksi
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                  <Chip 
+                    label={`Pre-order: ${product.pre_order || 0} hari`}
+                    color={product.pre_order && product.pre_order > 0 ? 'warning' : 'default'}
+                    variant={product.pre_order && product.pre_order > 0 ? 'filled' : 'outlined'}
+                    sx={{ fontWeight: 'bold' }}
+                  />
+                  {product.product_variants && product.product_variants.length > 0 ? (
+                    <Chip 
+                      label={`Total Stok: ${product.total_stock || 0} unit`}
+                      color={(product.total_stock || 0) > 0 ? 'success' : 'error'}
+                      variant={(product.total_stock || 0) > 0 ? 'filled' : 'outlined'}
+                    />
+                  ) : (
+                    <Chip 
+                      label={`Stok: ${product.stock || 0} unit`}
+                      color={(product.stock || 0) > 0 ? 'success' : 'error'}
+                      variant={(product.stock || 0) > 0 ? 'filled' : 'outlined'}
+                    />
+                  )}
+                </Box>
+                <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                  {product.pre_order && product.pre_order > 0 
+                    ? `Produk ini membutuhkan ${product.pre_order} hari untuk dibuat setelah order`
+                    : 'Produk tersedia langsung (tidak perlu pre-order)'
+                  }
+                </Typography>
+              </Box>
+
               {/* Variant Selector - E-commerce Style */}
               {product.product_variants && product.product_variants.length > 0 && Object.keys(variantGroups).length > 0 && (
                 <>
