@@ -298,8 +298,35 @@ const clearCart = async (req, res) => {
   }
 };
 
+// Get cart summary (total items count)
+const getCartSummary = async (req, res) => {
+  try {
+    const cartItems = await prisma.cartItem.findMany({
+      where: { user_id: req.user.id },
+      select: { quantity: true }
+    });
+
+    const totalItems = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+
+    res.json({
+      success: true,
+      data: {
+        totalItems,
+        itemCount: cartItems.length // Number of different products
+      }
+    });
+  } catch (error) {
+    logger.error('Get cart summary error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch cart summary'
+    });
+  }
+};
+
 module.exports = {
   getCart,
+  getCartSummary,
   addToCart,
   updateCartItem,
   removeFromCart,

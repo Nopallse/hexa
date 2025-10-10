@@ -8,6 +8,9 @@ const router = express.Router();
 // Get user's cart
 router.get('/', authenticateToken, cartController.getCart);
 
+// Get cart summary (total items count)
+router.get('/summary', authenticateToken, cartController.getCartSummary);
+
 // Add item to cart
 router.post('/', [
   authenticateToken,

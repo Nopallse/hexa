@@ -220,7 +220,7 @@ model Payment {
   id                String    @id @default(uuid())
   order_id          String
   payment_method    String    // transfer, e-wallet, COD
-  payment_status    String    @default("pending") // pending, paid, failed, refunded
+  payment_status    String    @default("pending") // pending, paid, failed, refunded, cancelled
   payment_date      DateTime?
   amount            Decimal   @db.Decimal(15, 2)
   currency_code     String    @default("IDR") // Payment currency

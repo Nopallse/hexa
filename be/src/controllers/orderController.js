@@ -377,33 +377,31 @@ const getPaymentMethods = async (req, res) => {
   try {
     const paymentMethods = [
       {
-        id: 'transfer',
-        name: 'Bank Transfer',
-        description: 'Transfer via bank account',
-        icon: '🏦',
-        available: true
-      },
-      {
-        id: 'e-wallet',
-        name: 'E-Wallet',
-        description: 'Pay using digital wallet',
-        icon: '📱',
-        available: true
-      },
-      {
-        id: 'COD',
-        name: 'Cash on Delivery',
-        description: 'Pay when item is delivered',
-        icon: '💰',
-        available: true
+        id: 'midtrans',
+        name: 'Midtrans Payment Gateway',
+        description: 'Pembayaran lokal dengan berbagai metode (Bank Transfer, E-Wallet, Credit Card, QRIS)',
+        icon: '💳',
+        available: true,
+        is_local: true,
+        supported_methods: ['bank_transfer', 'e_wallet', 'credit_card', 'qris']
       },
       {
         id: 'paypal',
         name: 'PayPal',
-        description: 'Pay securely with PayPal',
-        icon: '💳',
+        description: 'Pembayaran internasional dengan PayPal',
+        icon: '🌍',
         available: true,
-        requires_approval: true
+        is_international: true,
+        supported_methods: ['paypal']
+      },
+      {
+        id: 'COD',
+        name: 'Cash on Delivery',
+        description: 'Bayar saat barang diterima',
+        icon: '💰',
+        available: true,
+        requires_approval: true,
+        is_local: true
       }
     ];
 

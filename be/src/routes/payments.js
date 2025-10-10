@@ -59,6 +59,35 @@ router.post('/paypal/capture', [
 // PayPal webhook (no authentication required)
 router.post('/paypal/webhook', paymentController.handlePayPalWebhook);
 
+// Create Midtrans payment
+router.post('/midtrans/create', [
+  authenticateToken,
+  body('order_id').isUUID(),
+  body('payment_method').optional().isIn(['bank_transfer', 'e_wallet', 'credit_card', 'qris'])
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: errors.array()
+    });
+  }
+  return paymentController.createMidtransPayment(req, res);
+});
+
+// Midtrans notification webhook (no authentication required)
+router.post('/midtrans/notification', paymentController.handleMidtransNotification);
+
+// Get payment status for an order
+router.get('/status/:orderId', authenticateToken, paymentController.getPaymentStatus);
+
+// Cancel active payment
+router.post('/cancel/:orderId', authenticateToken, paymentController.cancelActivePayment);
+
+// Get Midtrans transaction status
+router.get('/midtrans/:orderId/status', authenticateToken, paymentController.getMidtransTransactionStatus);
+
 // Refund PayPal payment
 router.post('/paypal/refund', [
   authenticateToken,

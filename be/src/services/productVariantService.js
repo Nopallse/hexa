@@ -255,9 +255,9 @@ const formatProductResponse = async (product) => {
         ? { min: minPrice, max: maxPrice, display: `Rp ${minPrice.toLocaleString()}` }
         : { min: minPrice, max: maxPrice, display: `Rp ${minPrice.toLocaleString()} - Rp ${maxPrice.toLocaleString()}` },
       total_stock: totalStock,
-      // Don't expose single price/stock for products with variants
-      price: null,
-      stock: null
+      // Keep original price as default price for variant generation
+      price: parseFloat(product.price),
+      stock: product.stock
     };
   } else {
     // No variants, use product price & stock
@@ -272,6 +272,80 @@ const formatProductResponse = async (product) => {
   }
 };
 
+/**
+ * Sync product stock with total variant stock
+ * This ensures product.stock always equals sum of all variant stocks
+ */
+const syncProductStock = async (productId) => {
+  try {
+    // Get all variants for this product
+    const variants = await prisma.productVariant.findMany({
+      where: { product_id: productId },
+      select: { stock: true }
+    });
+
+    // Calculate total stock from variants
+    const totalVariantStock = variants.reduce((sum, variant) => sum + variant.stock, 0);
+
+    // Update product stock to match total variant stock
+    const updatedProduct = await prisma.product.update({
+      where: { id: productId },
+      data: { stock: totalVariantStock },
+      select: { id: true, name: true, stock: true }
+    });
+
+    console.log(`Stock synced for product ${updatedProduct.name}: ${updatedProduct.stock} (from ${variants.length} variants)`);
+    
+    return updatedProduct;
+  } catch (error) {
+    console.error('Error syncing product stock:', error);
+    throw error;
+  }
+};
+
+/**
+ * Sync product stock for multiple products
+ */
+const syncMultipleProductStocks = async (productIds) => {
+  const results = [];
+  for (const productId of productIds) {
+    try {
+      const result = await syncProductStock(productId);
+      results.push(result);
+    } catch (error) {
+      console.error(`Failed to sync stock for product ${productId}:`, error);
+      results.push({ id: productId, error: error.message });
+    }
+  }
+  return results;
+};
+
+/**
+ * Sync all products with variants
+ */
+const syncAllProductStocks = async () => {
+  try {
+    // Get all products that have variants
+    const productsWithVariants = await prisma.product.findMany({
+      where: {
+        deleted_at: null,
+        product_variants: {
+          some: {}
+        }
+      },
+      select: { id: true }
+    });
+
+    const productIds = productsWithVariants.map(p => p.id);
+    console.log(`Syncing stock for ${productIds.length} products with variants...`);
+    
+    return await syncMultipleProductStocks(productIds);
+  } catch (error) {
+    console.error('Error syncing all product stocks:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   getProductPriceAndStock,
   checkStock,
@@ -279,6 +353,9 @@ module.exports = {
   reduceStock,
   restoreStock,
   formatProductResponse,
-  getVariantDisplayImage
+  getVariantDisplayImage,
+  syncProductStock,
+  syncMultipleProductStocks,
+  syncAllProductStocks
 };
 

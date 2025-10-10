@@ -40,7 +40,8 @@ router.post('/', [
   body('category_id').isUUID(),
   body('name').notEmpty().trim(),
   body('description').optional().trim(),
-  body('price').isFloat({ min: 0 }),
+  body('price').isNumeric(),
+  body('pre_order').isInt({ min: 0 }),
   body('stock').isInt({ min: 0 })
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -61,7 +62,7 @@ router.put('/:id', [
   body('category_id').optional().isUUID(),
   body('name').optional().notEmpty().trim(),
   body('description').optional().trim(),
-  body('price').optional().isFloat({ min: 0 }),
+  body('price').optional().isNumeric(),
   body('pre_order').optional().isInt({ min: 0 }), 
   body('stock').optional().isInt({ min: 0 })
 ], async (req, res) => {
@@ -257,5 +258,17 @@ router.delete('/images/:image_id', [
   authenticateToken,
   requireRole(['admin'])
 ], productController.deleteProductImage);
+
+// Sync product stocks with variants (admin only)
+router.post('/sync-stocks', [
+  authenticateToken,
+  requireRole(['admin'])
+], productController.syncAllProductStocks);
+
+// Sync specific product stock with variants (admin only)
+router.post('/:id/sync-stock', [
+  authenticateToken,
+  requireRole(['admin'])
+], productController.syncProductStock);
 
 module.exports = router;

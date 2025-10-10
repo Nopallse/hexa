@@ -1,6 +1,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const PayPalService = require('../services/paypalService');
+const MidtransService = require('../services/midtransService');
 
 // Create payment
 const createPayment = async (req, res) => {
@@ -545,6 +546,556 @@ const refundPayPalPayment = async (req, res) => {
   }
 };
 
+// Create Midtrans payment
+const createMidtransPayment = async (req, res) => {
+  try {
+    const { order_id, payment_method = 'bank_transfer' } = req.body;
+
+    console.log('Midtrans payment request:', {
+      order_id,
+      payment_method,
+      user_id: req.user.id
+    });
+
+    // Check if order exists and belongs to user
+    const order = await prisma.order.findFirst({
+      where: {
+        id: order_id,
+        user_id: req.user.id
+      },
+      include: {
+        order_items: {
+          include: {
+            product_variant: {
+              include: {
+                product: {
+                  select: {
+                    name: true,
+                    description: true
+                  }
+                },
+                variant_options: {
+                  select: {
+                    option_name: true,
+                    option_value: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        address: true
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    console.log('Order data:', {
+      id: order.id,
+      total_amount: order.total_amount,
+      shipping_cost: order.shipping_cost,
+      address: order.address ? {
+        recipient_name: order.address.recipient_name,
+        phone_number: order.address.phone_number,
+        address_line: order.address.address_line,
+        city: order.address.city,
+        postal_code: order.address.postal_code
+      } : 'No address found'
+    });
+
+    if (order.payment_status === 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'Order is already paid'
+      });
+    }
+
+    // Check if there's an active payment session
+    const existingPayment = await prisma.payment.findFirst({
+      where: {
+        order_id: order_id,
+        payment_status: { in: ['pending', 'processing'] }
+      },
+      orderBy: {
+        payment_date: 'desc'
+      }
+    });
+
+    if (existingPayment) {
+      // For now, we'll consider payments valid for 30 minutes from creation
+      // Since we don't have created_at, we'll use a different approach
+      // We'll check if payment_date is recent (within 30 minutes) or if it's null (newly created)
+      const now = new Date();
+      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+      
+      // If payment_date is null (newly created) or within 30 minutes, consider it active
+      const isRecent = !existingPayment.payment_date || 
+                      new Date(existingPayment.payment_date) > thirtyMinutesAgo;
+
+      if (isRecent) {
+        return res.status(400).json({
+          success: false,
+          error: 'Payment session already exists',
+          data: {
+            existing_payment: {
+              id: existingPayment.id,
+              payment_reference: existingPayment.payment_reference,
+              payment_status: existingPayment.payment_status,
+              payment_date: existingPayment.payment_date,
+              expires_at: existingPayment.payment_date ? 
+                new Date(new Date(existingPayment.payment_date).getTime() + 30 * 60 * 1000) :
+                new Date(now.getTime() + 30 * 60 * 1000),
+              can_retry: false
+            }
+          }
+        });
+      } else {
+        // Mark expired payment as cancelled
+        await prisma.payment.update({
+          where: { id: existingPayment.id },
+          data: { payment_status: 'cancelled' }
+        });
+      }
+    }
+
+    // Prepare items for Midtrans
+    const itemDetails = order.order_items.map(item => {
+      // Truncate name if too long (Midtrans limit is 50 characters)
+      const fullName = `${item.product_variant.product.name} - ${item.product_variant.variant_name}`;
+      const truncatedName = fullName.length > 50 ? fullName.substring(0, 47) + '...' : fullName;
+      
+      return {
+        id: item.product_variant.id,
+        price: parseFloat(item.price),
+        quantity: item.quantity,
+        name: truncatedName
+      };
+    });
+
+    // Add shipping as separate item
+    if (order.shipping_cost > 0) {
+      itemDetails.push({
+        id: 'shipping',
+        price: parseFloat(order.shipping_cost),
+        quantity: 1,
+        name: 'Biaya Pengiriman'
+      });
+    }
+
+    // Calculate total from item details to ensure accuracy
+    const calculatedTotal = itemDetails.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const orderTotal = parseFloat(order.total_amount) + parseFloat(order.shipping_cost);
+
+    console.log('Item details and totals:', {
+      itemDetails,
+      calculatedTotal,
+      orderTotal,
+      difference: Math.abs(calculatedTotal - orderTotal)
+    });
+
+    // Prepare customer details
+    const recipientName = order.address.recipient_name || 'Customer';
+    const nameParts = recipientName.split(' ');
+    const firstName = nameParts[0] || 'Customer';
+    const lastName = nameParts.slice(1).join(' ') || '';
+    
+    console.log('Customer details preparation:', {
+      recipientName,
+      firstName,
+      lastName,
+      email: req.user.email,
+      phone: order.address.phone_number,
+      address: order.address.address_line,
+      city: order.address.city,
+      postal_code: order.address.postal_code
+    });
+    
+    const customerDetails = {
+      first_name: firstName,
+      last_name: lastName,
+      email: req.user.email,
+      phone: order.address.phone_number || '',
+      billing_address: {
+        first_name: firstName,
+        last_name: lastName,
+        address: order.address.address_line || '',
+        city: order.address.city || '',
+        postal_code: order.address.postal_code || '',
+        country_code: 'IDN'
+      },
+      shipping_address: {
+        first_name: firstName,
+        last_name: lastName,
+        address: order.address.address_line || '',
+        city: order.address.city || '',
+        postal_code: order.address.postal_code || '',
+        country_code: 'IDN'
+      }
+    };
+
+    // Create Midtrans Snap payment
+    const midtransPayment = await MidtransService.createSnapPayment({
+      orderId: order.id,
+      totalAmount: calculatedTotal, // Use calculated total instead of order total
+      customerDetails,
+      itemDetails,
+      paymentMethod: payment_method
+    });
+
+    if (!midtransPayment.success) {
+      return res.status(400).json({
+        success: false,
+        error: midtransPayment.error
+      });
+    }
+
+    // Save Midtrans payment record
+    await prisma.payment.create({
+      data: {
+        order_id,
+        payment_method: 'midtrans',
+        amount: calculatedTotal, // Use calculated total
+        payment_reference: midtransPayment.data.token,
+        payment_status: 'pending'
+      }
+    });
+
+    logger.info(`Midtrans Snap payment created for order ${order_id} by ${req.user.email}`);
+
+    res.status(201).json({
+      success: true,
+      message: 'Midtrans Snap payment created successfully',
+      data: {
+        token: midtransPayment.data.token,
+        redirect_url: midtransPayment.data.redirect_url,
+        order_id: order.id,
+        payment_type: payment_method
+      }
+    });
+  } catch (error) {
+    logger.error('Create Midtrans payment error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to create Midtrans payment'
+    });
+  }
+};
+
+// Handle Midtrans notification
+const handleMidtransNotification = async (req, res) => {
+  try {
+    const notificationData = req.body;
+
+    // Process notification
+    const result = await MidtransService.handleNotification(notificationData);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    const { order_id, transaction_status, fraud_status } = result.data;
+
+    // Find payment record
+    const payment = await prisma.payment.findFirst({
+      where: {
+        order_id: order_id,
+        payment_method: 'midtrans'
+      },
+      include: {
+        order: true
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment record not found'
+      });
+    }
+
+    // Update payment and order status based on transaction status
+    let paymentStatus = 'pending';
+    let orderStatus = payment.order.status;
+
+    switch (transaction_status) {
+      case 'capture':
+        if (fraud_status === 'accept') {
+          paymentStatus = 'paid';
+          orderStatus = 'processing';
+        } else {
+          paymentStatus = 'failed';
+        }
+        break;
+      case 'settlement':
+        paymentStatus = 'paid';
+        orderStatus = 'processing';
+        break;
+      case 'pending':
+        paymentStatus = 'pending';
+        break;
+      case 'deny':
+      case 'expire':
+      case 'cancel':
+        paymentStatus = 'failed';
+        break;
+    }
+
+    // Update payment and order
+    await prisma.$transaction(async (tx) => {
+      // Update payment
+      await tx.payment.update({
+        where: { id: payment.id },
+        data: {
+          payment_status: paymentStatus,
+          payment_date: paymentStatus === 'paid' ? new Date() : null
+        }
+      });
+
+      // Update order
+      await tx.order.update({
+        where: { id: payment.order_id },
+        data: {
+          payment_status: paymentStatus,
+          status: orderStatus
+        }
+      });
+
+      // Create transaction log
+      await tx.transaction.create({
+        data: {
+          user_id: payment.order.user_id,
+          order_id: payment.order_id,
+          status: 'success',
+          message: `Midtrans payment ${transaction_status}: ${fraud_status || 'N/A'}`
+        }
+      });
+    });
+
+    logger.info(`Midtrans notification processed: ${transaction_status} for order ${order_id}`);
+
+    res.json({
+      success: true,
+      message: 'Notification processed successfully'
+    });
+  } catch (error) {
+    logger.error('Midtrans notification error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to process notification'
+    });
+  }
+};
+
+// Get Midtrans transaction status
+const getMidtransTransactionStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    // Check if order exists and belongs to user
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        user_id: req.user.id
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    // Get status from Midtrans
+    const statusResult = await MidtransService.getTransactionStatus(orderId);
+
+    if (!statusResult.success) {
+      return res.status(400).json({
+        success: false,
+        error: statusResult.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        order_id: orderId,
+        transaction_status: statusResult.data.transaction_status,
+        fraud_status: statusResult.data.fraud_status,
+        gross_amount: statusResult.data.gross_amount,
+        payment_type: statusResult.data.payment_type
+      }
+    });
+  } catch (error) {
+    logger.error('Get Midtrans status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get transaction status'
+    });
+  }
+};
+
+// Get payment status for an order
+const getPaymentStatus = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        user_id: req.user.id
+      },
+      include: {
+        payments: {
+          orderBy: {
+            payment_date: 'desc'
+          }
+        }
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    // Find active payment
+    const activePayment = order.payments.find(payment => 
+      payment.payment_status === 'pending' || payment.payment_status === 'processing'
+    );
+
+    if (activePayment) {
+      // Use payment_date or consider it recent if null
+      const now = new Date();
+      const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+      
+      const isRecent = !activePayment.payment_date || 
+                      new Date(activePayment.payment_date) > thirtyMinutesAgo;
+
+      if (!isRecent) {
+        // Mark as cancelled
+        await prisma.payment.update({
+          where: { id: activePayment.id },
+          data: { payment_status: 'cancelled' }
+        });
+
+        return res.json({
+          success: true,
+          data: {
+            has_active_payment: false,
+            can_create_payment: true,
+            message: 'Previous payment session has expired'
+          }
+        });
+      }
+
+      return res.json({
+        success: true,
+        data: {
+          has_active_payment: true,
+          can_create_payment: false,
+          active_payment: {
+            id: activePayment.id,
+            payment_method: activePayment.payment_method,
+            payment_reference: activePayment.payment_reference,
+            payment_status: activePayment.payment_status,
+            payment_date: activePayment.payment_date,
+            expires_at: activePayment.payment_date ? 
+              new Date(new Date(activePayment.payment_date).getTime() + 30 * 60 * 1000) :
+              new Date(now.getTime() + 30 * 60 * 1000)
+          }
+        }
+      });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        has_active_payment: false,
+        can_create_payment: true,
+        message: 'No active payment session'
+      }
+    });
+  } catch (error) {
+    logger.error('Get payment status error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get payment status'
+    });
+  }
+};
+
+// Cancel active payment
+const cancelActivePayment = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const order = await prisma.order.findFirst({
+      where: {
+        id: orderId,
+        user_id: req.user.id
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    // Find active payment
+    const activePayment = await prisma.payment.findFirst({
+      where: {
+        order_id: orderId,
+        payment_status: { in: ['pending', 'processing'] }
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    if (!activePayment) {
+      return res.status(400).json({
+        success: false,
+        error: 'No active payment to cancel'
+      });
+    }
+
+    // Mark as cancelled
+    await prisma.payment.update({
+      where: { id: activePayment.id },
+      data: { payment_status: 'cancelled' }
+    });
+
+    logger.info(`Payment ${activePayment.id} cancelled for order ${orderId} by ${req.user.email}`);
+
+    res.json({
+      success: true,
+      message: 'Payment session cancelled successfully',
+      data: {
+        cancelled_payment_id: activePayment.id
+      }
+    });
+  } catch (error) {
+    logger.error('Cancel payment error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to cancel payment'
+    });
+  }
+};
+
 module.exports = {
   createPayment,
   getPaymentInfo,
@@ -552,5 +1103,10 @@ module.exports = {
   createPayPalPayment,
   capturePayPalPayment,
   handlePayPalWebhook,
-  refundPayPalPayment
+  refundPayPalPayment,
+  createMidtransPayment,
+  handleMidtransNotification,
+  getMidtransTransactionStatus,
+  getPaymentStatus,
+  cancelActivePayment
 };

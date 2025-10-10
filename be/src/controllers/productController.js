@@ -117,9 +117,9 @@ const createProduct = async (req, res) => {
         category_id,
         name,
         description,
-        price,
-        pre_order,
-        stock
+        price: parseFloat(price),
+        pre_order: parseInt(pre_order),
+        stock: parseInt(stock)
       },
       include: {
         category: {
@@ -152,7 +152,13 @@ const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
     const { category_id, name, description, price, pre_order, stock } = req.body;
-    console.log(req.body);
+    console.log('=== UPDATE PRODUCT DEBUG ===');
+    console.log('Product ID:', id);
+    console.log('Request Body:', req.body);
+    console.log('Extracted values:');
+    console.log('- price:', price, typeof price);
+    console.log('- pre_order:', pre_order, typeof pre_order);
+    console.log('- stock:', stock, typeof stock);
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
       where: { id }
@@ -179,16 +185,22 @@ const updateProduct = async (req, res) => {
       }
     }
 
+    // Build update data
+    const updateData = {
+      ...(category_id && { category_id }),
+      ...(name && { name }),
+      ...(description !== undefined && { description }),
+      ...(price !== undefined && { price: parseFloat(price) }),
+      ...(pre_order !== undefined && { pre_order: parseInt(pre_order) }),
+      ...(stock !== undefined && { stock: parseInt(stock) })
+    };
+
+    console.log('Update data:', updateData);
+    console.log('Price check:', price !== undefined, 'Value:', price);
+
     const product = await prisma.product.update({
       where: { id },
-      data: {
-        ...(category_id && { category_id }),
-        ...(name && { name }),
-        ...(description !== undefined && { description }),
-        ...(price && { price }),
-        ...(pre_order && { pre_order }),
-        ...(stock !== undefined && { stock })
-      },
+      data: updateData,
       include: {
         category: {
           select: {
@@ -198,6 +210,9 @@ const updateProduct = async (req, res) => {
         }
       }
     });
+
+    console.log('Updated product from database:', product);
+    console.log('Updated price:', product.price, typeof product.price);
 
     logger.info(`Product updated: ${product.name} by ${req.user.email}`);
 
@@ -346,6 +361,14 @@ const createProductVariant = async (req, res) => {
     });
 
     logger.info(`Product variant created: ${variant.variant_name} for ${product.name} by ${req.user.email}`);
+
+    // Auto-sync product stock with total variant stock
+    try {
+      await productVariantService.syncProductStock(product_id);
+    } catch (syncError) {
+      logger.error('Failed to sync product stock after variant creation:', syncError);
+      // Don't fail the request, just log the error
+    }
 
     res.status(201).json({
       success: true,
@@ -648,6 +671,14 @@ const updateProductVariant = async (req, res) => {
 
     logger.info(`Product variant updated: ${variant.variant_name} by ${req.user.email}`);
 
+    // Auto-sync product stock with total variant stock
+    try {
+      await productVariantService.syncProductStock(existingVariant.product_id);
+    } catch (syncError) {
+      logger.error('Failed to sync product stock after variant update:', syncError);
+      // Don't fail the request, just log the error
+    }
+
     res.json({
       success: true,
       message: 'Product variant updated successfully',
@@ -765,6 +796,14 @@ const deleteProductVariant = async (req, res) => {
     });
 
     logger.info(`Product variant deleted: ${variant.variant_name} from ${variant.product.name} by ${req.user.email}`);
+
+    // Auto-sync product stock with total variant stock
+    try {
+      await productVariantService.syncProductStock(variant.product_id);
+    } catch (syncError) {
+      logger.error('Failed to sync product stock after variant deletion:', syncError);
+      // Don't fail the request, just log the error
+    }
 
     res.json({
       success: true,
@@ -1168,6 +1207,58 @@ const deleteProductImage = async (req, res) => {
   }
 };
 
+// Sync all product stocks with their variants
+const syncAllProductStocks = async (req, res) => {
+  try {
+    const results = await productVariantService.syncAllProductStocks();
+    
+    const successCount = results.filter(r => !r.error).length;
+    const errorCount = results.filter(r => r.error).length;
+    
+    logger.info(`Stock sync completed: ${successCount} success, ${errorCount} errors by ${req.user.email}`);
+    
+    res.json({
+      success: true,
+      message: `Stock sync completed: ${successCount} products synced successfully`,
+      data: {
+        total: results.length,
+        success: successCount,
+        errors: errorCount,
+        results: results
+      }
+    });
+  } catch (error) {
+    logger.error('Sync all product stocks error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to sync product stocks'
+    });
+  }
+};
+
+// Sync specific product stock with its variants
+const syncProductStock = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const result = await productVariantService.syncProductStock(id);
+    
+    logger.info(`Product stock synced: ${result.name} by ${req.user.email}`);
+    
+    res.json({
+      success: true,
+      message: 'Product stock synced successfully',
+      data: result
+    });
+  } catch (error) {
+    logger.error('Sync product stock error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to sync product stock'
+    });
+  }
+};
+
 module.exports = {
   getAllProducts,
   getProductById,
@@ -1193,5 +1284,8 @@ module.exports = {
   createProductImage,
   getProductImages,
   updateProductImage,
-  deleteProductImage
+  deleteProductImage,
+  // Stock Sync
+  syncAllProductStocks,
+  syncProductStock
 };
