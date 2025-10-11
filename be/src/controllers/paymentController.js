@@ -803,6 +803,14 @@ const handleMidtransNotification = async (req, res) => {
 
     const { order_id, transaction_status, fraud_status } = result.data;
 
+    // Handle test notifications from Midtrans
+    if (order_id.startsWith('payment_notif_test_')) {
+      return res.json({
+        success: true,
+        message: 'Test notification received successfully'
+      });
+    }
+
     // Find payment record
     const payment = await prisma.payment.findFirst({
       where: {

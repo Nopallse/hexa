@@ -26,6 +26,10 @@ router.post('/midtrans/create', [
 // Midtrans notification webhook (no authentication required)
 router.post('/midtrans/notification', paymentController.handleMidtransNotification);
 
+// Temporary route for incorrect URL (without 's' in payments)
+// This handles the case where Midtrans dashboard is configured with wrong URL
+router.post('/payment/midtrans/notification', paymentController.handleMidtransNotification);
+
 // Get payment status for an order
 router.get('/status/:orderId', authenticateToken, paymentController.getPaymentStatus);
 
