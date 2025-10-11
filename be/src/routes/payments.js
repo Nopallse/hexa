@@ -5,59 +5,6 @@ const paymentController = require('../controllers/paymentController');
 
 const router = express.Router();
 
-// Create payment (traditional methods)
-router.post('/', [
-  authenticateToken,
-  body('order_id').isUUID(),
-  body('payment_method').isIn(['transfer', 'e-wallet', 'COD']),
-  body('amount').isFloat({ min: 0 }),
-  body('payment_reference').optional().trim()
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      details: errors.array()
-    });
-  }
-  return paymentController.createPayment(req, res);
-});
-
-// Create PayPal payment
-router.post('/paypal/create', [
-  authenticateToken,
-  body('order_id').isUUID()
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      details: errors.array()
-    });
-  }
-  return paymentController.createPayPalPayment(req, res);
-});
-
-// Capture PayPal payment
-router.post('/paypal/capture', [
-  authenticateToken,
-  body('paypal_order_id').notEmpty()
-], async (req, res) => {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation failed',
-      details: errors.array()
-    });
-  }
-  return paymentController.capturePayPalPayment(req, res);
-});
-
-// PayPal webhook (no authentication required)
-router.post('/paypal/webhook', paymentController.handlePayPalWebhook);
 
 // Create Midtrans payment
 router.post('/midtrans/create', [
@@ -88,13 +35,11 @@ router.post('/cancel/:orderId', authenticateToken, paymentController.cancelActiv
 // Get Midtrans transaction status
 router.get('/midtrans/:orderId/status', authenticateToken, paymentController.getMidtransTransactionStatus);
 
-// Refund PayPal payment
-router.post('/paypal/refund', [
+// Continue existing Midtrans payment
+router.post('/midtrans/continue', [
   authenticateToken,
-  requireRole(['admin']),
-  body('payment_id').isUUID(),
-  body('amount').optional().isFloat({ min: 0 }),
-  body('reason').optional().trim()
+  body('order_id').isUUID(),
+  body('payment_method').optional().isIn(['bank_transfer', 'e_wallet', 'credit_card', 'qris'])
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -104,8 +49,9 @@ router.post('/paypal/refund', [
       details: errors.array()
     });
   }
-  return paymentController.refundPayPalPayment(req, res);
+  return paymentController.continueMidtransPayment(req, res);
 });
+
 
 // Get payment info for order
 router.get('/:orderId', authenticateToken, paymentController.getPaymentInfo);

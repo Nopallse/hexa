@@ -638,22 +638,43 @@ const createMidtransPayment = async (req, res) => {
                       new Date(existingPayment.payment_date) > thirtyMinutesAgo;
 
       if (isRecent) {
-        return res.status(400).json({
-          success: false,
-          error: 'Payment session already exists',
-          data: {
-            existing_payment: {
-              id: existingPayment.id,
-              payment_reference: existingPayment.payment_reference,
-              payment_status: existingPayment.payment_status,
-              payment_date: existingPayment.payment_date,
-              expires_at: existingPayment.payment_date ? 
-                new Date(new Date(existingPayment.payment_date).getTime() + 30 * 60 * 1000) :
-                new Date(now.getTime() + 30 * 60 * 1000),
-              can_retry: false
-            }
+        // Instead of returning error, try to get fresh token from Midtrans
+        try {
+          const statusResult = await MidtransService.getTransactionStatus(order.id);
+          
+          if (statusResult.success && statusResult.data.transaction_status === 'pending') {
+            // Transaction is still pending, return the existing token
+            return res.status(400).json({
+              success: false,
+              error: 'Payment session already exists',
+              data: {
+                existing_payment: {
+                  id: existingPayment.id,
+                  payment_reference: existingPayment.payment_reference,
+                  payment_status: existingPayment.payment_status,
+                  payment_date: existingPayment.payment_date,
+                  expires_at: existingPayment.payment_date ? 
+                    new Date(new Date(existingPayment.payment_date).getTime() + 30 * 60 * 1000) :
+                    new Date(now.getTime() + 30 * 60 * 1000),
+                  can_retry: false
+                }
+              }
+            });
+          } else {
+            // Transaction is expired or completed, mark as cancelled and continue
+            await prisma.payment.update({
+              where: { id: existingPayment.id },
+              data: { payment_status: 'cancelled' }
+            });
           }
-        });
+        } catch (statusError) {
+          console.log('Error checking transaction status:', statusError);
+          // If we can't check status, mark as cancelled and continue
+          await prisma.payment.update({
+            where: { id: existingPayment.id },
+            data: { payment_status: 'cancelled' }
+          });
+        }
       } else {
         // Mark expired payment as cancelled
         await prisma.payment.update({
@@ -1096,6 +1117,133 @@ const cancelActivePayment = async (req, res) => {
   }
 };
 
+// Continue existing Midtrans payment
+const continueMidtransPayment = async (req, res) => {
+  try {
+    const { order_id, payment_method = 'bank_transfer' } = req.body;
+
+    console.log('Continue Midtrans payment request:', {
+      order_id,
+      payment_method,
+      user_id: req.user.id
+    });
+
+    // Check if order exists and belongs to user
+    const order = await prisma.order.findFirst({
+      where: {
+        id: order_id,
+        user_id: req.user.id
+      },
+      include: {
+        order_items: {
+          include: {
+            product_variant: {
+              include: {
+                product: {
+                  select: {
+                    name: true,
+                    description: true
+                  }
+                },
+                variant_options: {
+                  select: {
+                    option_name: true,
+                    option_value: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        address: true
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    if (order.payment_status === 'paid') {
+      return res.status(400).json({
+        success: false,
+        error: 'Order is already paid'
+      });
+    }
+
+    // Find existing payment
+    const existingPayment = await prisma.payment.findFirst({
+      where: {
+        order_id: order_id,
+        payment_status: { in: ['pending', 'processing'] }
+      },
+      orderBy: {
+        payment_date: 'desc'
+      }
+    });
+
+    if (!existingPayment) {
+      return res.status(400).json({
+        success: false,
+        error: 'No existing payment found'
+      });
+    }
+
+    // Check if existing payment is still valid
+    const now = new Date();
+    const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
+    
+    const isRecent = !existingPayment.payment_date || 
+                    new Date(existingPayment.payment_date) > thirtyMinutesAgo;
+
+    if (!isRecent) {
+      // Mark as cancelled and create new payment
+      await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: { payment_status: 'cancelled' }
+      });
+      
+      // Continue with normal payment creation flow
+      return createMidtransPayment(req, res);
+    }
+
+    // Try to get fresh status from Midtrans
+    const statusResult = await MidtransService.getTransactionStatus(order.id);
+    
+    if (statusResult.success && statusResult.data.transaction_status === 'pending') {
+      // Transaction is still pending, return existing token
+      res.json({
+        success: true,
+        message: 'Continuing existing payment',
+        data: {
+          token: existingPayment.payment_reference,
+          redirect_url: null,
+          order_id: order.id,
+          payment_type: payment_method,
+          is_existing: true
+        }
+      });
+    } else {
+      // Transaction is expired or completed, cancel and create new
+      await prisma.payment.update({
+        where: { id: existingPayment.id },
+        data: { payment_status: 'cancelled' }
+      });
+      
+      // Continue with normal payment creation flow
+      return createMidtransPayment(req, res);
+    }
+  } catch (error) {
+    logger.error('Continue Midtrans payment error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to continue Midtrans payment'
+    });
+  }
+};
+
 module.exports = {
   createPayment,
   getPaymentInfo,
@@ -1108,5 +1256,6 @@ module.exports = {
   handleMidtransNotification,
   getMidtransTransactionStatus,
   getPaymentStatus,
-  cancelActivePayment
+  cancelActivePayment,
+  continueMidtransPayment
 };

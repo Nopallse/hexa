@@ -48,28 +48,18 @@ class ExchangeRateService {
       const { quotes, timestamp } = apiData;
       const rates = [];
 
-      // Process each supported currency (USD to others)
+      // Process each supported currency
       for (const currency of this.supportedCurrencies) {
         const quoteKey = `${this.baseCurrency}${currency}`;
         const rate = quotes[quoteKey];
 
         if (rate) {
-          // Store USD to currency rate
           rates.push({
             from_currency: this.baseCurrency,
             to_currency: currency,
             rate: parseFloat(rate),
             source: 'exchangerate.host',
             last_updated: new Date(timestamp * 1000) // Convert Unix timestamp to Date
-          });
-
-          // Store inverse rate (currency to USD)
-          rates.push({
-            from_currency: currency,
-            to_currency: this.baseCurrency,
-            rate: 1 / parseFloat(rate), // Inverse rate
-            source: 'exchangerate.host',
-            last_updated: new Date(timestamp * 1000)
           });
         }
       }
@@ -93,7 +83,7 @@ class ExchangeRateService {
         });
       }
 
-      logger.info(`Successfully processed and stored ${rates.length} exchange rates (including inverse rates)`);
+      logger.info(`Successfully processed and stored ${rates.length} exchange rates`);
       return rates;
     } catch (error) {
       logger.error('Failed to process and store exchange rates:', error.message);
