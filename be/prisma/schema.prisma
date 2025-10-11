@@ -179,7 +179,7 @@ model Order {
   currency_code  String   @default("IDR") // Currency used at order time (snapshot)
   exchange_rate  Decimal? @db.Decimal(10, 4) // Exchange rate at order time (if not IDR)
   shipping_cost  Decimal  @db.Decimal(15, 2)
-  payment_status String   @default("unpaid") // unpaid, paid, refunded
+  payment_status String   @default("unpaid") // unpaid, paid
   created_at     DateTime @default(now())
 
   // Relations

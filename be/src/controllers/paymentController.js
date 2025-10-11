@@ -638,43 +638,19 @@ const createMidtransPayment = async (req, res) => {
                       new Date(existingPayment.payment_date) > thirtyMinutesAgo;
 
       if (isRecent) {
-        // Instead of returning error, try to get fresh token from Midtrans
-        try {
-          const statusResult = await MidtransService.getTransactionStatus(order.id);
-          
-          if (statusResult.success && statusResult.data.transaction_status === 'pending') {
-            // Transaction is still pending, return the existing token
-            return res.status(400).json({
-              success: false,
-              error: 'Payment session already exists',
-              data: {
-                existing_payment: {
-                  id: existingPayment.id,
-                  payment_reference: existingPayment.payment_reference,
-                  payment_status: existingPayment.payment_status,
-                  payment_date: existingPayment.payment_date,
-                  expires_at: existingPayment.payment_date ? 
-                    new Date(new Date(existingPayment.payment_date).getTime() + 30 * 60 * 1000) :
-                    new Date(now.getTime() + 30 * 60 * 1000),
-                  can_retry: false
-                }
-              }
-            });
-          } else {
-            // Transaction is expired or completed, mark as cancelled and continue
-            await prisma.payment.update({
-              where: { id: existingPayment.id },
-              data: { payment_status: 'cancelled' }
-            });
+        // Return existing payment token instead of creating new one
+        console.log('Using existing payment token:', existingPayment.payment_reference);
+        return res.status(200).json({
+          success: true,
+          message: 'Using existing payment session',
+          data: {
+            token: existingPayment.payment_reference,
+            redirect_url: null,
+            order_id: order.id,
+            payment_type: payment_method,
+            is_existing: true
           }
-        } catch (statusError) {
-          console.log('Error checking transaction status:', statusError);
-          // If we can't check status, mark as cancelled and continue
-          await prisma.payment.update({
-            where: { id: existingPayment.id },
-            data: { payment_status: 'cancelled' }
-          });
-        }
+        });
       } else {
         // Mark expired payment as cancelled
         await prisma.payment.update({
@@ -759,9 +735,12 @@ const createMidtransPayment = async (req, res) => {
       }
     };
 
+    // Create unique order ID for Midtrans (add timestamp to avoid duplicate)
+    const uniqueOrderId = `${order.id}-${Date.now()}`;
+    
     // Create Midtrans Snap payment
     const midtransPayment = await MidtransService.createSnapPayment({
-      orderId: order.id,
+      orderId: uniqueOrderId,
       totalAmount: calculatedTotal, // Use calculated total instead of order total
       customerDetails,
       itemDetails,
@@ -794,7 +773,7 @@ const createMidtransPayment = async (req, res) => {
       data: {
         token: midtransPayment.data.token,
         redirect_url: midtransPayment.data.redirect_url,
-        order_id: order.id,
+        order_id: uniqueOrderId,
         payment_type: payment_method
       }
     });
