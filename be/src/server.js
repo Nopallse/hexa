@@ -20,6 +20,10 @@ const addressRoutes = require('./routes/addresses');
 const paymentRoutes = require('./routes/payments');
 const shippingRoutes = require('./routes/shipping');
 const userRoutes = require('./routes/users');
+const exchangeRateRoutes = require('./routes/exchangeRates');
+
+// Import cron job service
+const exchangeRateCronJob = require('./services/exchangeRateCronJob');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -84,6 +88,7 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/admin/users', userRoutes);
+app.use('/api/rates', exchangeRateRoutes);
 
 app.use(express.static(distPath));
 
@@ -102,10 +107,33 @@ app.use('*', (req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
   logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
+  
+  // Initialize exchange rate cron jobs
+  try {
+    logger.info('🔄 Initializing exchange rate cron jobs...');
+    await exchangeRateCronJob.runInitialUpdate();
+    exchangeRateCronJob.start();
+    logger.info('✅ Exchange rate cron jobs initialized successfully');
+  } catch (error) {
+    logger.error('❌ Failed to initialize exchange rate cron jobs:', error);
+  }
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  logger.info('🛑 SIGTERM received, shutting down gracefully...');
+  exchangeRateCronJob.stop();
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  logger.info('🛑 SIGINT received, shutting down gracefully...');
+  exchangeRateCronJob.stop();
+  process.exit(0);
 });
 
 module.exports = app;
