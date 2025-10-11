@@ -3,17 +3,12 @@ import {
   CardContent,
   Box,
   Typography,
-  Stack,
   Button,
   useTheme,
-  Chip,
-  IconButton,
 } from '@mui/material';
 import {
   Edit as EditIcon,
   Delete as DeleteIcon,
-  LocationOn as LocationIcon,
-  Home as HomeIcon,
 } from '@mui/icons-material';
 import { useState } from 'react';
 import { Address } from '../types';
@@ -60,83 +55,78 @@ export default function AddressCard({ address, onEdit, onDelete, onUpdate }: Add
   };
 
   return (
-    <Card
-      sx={{
-        border: address.is_primary 
-          ? `2px solid ${theme.palette.primary.main}` 
-          : `1px solid ${theme.palette.grey[300]}`,
-        borderRadius: 2,
-        transition: 'all 0.2s ease',
-        backgroundColor: address.is_primary 
-          ? theme.palette.primary.light + '10' 
-          : 'transparent',
-        '&:hover': {
-          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-          transform: 'translateY(-2px)',
-        },
-      }}
-    >
-      <CardContent>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 2 }}>
-              <LocationIcon color="primary" />
-              <Typography variant="h6" fontWeight={600}>
-                Alamat
-              </Typography>
-              {address.is_primary && (
-                <Chip
-                  label="Utama"
-                  color="primary"
-                  size="small"
-                  variant="outlined"
-                  icon={<HomeIcon />}
-                />
-              )}
-            </Stack>
-
-            <Typography variant="body1" fontWeight={500} sx={{ mb: 1 }}>
-              {address.address_line}
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              {address.city}, {address.province} {address.postal_code}
-            </Typography>
-
-            <Typography variant="caption" color="text.secondary">
-              Ditambahkan pada {formatDate(address.created_at)}
-            </Typography>
-          </Box>
-
-          <Stack direction="row" spacing={1}>
-            <IconButton
-              onClick={() => onEdit(address)}
-              color="primary"
-              sx={{
-                border: `1px solid ${theme.palette.primary.light}`,
-                '&:hover': {
-                  backgroundColor: theme.palette.primary.light + '20',
-                },
-              }}
-            >
-              <EditIcon />
-            </IconButton>
-            
-            <IconButton
+    <Card sx={{ 
+      borderRadius: 2, 
+      boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column'
+    }}>
+      <CardContent sx={{ p: 3, flexGrow: 1 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Typography 
+            variant="h6" 
+            sx={{ 
+              fontWeight: 600,
+              color: 'text.primary'
+            }}
+          >
+            Alamat Utama
+          </Typography>
+          {address.is_primary && (
+            <Box sx={{ 
+              backgroundColor: 'primary.main', 
+              color: 'white', 
+              px: 1, 
+              py: 0.5, 
+              borderRadius: 1,
+              fontSize: '0.75rem',
+              fontWeight: 600
+            }}>
+              Default
+            </Box>
+          )}
+        </Box>
+        
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {address.address_line}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+          {address.city}, {address.province} {address.postal_code}
+        </Typography>
+        
+        <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={() => onEdit(address)}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: '0.75rem',
+            }}
+          >
+            Edit
+          </Button>
+          {!address.is_primary && (
+            <Button
+              variant="outlined"
+              color="error"
+              size="small"
               onClick={handleDelete}
               disabled={deleting}
-              color="error"
               sx={{
-                border: `1px solid ${theme.palette.error.light}`,
-                '&:hover': {
-                  backgroundColor: theme.palette.error.light + '20',
-                },
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: '0.75rem',
               }}
             >
-              <DeleteIcon />
-            </IconButton>
-          </Stack>
-        </Stack>
+              Hapus
+            </Button>
+          )}
+        </Box>
       </CardContent>
     </Card>
   );

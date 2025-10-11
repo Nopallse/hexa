@@ -6,11 +6,11 @@ import {
   Alert,
   Skeleton,
   useTheme,
-  Breadcrumbs,
-  Link,
+  Button,
+  Chip,
 } from '@mui/material';
 import {
-  Home,
+  ArrowBack,
   ShoppingCart,
   ShoppingBag,
 } from '@mui/icons-material';
@@ -21,10 +21,12 @@ import { cartApi } from '../services/cartApi';
 import { useCartStore } from '../store/cartStore';
 import CartItem from '../components/CartItem';
 import CartSummary from '../components/CartSummary';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function CartPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -69,14 +71,6 @@ export default function CartPage() {
     fetchCart();
   }, []);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
   // Filter items
   const availableItems = items.filter(item => item.product_variant.product.deleted_at === null);
   const deletedItems = items.filter(item => item.product_variant.product.deleted_at !== null);
@@ -84,53 +78,31 @@ export default function CartPage() {
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
-        {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 4 }}>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <Home sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Beranda
-          </Link>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/products')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <ShoppingBag sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Produk
-          </Link>
-          <Typography variant="body2" color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            <ShoppingCart sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Keranjang
-          </Typography>
-        </Breadcrumbs>
-
-        {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+        {/* Navigation Header */}
+        <Box sx={{ mb: 3 }}>
+         
+          
+          <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
             Keranjang Belanja
           </Typography>
           <Typography variant="body1" color="text.secondary">
             Kelola item di keranjang belanja Anda
           </Typography>
         </Box>
+
+        {/* Currency Loading State */}
+        {currencyLoading && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Loading exchange rates...
+          </Alert>
+        )}
+
+        {/* Currency Error State */}
+        {currencyError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Failed to load exchange rates. Prices will be displayed in default currency.
+          </Alert>
+        )}
 
         {/* Error Alert */}
         {error && (
@@ -164,65 +136,55 @@ export default function CartPage() {
                   textAlign: 'center',
                   py: 8,
                   px: 4,
-                  borderRadius: 3,
-                  background: 'linear-gradient(135deg, #faf8ff 0%, #f0f4ff 100%)',
-                  border: `1px solid ${theme.palette.primary.light}20`,
+                  borderRadius: 2,
+                  backgroundColor: 'grey.50',
                 }}
               >
                 <ShoppingCart sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-                <Typography variant="h6" color="text.secondary" fontWeight={600} sx={{ mb: 1 }}>
+                
+                <Typography variant="h5" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
                   Keranjang Anda Kosong
                 </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                  Mulai berbelanja dan tambahkan produk ke keranjang Anda
+                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                  Belum ada item di keranjang belanja Anda
                 </Typography>
-                <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
-                  <Link
-                    component="button"
-                    variant="button"
+                
+                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                  <Button
+                    variant="contained"
+                    size="large"
+                    startIcon={<ShoppingBag />}
                     onClick={() => navigate('/products')}
                     sx={{
                       px: 3,
                       py: 1.5,
                       borderRadius: 2,
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      textDecoration: 'none',
                       fontWeight: 600,
-                      '&:hover': {
-                        backgroundColor: 'primary.dark',
-                      },
                     }}
                   >
-                    Lihat Produk
-                  </Link>
-                  <Link
-                    component="button"
-                    variant="button"
+                    Mulai Berbelanja
+                  </Button>
+                  <Button
+                    variant="outlined"
+                    size="large"
                     onClick={() => navigate('/')}
                     sx={{
                       px: 3,
                       py: 1.5,
                       borderRadius: 2,
-                      backgroundColor: 'grey.100',
-                      color: 'text.primary',
-                      textDecoration: 'none',
-                      fontWeight: 600,
-                      '&:hover': {
-                        backgroundColor: 'grey.200',
-                      },
+                      fontWeight: 500,
                     }}
                   >
                     Kembali ke Beranda
-                  </Link>
-                </Box>
+                  </Button>
+                </Stack>
               </Box>
             ) : (
               <Stack spacing={2}>
                 {/* Available Items */}
                 {availableItems.length > 0 && (
                   <>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
                       Item Tersedia ({availableItems.length})
                     </Typography>
                     {availableItems.map((item) => (
@@ -242,7 +204,13 @@ export default function CartPage() {
                     <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'error.main' }}>
                       Item Tidak Tersedia ({deletedItems.length})
                     </Typography>
-                    <Alert severity="warning" sx={{ mb: 2 }}>
+                    <Alert 
+                      severity="warning" 
+                      sx={{ 
+                        mb: 2,
+                        borderRadius: 2,
+                      }}
+                    >
                       Beberapa item di keranjang Anda sudah tidak tersedia. Item ini akan diabaikan saat checkout.
                     </Alert>
                     {deletedItems.map((item) => (

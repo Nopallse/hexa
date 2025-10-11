@@ -18,6 +18,7 @@ import {
 import { useState } from 'react';
 import { Order } from '../types';
 import { orderApi } from '../services/orderApi';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface OrderCardProps {
   order: Order;
@@ -27,14 +28,7 @@ interface OrderCardProps {
 export default function OrderCard({ order, onView }: OrderCardProps) {
   const theme = useTheme();
   const [cancelling, setCancelling] = useState(false);
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
+  const { formatPrice } = useCurrencyConversion();
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -48,8 +42,8 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
     switch (status) {
       case 'pending':
         return 'warning';
-      case 'confirmed':
-        return 'info';
+      case 'processing':
+        return 'primary';
       case 'shipped':
         return 'primary';
       case 'delivered':
@@ -65,8 +59,8 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
     switch (status) {
       case 'pending':
         return 'Menunggu Konfirmasi';
-      case 'confirmed':
-        return 'Dikonfirmasi';
+      case 'processing':
+        return 'Sedang Diproses';
       case 'shipped':
         return 'Dikirim';
       case 'delivered':
@@ -135,99 +129,131 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
   return (
     <Card
       sx={{
-        border: `1px solid ${theme.palette.grey[200]}`,
-        borderRadius: 3,
+        mb: 2,
+        borderRadius: 2,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        border: 'none',
         transition: 'all 0.2s ease',
         '&:hover': {
-          boxShadow: '0 8px 24px rgba(0,0,0,0.12)',
-          transform: 'translateY(-2px)',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.15)',
         },
       }}
     >
-      <CardContent>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={3} alignItems="flex-start">
+      <CardContent sx={{ p: 3 }}>
+        {/* Modern Layout */}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          {/* Order Image */}
+          <Box sx={{ flexShrink: 0 }}>
+            <Avatar
+              src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(order.order_items[0]?.product_variant?.product?.name?.substring(0, 10) || 'Order')}`}
+              alt="Order items"
+              sx={{
+                width: 80,
+                height: 80,
+                borderRadius: 2,
+                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              }}
+              variant="rounded"
+            >
+              <ShoppingCartIcon sx={{ fontSize: 32 }} />
+            </Avatar>
+          </Box>
+
           {/* Order Info */}
           <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Stack direction="row" justifyContent="space-between" alignItems="flex-start" sx={{ mb: 2 }}>
-              <Box>
-                <Typography variant="h6" fontWeight={600} sx={{ mb: 0.5 }}>
-                  Order #{order.id.slice(-8).toUpperCase()}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {formatDate(order.created_at)}
-                </Typography>
-              </Box>
-              
-              <Stack direction="row" spacing={1}>
-                <Chip
-                  label={getStatusLabel(order.status)}
-                  color={getStatusColor(order.status) as any}
-                  size="small"
-                  variant="outlined"
-                />
-                <Chip
-                  label={getPaymentStatusLabel(order.payment_status)}
-                  color={getPaymentStatusColor(order.payment_status) as any}
-                  size="small"
-                  variant="outlined"
-                />
-              </Stack>
-            </Stack>
-
-            {/* Items Preview */}
-            <Stack direction="row" spacing={2} alignItems="center" sx={{ mb: 2 }}>
-              <Avatar
-                src={primaryImage || `https://placehold.co/50x50/9682DB/FFFFFF/png?text=${encodeURIComponent(order.order_items[0]?.product_variant?.product?.name || 'Order')}`}
-                alt="Order items"
-                sx={{
-                  width: 50,
-                  height: 50,
-                  borderRadius: 2,
-                  flexShrink: 0,
-                }}
-                variant="rounded"
-              >
-                <ShoppingCartIcon />
-              </Avatar>
-              
-              <Box sx={{ flex: 1, minWidth: 0 }}>
-                <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
-                  {order.order_items.length} item
-                  {order.order_items.length > 1 && 's'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary" noWrap>
-                  {order.order_items[0]?.product_variant?.product?.name}
-                  {order.order_items.length > 1 && ` dan ${order.order_items.length - 1} item lainnya`}
-                </Typography>
-              </Box>
-            </Stack>
-
-            {/* Address */}
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              <strong>Alamat:</strong> {order.address.address_line}, {order.address.city}, {order.address.province}
+            <Typography 
+              variant="h6" 
+              fontWeight={600} 
+              sx={{ 
+                mb: 1, 
+                color: 'text.primary',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                display: '-webkit-box',
+                WebkitLineClamp: 2,
+                WebkitBoxOrient: 'vertical',
+                lineHeight: 1.3,
+                fontSize: '1rem',
+              }}
+              title={`Order #${order.id.slice(-8).toUpperCase()}`}
+            >
+              Order #{order.id.slice(-8).toUpperCase()}
             </Typography>
+            
+            {/* Status Chips */}
+            <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
+              <Chip
+                label={getStatusLabel(order.status)}
+                size="small"
+                variant="outlined"
+                sx={{ 
+                  fontSize: '0.7rem',
+                  height: 20,
+                  borderColor: getStatusColor(order.status) === 'warning' ? 'warning.main' : 
+                              getStatusColor(order.status) === 'success' ? 'success.main' :
+                              getStatusColor(order.status) === 'error' ? 'error.main' : 'primary.main',
+                  color: getStatusColor(order.status) === 'warning' ? 'warning.main' : 
+                         getStatusColor(order.status) === 'success' ? 'success.main' :
+                         getStatusColor(order.status) === 'error' ? 'error.main' : 'primary.main',
+                  '& .MuiChip-label': {
+                    px: 1,
+                  }
+                }}
+              />
+              <Chip
+                label={getPaymentStatusLabel(order.payment_status)}
+                size="small"
+                variant="outlined"
+                sx={{ 
+                  fontSize: '0.7rem',
+                  height: 20,
+                  borderColor: getPaymentStatusColor(order.payment_status) === 'warning' ? 'warning.main' : 
+                              getPaymentStatusColor(order.payment_status) === 'success' ? 'success.main' :
+                              getPaymentStatusColor(order.payment_status) === 'error' ? 'error.main' : 'primary.main',
+                  color: getPaymentStatusColor(order.payment_status) === 'warning' ? 'warning.main' : 
+                         getPaymentStatusColor(order.payment_status) === 'success' ? 'success.main' :
+                         getPaymentStatusColor(order.payment_status) === 'error' ? 'error.main' : 'primary.main',
+                  '& .MuiChip-label': {
+                    px: 1,
+                  }
+                }}
+              />
+            </Stack>
 
-            {/* Tracking Info */}
-            {order.shipping?.tracking_number && (
-              <Typography variant="body2" color="primary.main" sx={{ mb: 1 }}>
-                <strong>No. Resi:</strong> {order.shipping.tracking_number}
-              </Typography>
-            )}
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+              Dibuat: {formatDate(order.created_at)}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+              {order.order_items.length} item{order.order_items.length > 1 ? 's' : ''}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+              {order.address.city}, {order.address.province}
+            </Typography>
           </Box>
 
           {/* Price & Actions */}
-          <Box sx={{ textAlign: { xs: 'left', sm: 'right' }, minWidth: { xs: 'auto', sm: '200px' } }}>
-            <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ mb: 1 }}>
-              {formatPrice(order.total_amount + order.shipping_cost)}
-            </Typography>
-            
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-              Total: {formatPrice(order.total_amount)} + 
-              <br />
-              Ongkir: {formatPrice(order.shipping_cost)}
-            </Typography>
+          <Box sx={{ 
+            display: 'flex', 
+            alignItems: 'center',
+            gap: 2,
+            flexShrink: 0,
+          }}>
+            {/* Price */}
+            <Box sx={{ textAlign: 'right', minWidth: 100 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                Total
+              </Typography>
+              <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: '1rem' }}>
+                {formatPrice(Number(order.total_amount) + Number(order.shipping_cost))}
+              </Typography>
+            </Box>
 
-            <Stack direction={{ xs: 'row', sm: 'column' }} spacing={1}>
+            {/* Action Buttons */}
+            <Box sx={{ 
+              display: 'flex', 
+              flexDirection: 'column',
+              gap: 1,
+            }}>
               <Button
                 variant="contained"
                 size="small"
@@ -236,10 +262,16 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
                 sx={{
                   borderRadius: 2,
                   fontWeight: 600,
-                  flex: { xs: 1, sm: 'none' },
+                  fontSize: '0.75rem',
+                  py: 0.5,
+                  px: 1.5,
+                  backgroundColor: 'primary.main',
+                  '&:hover': {
+                    backgroundColor: 'primary.dark',
+                  },
                 }}
               >
-                Lihat Detail
+                Detail
               </Button>
               
               {canCancel && (
@@ -253,15 +285,23 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
                   sx={{
                     borderRadius: 2,
                     fontWeight: 600,
-                    flex: { xs: 1, sm: 'none' },
+                    fontSize: '0.75rem',
+                    py: 0.5,
+                    px: 1.5,
+                    borderColor: 'error.main',
+                    color: 'error.main',
+                    '&:hover': {
+                      backgroundColor: 'error.light',
+                      borderColor: 'error.dark',
+                    },
                   }}
                 >
-                  {cancelling ? 'Membatalkan...' : 'Batalkan'}
+                  {cancelling ? 'Batal...' : 'Batal'}
                 </Button>
               )}
-            </Stack>
+            </Box>
           </Box>
-        </Stack>
+        </Box>
       </CardContent>
     </Card>
   );

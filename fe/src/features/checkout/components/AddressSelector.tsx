@@ -73,9 +73,9 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
 
   if (loading) {
     return (
-      <Card>
-        <CardContent>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+      <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
             Alamat Pengiriman
           </Typography>
           <Stack spacing={2}>
@@ -90,12 +90,12 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
 
   if (addresses.length === 0) {
     return (
-      <Card>
-        <CardContent>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+      <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ p: 3 }}>
+          <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
             Alamat Pengiriman
           </Typography>
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
             Anda belum memiliki alamat pengiriman. Silakan tambahkan alamat terlebih dahulu.
           </Alert>
           <Button
@@ -103,6 +103,15 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
             startIcon={<AddIcon />}
             onClick={handleAddAddress}
             fullWidth
+            sx={{
+              py: 1.5,
+              borderRadius: 2,
+              fontWeight: 600,
+              backgroundColor: 'primary.main',
+              '&:hover': {
+                backgroundColor: 'primary.dark',
+              },
+            }}
           >
             Tambah Alamat
           </Button>
@@ -112,10 +121,10 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
   }
 
   return (
-    <Card>
-      <CardContent>
+    <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <CardContent sx={{ p: 3 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-          <Typography variant="h6" fontWeight={600}>
+          <Typography variant="h6" fontWeight={600} sx={{ color: 'text.primary' }}>
             Alamat Pengiriman
           </Typography>
           <Button
@@ -123,13 +132,23 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
             size="small"
             startIcon={<AddIcon />}
             onClick={handleAddAddress}
+            sx={{
+              borderRadius: 2,
+              fontWeight: 500,
+              borderColor: 'primary.main',
+              color: 'primary.main',
+              '&:hover': {
+                backgroundColor: 'primary.light',
+                borderColor: 'primary.dark',
+              },
+            }}
           >
             Tambah Alamat
           </Button>
         </Box>
 
         {error && (
-          <Alert severity="error" sx={{ mb: 2 }} onClose={() => setError(null)}>
+          <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
             {error}
           </Alert>
         )}
@@ -150,13 +169,18 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
                       p: 2,
                       border: selectedAddress === address.id 
                         ? `2px solid ${theme.palette.primary.main}` 
-                        : `1px solid ${theme.palette.grey[300]}`,
+                        : `1px solid ${theme.palette.grey[200]}`,
                       borderRadius: 2,
                       backgroundColor: selectedAddress === address.id 
                         ? theme.palette.primary.light + '10' 
-                        : 'transparent',
+                        : 'grey.50',
                       transition: 'all 0.2s ease',
                       width: '100%',
+                      '&:hover': {
+                        backgroundColor: selectedAddress === address.id 
+                          ? theme.palette.primary.light + '15' 
+                          : 'grey.100',
+                      },
                     }}
                   >
                     <Stack direction="row" spacing={2} alignItems="flex-start">

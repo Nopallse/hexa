@@ -1,0 +1,408 @@
+{
+  "designSystem": {
+    "name": "Hexa E-commerce Design System",
+    "version": "1.0.0",
+    "description": "Design system untuk aplikasi e-commerce Hexa dengan tema modern, clean, dan user-friendly",
+    
+    "colors": {
+      "primary": {
+        "main": "#9682DB",
+        "light": "#B8A8E8",
+        "dark": "#7A6BB8",
+        "description": "Warna utama untuk buttons, links, dan accent elements"
+      },
+      "secondary": {
+        "main": "#6C5CE7",
+        "light": "#A29BFE",
+        "dark": "#5F3DC4",
+        "description": "Warna sekunder untuk variasi dan highlights"
+      },
+      "error": {
+        "main": "#E74C3C",
+        "light": "#F8D7DA",
+        "dark": "#C0392B",
+        "description": "Warna untuk error states, delete actions, dan warnings"
+      },
+      "success": {
+        "main": "#27AE60",
+        "light": "#D4EDDA",
+        "dark": "#1E8449",
+        "description": "Warna untuk success states dan positive actions"
+      },
+      "warning": {
+        "main": "#F39C12",
+        "light": "#FFF3CD",
+        "dark": "#D68910",
+        "description": "Warna untuk warning states dan alerts"
+      },
+      "grey": {
+        "50": "#F8F9FA",
+        "100": "#E9ECEF",
+        "200": "#DEE2E6",
+        "300": "#CED4DA",
+        "400": "#ADB5BD",
+        "500": "#6C757D",
+        "600": "#495057",
+        "700": "#343A40",
+        "800": "#212529",
+        "900": "#000000",
+        "description": "Palette abu-abu untuk backgrounds, borders, dan text"
+      }
+    },
+
+    "typography": {
+      "fontFamily": "Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "fontWeights": {
+        "light": 300,
+        "regular": 400,
+        "medium": 500,
+        "semiBold": 600,
+        "bold": 700
+      },
+      "fontSizes": {
+        "xs": "0.75rem",
+        "sm": "0.875rem",
+        "base": "1rem",
+        "lg": "1.125rem",
+        "xl": "1.25rem",
+        "2xl": "1.5rem",
+        "3xl": "1.875rem",
+        "4xl": "2.25rem"
+      },
+      "lineHeights": {
+        "tight": 1.2,
+        "normal": 1.3,
+        "relaxed": 1.5
+      }
+    },
+
+    "spacing": {
+      "xs": "0.25rem",
+      "sm": "0.5rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem",
+      "3xl": "4rem",
+      "4xl": "6rem"
+    },
+
+    "borderRadius": {
+      "none": "0",
+      "sm": "0.125rem",
+      "base": "0.25rem",
+      "md": "0.375rem",
+      "lg": "0.5rem",
+      "xl": "0.75rem",
+      "2xl": "1rem",
+      "full": "9999px"
+    },
+
+    "shadows": {
+      "none": "none",
+      "sm": "0 1px 2px rgba(0,0,0,0.05)",
+      "base": "0 1px 3px rgba(0,0,0,0.1)",
+      "md": "0 2px 8px rgba(0,0,0,0.1)",
+      "lg": "0 4px 16px rgba(0,0,0,0.1)",
+      "xl": "0 8px 32px rgba(0,0,0,0.15)",
+      "primary": "0 4px 16px rgba(150, 130, 219, 0.3)",
+      "error": "0 4px 12px rgba(231, 76, 60, 0.3)"
+    },
+
+    "components": {
+      "card": {
+        "borderRadius": "0.5rem",
+        "boxShadow": "0 1px 3px rgba(0,0,0,0.1)",
+        "padding": "1.5rem",
+        "border": "none",
+        "backgroundColor": "white",
+        "hover": {
+          "boxShadow": "0 2px 8px rgba(0,0,0,0.15)"
+        }
+      },
+      
+      "button": {
+        "primary": {
+          "backgroundColor": "primary.main",
+          "color": "white",
+          "borderRadius": "0.5rem",
+          "padding": "0.75rem 1.5rem",
+          "fontWeight": 600,
+          "fontSize": "1rem",
+          "hover": {
+            "backgroundColor": "primary.dark"
+          },
+          "disabled": {
+            "backgroundColor": "grey.300",
+            "color": "grey.500"
+          }
+        },
+        "secondary": {
+          "backgroundColor": "transparent",
+          "color": "primary.main",
+          "border": "1px solid primary.main",
+          "borderRadius": "0.5rem",
+          "padding": "0.75rem 1.5rem",
+          "fontWeight": 500,
+          "fontSize": "0.9rem",
+          "hover": {
+            "backgroundColor": "primary.light",
+            "borderColor": "primary.dark"
+          }
+        },
+        "error": {
+          "backgroundColor": "transparent",
+          "color": "error.main",
+          "border": "1px solid error.main",
+          "borderRadius": "0.5rem",
+          "padding": "0.75rem 1.5rem",
+          "fontWeight": 500,
+          "fontSize": "0.9rem",
+          "hover": {
+            "backgroundColor": "error.light",
+            "borderColor": "error.dark"
+          }
+        }
+      },
+
+      "input": {
+        "borderRadius": "0.25rem",
+        "border": "1px solid grey.400",
+        "padding": "0.75rem",
+        "fontSize": "1rem",
+        "fontWeight": 600,
+        "backgroundColor": "white",
+        "focus": {
+          "borderColor": "primary.main",
+          "outline": "none"
+        },
+        "hover": {
+          "borderColor": "primary.dark"
+        }
+      },
+
+      "chip": {
+        "small": {
+          "height": "20px",
+          "fontSize": "0.7rem",
+          "padding": "0 8px",
+          "borderRadius": "0.25rem"
+        },
+        "medium": {
+          "height": "24px",
+          "fontSize": "0.75rem",
+          "padding": "0 12px",
+          "borderRadius": "0.375rem"
+        },
+        "variants": {
+          "filled": {
+            "backgroundColor": "primary.main",
+            "color": "white",
+            "fontWeight": 600
+          },
+          "outlined": {
+            "backgroundColor": "transparent",
+            "color": "primary.main",
+            "border": "1px solid primary.main",
+            "fontWeight": 500
+          }
+        }
+      },
+
+      "alert": {
+        "borderRadius": "0.5rem",
+        "padding": "1rem",
+        "fontWeight": 500,
+        "variants": {
+          "error": {
+            "backgroundColor": "error.light",
+            "color": "error.dark",
+            "border": "1px solid error.main"
+          },
+          "warning": {
+            "backgroundColor": "warning.light",
+            "color": "warning.dark",
+            "border": "1px solid warning.main"
+          },
+          "info": {
+            "backgroundColor": "primary.light",
+            "color": "primary.dark",
+            "border": "1px solid primary.main"
+          }
+        }
+      }
+    },
+
+    "layouts": {
+      "cartItem": {
+        "layout": "horizontal",
+        "imageSize": "80x80px",
+        "imageBorderRadius": "0.5rem",
+        "imageShadow": "0 2px 8px rgba(0,0,0,0.1)",
+        "spacing": "1.5rem",
+        "padding": "1.5rem",
+        "quantityControls": {
+          "containerBackground": "grey.50",
+          "containerBorderRadius": "0.5rem",
+          "containerPadding": "0.25rem",
+          "buttonSize": "28x28px",
+          "buttonBorderRadius": "0.25rem",
+          "buttonShadow": "0 1px 2px rgba(0,0,0,0.1)",
+          "quantityDisplay": {
+            "minWidth": "24px",
+            "fontSize": "0.9rem",
+            "fontWeight": 600
+          }
+        },
+        "priceSection": {
+          "minWidth": "100px",
+          "textAlign": "right",
+          "unitPrice": {
+            "fontSize": "0.75rem",
+            "color": "text.secondary",
+            "marginBottom": "0.25rem"
+          },
+          "totalPrice": {
+            "fontSize": "1rem",
+            "fontWeight": 700,
+            "color": "primary.main"
+          }
+        }
+      },
+
+      "cartSummary": {
+        "position": "sticky",
+        "top": "24px",
+        "borderRadius": "0.5rem",
+        "boxShadow": "0 2px 8px rgba(0,0,0,0.1)",
+        "padding": "1.5rem",
+        "sections": {
+          "itemCount": {
+            "backgroundColor": "grey.50",
+            "borderRadius": "0.5rem",
+            "padding": "1rem",
+            "fontWeight": 500
+          },
+          "deletedItems": {
+            "backgroundColor": "error.light",
+            "borderRadius": "0.5rem",
+            "padding": "0.75rem",
+            "fontWeight": 500
+          },
+          "totalPrice": {
+            "backgroundColor": "primary.main",
+            "color": "white",
+            "borderRadius": "0.5rem",
+            "padding": "1rem",
+            "fontWeight": 600
+          }
+        }
+      },
+
+      "cartPage": {
+        "containerMaxWidth": "xl",
+        "padding": "2rem 0",
+        "header": {
+          "marginBottom": "1.5rem",
+          "title": {
+            "fontSize": "2.25rem",
+            "fontWeight": 600,
+            "color": "text.primary",
+            "marginBottom": "0.5rem"
+          },
+          "description": {
+            "fontSize": "1rem",
+            "color": "text.secondary"
+          }
+        },
+        "emptyState": {
+          "backgroundColor": "grey.50",
+          "borderRadius": "0.5rem",
+          "padding": "4rem 2rem",
+          "textAlign": "center",
+          "iconSize": "64px",
+          "iconColor": "text.secondary",
+          "title": {
+            "fontSize": "1.5rem",
+            "fontWeight": 600,
+            "color": "text.primary",
+            "marginBottom": "0.5rem"
+          },
+          "description": {
+            "fontSize": "1rem",
+            "color": "text.secondary",
+            "marginBottom": "1.5rem"
+          }
+        }
+      }
+    },
+
+    "responsive": {
+      "breakpoints": {
+        "xs": "0px",
+        "sm": "600px",
+        "md": "900px",
+        "lg": "1200px",
+        "xl": "1536px"
+      },
+      "cartItem": {
+        "mobile": {
+          "layout": "vertical",
+          "imageSize": "80x80px",
+          "spacing": "1rem"
+        },
+        "desktop": {
+          "layout": "horizontal",
+          "imageSize": "80x80px",
+          "spacing": "1.5rem"
+        }
+      },
+      "cartPage": {
+        "mobile": {
+          "layout": "vertical",
+          "summaryWidth": "100%"
+        },
+        "desktop": {
+          "layout": "horizontal",
+          "summaryWidth": "400px"
+        }
+      }
+    },
+
+    "animations": {
+      "transitions": {
+        "fast": "0.15s ease",
+        "normal": "0.2s ease",
+        "slow": "0.3s ease"
+      },
+      "hover": {
+        "scale": "1.05",
+        "translateY": "-2px"
+      }
+    },
+
+    "guidelines": {
+      "principles": [
+        "Clean dan minimal - hindari elemen visual yang tidak perlu",
+        "Konsisten - gunakan design tokens yang sama di seluruh aplikasi",
+        "User-friendly - prioritaskan usability dan accessibility",
+        "Modern - gunakan spacing, typography, dan color yang contemporary",
+        "Responsive - pastikan design bekerja di semua ukuran layar"
+      ],
+      "do": [
+        "Gunakan spacing yang konsisten (0.25rem, 0.5rem, 1rem, 1.5rem, 2rem, 3rem)",
+        "Gunakan border radius yang konsisten (0.25rem untuk small, 0.5rem untuk medium)",
+        "Gunakan shadow yang subtle untuk depth",
+        "Gunakan color palette yang sudah ditentukan",
+        "Gunakan typography scale yang konsisten"
+      ],
+      "dont": [
+        "Jangan gunakan terlalu banyak warna",
+        "Jangan gunakan shadow yang terlalu dramatic",
+        "Jangan gunakan border radius yang terlalu besar",
+        "Jangan gunakan spacing yang tidak konsisten",
+        "Jangan gunakan font weight yang terlalu banyak variasi"
+      ]
+    }
+  }
+}

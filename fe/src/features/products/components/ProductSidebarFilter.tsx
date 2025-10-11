@@ -19,6 +19,7 @@ import {
   ListItemButton,
   ListItemText,
   Checkbox,
+  useMediaQuery,
 } from '@mui/material';
 import { 
   ExpandMore,
@@ -34,15 +35,18 @@ interface ProductSidebarFilterProps {
   onFilterChange: (filters: ProductQueryParams) => void;
   categories: Array<{ id: string; name: string }>;
   loading?: boolean;
+  variant?: 'default' | 'mobile';
 }
 
 export default function ProductSidebarFilter({ 
   filters, 
   onFilterChange, 
   categories, 
-  loading = false 
+  loading = false,
+  variant = 'default'
 }: ProductSidebarFilterProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [expandedCategories, setExpandedCategories] = useState(true);
   const [expandedPrice, setExpandedPrice] = useState(true);
 
@@ -73,47 +77,49 @@ export default function ProductSidebarFilter({
   return (
     <Box
       sx={{
-        p: 3,
-        borderRadius: 3,
-        background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
-        border: `1px solid ${theme.palette.primary.light}20`,
-        boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-        position: 'sticky',
-        top: 20,
+        p: variant === 'mobile' ? 0 : 3,
+        borderRadius: variant === 'mobile' ? 0 : 3,
+        background: variant === 'mobile' ? 'transparent' : 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
+        border: variant === 'mobile' ? 'none' : `1px solid ${theme.palette.primary.light}20`,
+        boxShadow: variant === 'mobile' ? 'none' : '0 4px 20px rgba(0,0,0,0.08)',
+        position: isMobile ? 'static' : 'sticky',
+        top: isMobile ? 'auto' : 20,
       }}
     >
       {/* Header */}
-      <Box sx={{ mb: 3 }}>
-        <Typography
-          variant="h6"
-          fontWeight={700}
-          sx={{
-            color: theme.palette.primary.main,
-            fontFamily: '"Playfair Display", "Georgia", serif',
-            letterSpacing: '-0.01em',
-          }}
-        >
-          Filter Produk
-        </Typography>
-        {hasActiveFilters && (
-          <Button
-            size="small"
-            startIcon={<Clear />}
-            onClick={handleClearFilters}
+      {variant === 'default' && (
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="h6"
+            fontWeight={700}
             sx={{
-              mt: 1,
-              color: theme.palette.error.main,
-              fontSize: '0.875rem',
-              textTransform: 'none',
-              '&:hover': {
-                backgroundColor: theme.palette.error.light + '10',
-              },
+              color: theme.palette.primary.main,
+              fontFamily: '"Playfair Display", "Georgia", serif',
+              letterSpacing: '-0.01em',
             }}
           >
-            Hapus Semua Filter
-          </Button>
-        )}
-      </Box>
+            Filter Produk
+          </Typography>
+          {hasActiveFilters && (
+            <Button
+              size="small"
+              startIcon={<Clear />}
+              onClick={handleClearFilters}
+              sx={{
+                mt: 1,
+                color: theme.palette.error.main,
+                fontSize: '0.875rem',
+                textTransform: 'none',
+                '&:hover': {
+                  backgroundColor: theme.palette.error.light + '10',
+                },
+              }}
+            >
+              Hapus Semua Filter
+            </Button>
+          )}
+        </Box>
+      )}
 
       {/* Categories Filter */}
       <Accordion 
@@ -121,8 +127,8 @@ export default function ProductSidebarFilter({
         onChange={() => setExpandedCategories(!expandedCategories)}
         sx={{
           boxShadow: 'none',
-          border: `1px solid ${theme.palette.primary.light}20`,
-          borderRadius: 2,
+          border: variant === 'mobile' ? 'none' : `1px solid ${theme.palette.primary.light}20`,
+          borderRadius: variant === 'mobile' ? 0 : 2,
           mb: 2,
           '&:before': { display: 'none' },
         }}
@@ -130,8 +136,8 @@ export default function ProductSidebarFilter({
         <AccordionSummary
           expandIcon={<ExpandMore />}
           sx={{
-            backgroundColor: theme.palette.primary.light + '10',
-            borderRadius: expandedCategories ? '8px 8px 0 0' : '8px',
+            backgroundColor: variant === 'mobile' ? 'transparent' : theme.palette.primary.light + '10',
+            borderRadius: variant === 'mobile' ? 0 : (expandedCategories ? '8px 8px 0 0' : '8px'),
             '& .MuiAccordionSummary-content': {
               alignItems: 'center',
             },
@@ -206,8 +212,8 @@ export default function ProductSidebarFilter({
         onChange={() => setExpandedPrice(!expandedPrice)}
         sx={{
           boxShadow: 'none',
-          border: `1px solid ${theme.palette.primary.light}20`,
-          borderRadius: 2,
+          border: variant === 'mobile' ? 'none' : `1px solid ${theme.palette.primary.light}20`,
+          borderRadius: variant === 'mobile' ? 0 : 2,
           mb: 2,
           '&:before': { display: 'none' },
         }}
@@ -215,8 +221,8 @@ export default function ProductSidebarFilter({
         <AccordionSummary
           expandIcon={<ExpandMore />}
           sx={{
-            backgroundColor: theme.palette.primary.light + '10',
-            borderRadius: expandedPrice ? '8px 8px 0 0' : '8px',
+            backgroundColor: variant === 'mobile' ? 'transparent' : theme.palette.primary.light + '10',
+            borderRadius: variant === 'mobile' ? 0 : (expandedPrice ? '8px 8px 0 0' : '8px'),
             '& .MuiAccordionSummary-content': {
               alignItems: 'center',
             },

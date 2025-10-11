@@ -2,20 +2,15 @@ import {
   Container,
   Typography,
   Box,
-  Stack,
+  Grid,
   Alert,
-  Skeleton,
+  CircularProgress,
   useTheme,
-  Breadcrumbs,
-  Link,
   Button,
-  Dialog,
-  DialogTitle,
-  DialogContent,
+  Card,
+  CardContent,
 } from '@mui/material';
 import {
-  Home,
-  Person as PersonIcon,
   Add as AddIcon,
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
@@ -25,7 +20,6 @@ import { Address } from '../types';
 import { addressApi } from '../services/addressApi';
 import { useAddressStore } from '../store/addressStore';
 import AddressCard from '../components/AddressCard';
-import AddressForm from '../components/AddressForm';
 
 export default function AddressListPage() {
   const theme = useTheme();
@@ -33,8 +27,6 @@ export default function AddressListPage() {
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [showForm, setShowForm] = useState(false);
-  const [editingAddress, setEditingAddress] = useState<Address | null>(null);
 
   const { addresses, setAddresses, addAddress, updateAddress, removeAddress } = useAddressStore();
 
@@ -59,13 +51,11 @@ export default function AddressListPage() {
   };
 
   const handleAddAddress = () => {
-    setEditingAddress(null);
-    setShowForm(true);
+    navigate('/addresses/add');
   };
 
   const handleEditAddress = (address: Address) => {
-    setEditingAddress(address);
-    setShowForm(true);
+    navigate(`/addresses/${address.id}/edit`);
   };
 
   const handleDeleteAddress = (address: Address) => {
@@ -73,20 +63,6 @@ export default function AddressListPage() {
     fetchAddresses();
   };
 
-  const handleFormSuccess = (address: Address) => {
-    if (editingAddress) {
-      updateAddress(address.id, address);
-    } else {
-      addAddress(address);
-    }
-    setShowForm(false);
-    setEditingAddress(null);
-  };
-
-  const handleFormCancel = () => {
-    setShowForm(false);
-    setEditingAddress(null);
-  };
 
   useEffect(() => {
     fetchAddresses();
@@ -94,154 +70,133 @@ export default function AddressListPage() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', py: 4 }}>
-        <Container maxWidth="lg">
-          <Stack spacing={2}>
-            {[...Array(3)].map((_, index) => (
-              <Skeleton key={index} variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
-            ))}
-          </Stack>
-        </Container>
-      </Box>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="lg">
-        {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 4 }}>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <Home sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Beranda
-          </Link>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/profile')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <PersonIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Profil
-          </Link>
-          <Typography variant="body2" color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            <LocationIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Alamat
-          </Typography>
-        </Breadcrumbs>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 600, 
+            color: 'text.primary',
+            mb: 1
+          }}
+        >
+          Alamat Saya
+        </Typography>
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+        >
+          Kelola alamat pengiriman Anda
+        </Typography>
+      </Box>
 
-        {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Box>
-              <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
-                Daftar Alamat
-              </Typography>
-              <Typography variant="body1" color="text.secondary">
-                Kelola alamat pengiriman Anda
-              </Typography>
-            </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleAddAddress}
-              sx={{ borderRadius: 2 }}
-            >
-              Tambah Alamat
-            </Button>
-          </Stack>
-        </Box>
+      {/* Address Header */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
+        <Typography 
+          variant="h6" 
+          sx={{ 
+            fontWeight: 600,
+            color: 'text.primary'
+          }}
+        >
+          Daftar Alamat
+        </Typography>
+        <Button
+          variant="contained"
+          startIcon={<AddIcon />}
+          onClick={handleAddAddress}
+          sx={{
+            borderRadius: 2,
+            textTransform: 'none',
+            fontWeight: 500,
+            backgroundColor: 'primary.main',
+            '&:hover': {
+              backgroundColor: 'primary.dark',
+            },
+          }}
+        >
+          Tambah Alamat
+        </Button>
+      </Box>
 
-        {/* Error Alert */}
-        {error && (
-          <Alert severity="error" sx={{ mb: 4 }} onClose={() => setError(null)}>
-            {error}
-          </Alert>
-        )}
+      {/* Error Alert */}
+      {error && (
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3, borderRadius: 2 }}
+          onClose={() => setError(null)}
+        >
+          {error}
+        </Alert>
+      )}
 
-        {/* Addresses List */}
-        {addresses.length === 0 ? (
-          <Box
-            sx={{
-              textAlign: 'center',
-              py: 8,
-              px: 4,
-              borderRadius: 3,
-              background: 'linear-gradient(135deg, #faf8ff 0%, #f0f4ff 100%)',
-              border: `1px solid ${theme.palette.primary.light}20`,
-            }}
-          >
+      {/* Addresses List */}
+      {addresses.length === 0 ? (
+        /* Empty State */
+        <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 4, textAlign: 'center' }}>
             <LocationIcon sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
-            <Typography variant="h6" color="text.secondary" fontWeight={600} sx={{ mb: 1 }}>
+            <Typography 
+              variant="h6" 
+              sx={{ 
+                fontWeight: 600, 
+                color: 'text.primary',
+                mb: 1
+              }}
+            >
               Belum Ada Alamat
             </Typography>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-              Tambahkan alamat pengiriman untuk memudahkan proses checkout
+            <Typography 
+              variant="body2" 
+              color="text.secondary"
+              sx={{ mb: 3 }}
+            >
+              Tambahkan alamat untuk memudahkan proses checkout
             </Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
               onClick={handleAddAddress}
-              sx={{ borderRadius: 2 }}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                backgroundColor: 'primary.main',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+              }}
             >
               Tambah Alamat Pertama
             </Button>
-          </Box>
-        ) : (
-          <Stack spacing={3}>
-            {addresses.map((address) => (
+          </CardContent>
+        </Card>
+      ) : (
+        /* Address List */
+        <Grid container spacing={3}>
+          {addresses.map((address) => (
+            <Grid item xs={12} md={6} key={address.id}>
               <AddressCard
-                key={address.id}
                 address={address}
                 onEdit={handleEditAddress}
                 onDelete={handleDeleteAddress}
                 onUpdate={fetchAddresses}
               />
-            ))}
-          </Stack>
-        )}
-
-        {/* Address Form Dialog */}
-        <Dialog
-          open={showForm}
-          onClose={handleFormCancel}
-          maxWidth="md"
-          fullWidth
-          PaperProps={{
-            sx: { borderRadius: 3 }
-          }}
-        >
-          <DialogTitle>
-            <Typography variant="h6" fontWeight={600}>
-              {editingAddress ? 'Edit Alamat' : 'Tambah Alamat Baru'}
-            </Typography>
-          </DialogTitle>
-          <DialogContent sx={{ p: 0 }}>
-            <AddressForm
-              address={editingAddress || undefined}
-              onSuccess={handleFormSuccess}
-              onCancel={handleFormCancel}
-            />
-          </DialogContent>
-        </Dialog>
-      </Container>
-    </Box>
+            </Grid>
+          ))}
+        </Grid>
+      )}
+    </Container>
   );
 }

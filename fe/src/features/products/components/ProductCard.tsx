@@ -4,16 +4,13 @@ import {
   CardActionArea, 
   Box, 
   Typography, 
-  Chip, 
   useTheme,
   Skeleton,
 } from '@mui/material';
-import { 
-  Inventory,
-} from '@mui/icons-material';
 import { useState } from 'react';
 import { Product } from '../types';
 import { getProductImageUrl } from '@/utils/image';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 // Simple price formatter for IDR
 const formatPrice = (amount: number): string => {
@@ -34,10 +31,11 @@ interface ProductCardProps {
 export default function ProductCard({ 
   product, 
   onView, 
-  loading = false 
+  loading = false
 }: ProductCardProps) {
   const theme = useTheme();
   const [imageLoading, setImageLoading] = useState(true);
+  const { formatPrice, formatPriceRange } = useCurrencyConversion();
 
   const primaryImage = product.product_images?.find(img => img.is_primary) || product.product_images?.[0];
   
@@ -48,10 +46,6 @@ export default function ProductCard({
     max: Math.max(...product.product_variants.map(v => parseFloat(v.price)))
   } : null;
 
-  // Calculate total stock for products with variants
-  const totalStock = hasVariants 
-    ? product.product_variants.reduce((sum, variant) => sum + variant.stock, 0)
-    : product.stock;
 
 
   const handleCardClick = () => {
@@ -61,14 +55,12 @@ export default function ProductCard({
 
   if (loading) {
     return (
-      <Card sx={{ height: '100%', borderRadius: 3 }}>
+      <Card sx={{ height: '100%', borderRadius: 1.5 }}>
         <CardContent sx={{ p: 0 }}>
           <Skeleton variant="rectangular" height={200} />
-          <Box sx={{ p: 3 }}>
-            <Skeleton variant="text" height={24} sx={{ mb: 1 }} />
-            <Skeleton variant="text" height={20} sx={{ mb: 2 }} />
-            <Skeleton variant="text" height={32} sx={{ mb: 2 }} />
-            <Skeleton variant="rectangular" height={36} />
+          <Box sx={{ p: 2 }}>
+            <Skeleton variant="text" height={20} sx={{ mb: 1 }} />
+            <Skeleton variant="text" height={24} />
           </Box>
         </CardContent>
       </Card>
@@ -133,73 +125,37 @@ export default function ProductCard({
               onError={() => setImageLoading(false)}
             />
           )}
-
         </Box>
 
-        <CardContent sx={{ p: 3, textAlign: 'center', display: 'flex', flexDirection: 'column'}}>
+        <CardContent sx={{ p: 2 }}>
           {/* Product Name */}
           <Typography
-            variant="h6"
+            variant="subtitle1"
             fontWeight={600}
             sx={{
-              mb: 0,
-              textAlign: 'start',
+              mb: 1,
               overflow: 'hidden',
               textOverflow: 'ellipsis',
               display: '-webkit-box',
               WebkitLineClamp: 2,
               WebkitBoxOrient: 'vertical',
-              fontFamily: '"Playfair Display", "Georgia", serif',
-              letterSpacing: '-0.01em',
               lineHeight: 1.3,
             }}
           >
             {product.name}
           </Typography>
 
-          {/* Price & Sales Info */}
-          <Box sx={{ mt: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
-            <Typography
-              variant="h6"
-              fontWeight={700}
-              color="primary.main"
-              sx={{
-                fontFamily: '"Playfair Display", "Georgia", serif',
-                mb: 0,
-              }}
-            >
-              {hasVariants ? formatPrice(priceRange!.min) : formatPrice(parseFloat(product.price || '0'))}
-            </Typography>
-            <Typography
-              variant="caption"
-              color="text.secondary"
-              sx={{
-                fontSize: '0.75rem',
-                fontWeight: 500,
-                ml: 1,
-              }}
-            >
-              100 Terjual
-            </Typography>
-          </Box>
-
-          {/* Pre-order Info */}
-          {product.pre_order && product.pre_order > 0 && (
-            <Box sx={{ mt: 1, display: 'flex', justifyContent: 'center' }}>
-              <Chip
-                label={`Pre-order ${product.pre_order} hari`}
-                size="small"
-                color="warning"
-                variant="outlined"
-                sx={{
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  borderColor: theme.palette.warning.main,
-                  color: theme.palette.warning.main,
-                }}
-              />
-            </Box>
-          )}
+          {/* Price */}
+          <Typography
+            variant="h6"
+            fontWeight={700}
+            color="primary.main"
+            sx={{
+              fontSize: '1.1rem',
+            }}
+          >
+            {hasVariants ? formatPriceRange(product.product_variants) : formatPrice(parseFloat(product.price || '0'))}
+          </Typography>
         </CardContent>
       </CardActionArea>
     </Card>

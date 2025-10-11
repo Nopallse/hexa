@@ -2,18 +2,11 @@ import {
   Container,
   Typography,
   Box,
-  Stack,
-  useTheme,
-  Breadcrumbs,
-  Link,
   Alert,
-  Skeleton,
+  CircularProgress,
+  Card,
+  CardContent,
 } from '@mui/material';
-import {
-  Home,
-  Person as PersonIcon,
-  LocationOn as LocationIcon,
-} from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Address } from '../types';
@@ -22,7 +15,6 @@ import { useAddressStore } from '../store/addressStore';
 import AddressForm from '../components/AddressForm';
 
 export default function EditAddressPage() {
-  const theme = useTheme();
   const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
   
@@ -79,98 +71,61 @@ export default function EditAddressPage() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', py: 4 }}>
-        <Container maxWidth="md">
-          <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 3 }} />
-        </Container>
-      </Box>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+          <CircularProgress />
+        </Box>
+      </Container>
     );
   }
 
   if (error || !address) {
     return (
-      <Box sx={{ minHeight: '100vh', py: 4 }}>
-        <Container maxWidth="md">
-          <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
-            {error || 'Alamat tidak ditemukan'}
-          </Alert>
-        </Container>
-      </Box>
+      <Container maxWidth="xl" sx={{ py: 4 }}>
+        <Alert 
+          severity="error" 
+          sx={{ mb: 3, borderRadius: 2 }}
+          onClose={() => setError(null)}
+        >
+          {error || 'Alamat tidak ditemukan'}
+        </Alert>
+      </Container>
     );
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="md">
-        {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 4 }}>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <Home sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Beranda
-          </Link>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/profile')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <PersonIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Profil
-          </Link>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/addresses')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <LocationIcon sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Alamat
-          </Link>
-          <Typography variant="body2" color="text.primary">
-            Edit Alamat
-          </Typography>
-        </Breadcrumbs>
+    <Container maxWidth="xl" sx={{ py: 4 }}>
+      {/* Page Header */}
+      <Box sx={{ mb: 4 }}>
+        <Typography 
+          variant="h4" 
+          component="h1" 
+          sx={{ 
+            fontWeight: 600, 
+            color: 'text.primary',
+            mb: 1
+          }}
+        >
+          Edit Alamat
+        </Typography>
+        <Typography 
+          variant="body1" 
+          color="text.secondary"
+        >
+          Ubah informasi alamat pengiriman Anda
+        </Typography>
+      </Box>
 
-        {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
-            Edit Alamat
-          </Typography>
-          <Typography variant="body1" color="text.secondary">
-            Ubah informasi alamat pengiriman Anda
-          </Typography>
-        </Box>
-
-        {/* Address Form */}
-        <AddressForm
-          address={address}
-          onSuccess={handleSuccess}
-          onCancel={handleCancel}
-        />
-      </Container>
-    </Box>
+      {/* Address Form */}
+      <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ p: 3 }}>
+          <AddressForm
+            address={address}
+            onSuccess={handleSuccess}
+            onCancel={handleCancel}
+          />
+        </CardContent>
+      </Card>
+    </Container>
   );
 }

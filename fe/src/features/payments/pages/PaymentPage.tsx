@@ -14,6 +14,7 @@ import {
   Grid,
   Avatar,
   Chip,
+  CircularProgress,
 } from '@mui/material';
 import {
   Home,
@@ -29,8 +30,8 @@ import { PaymentMethod } from '@/features/orders/types';
 import { paymentApi } from '../services/paymentApi';
 import { orderApi } from '@/features/orders/services/orderApi';
 import { usePaymentStore } from '../store/paymentStore';
-import PaymentMethodCard from '../components/PaymentMethodCard';
-import PayPalPaymentButton from '../components/PayPalPaymentButton';
+import MidtransPaymentButton from '../components/MidtransPaymentButton';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function PaymentPage() {
   const theme = useTheme();
@@ -42,17 +43,14 @@ export default function PaymentPage() {
   const [processing, setProcessing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
-  const [selectedMethod, setSelectedMethod] = useState<string>('paypal');
+  const [selectedMethod, setSelectedMethod] = useState<string>('midtrans'); // Auto-select Midtrans
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [paymentStatus, setPaymentStatus] = useState<any>(null);
+  
+  const { formatPrice, loading: currencyLoading, error: currencyError } = useCurrencyConversion();
+  const [checkingPayment, setCheckingPayment] = useState(false);
 
   const { setCurrentPaymentInfo, addPayment } = usePaymentStore();
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -100,19 +98,189 @@ export default function PaymentPage() {
     }
   };
 
-  // PayPal sudah dipilih secara default, tidak perlu fetch payment methods
+  const fetchPaymentMethods = async () => {
+    try {
+      const response = await orderApi.getPaymentMethods();
+      if (response.success) {
+        setPaymentMethods(response.data);
+      }
+    } catch (err) {
+      console.error('Error fetching payment methods:', err);
+    }
+  };
+
+  const checkPaymentStatus = async () => {
+    if (!orderId) return;
+    
+    try {
+      setCheckingPayment(true);
+      const response = await orderApi.getPaymentStatus(orderId);
+      if (response.success) {
+        setPaymentStatus(response.data);
+        
+        // If there's an active payment, set the method
+        if (response.data.has_active_payment) {
+          setSelectedMethod(response.data.active_payment.payment_method);
+        }
+      }
+    } catch (error) {
+      console.error('Error checking payment status:', error);
+    } finally {
+      setCheckingPayment(false);
+    }
+  };
+
+  const cancelActivePayment = async () => {
+    if (!orderId) return;
+    
+    try {
+      setProcessing(true);
+      const response = await orderApi.cancelActivePayment(orderId);
+      if (response.success) {
+        setPaymentStatus(null);
+        setSelectedMethod('paypal');
+        setError(null);
+      } else {
+        setError(response.error || 'Gagal membatalkan pembayaran');
+      }
+    } catch (error: any) {
+      setError(error.response?.data?.error || 'Gagal membatalkan pembayaran');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const handleContinuePayment = async () => {
+    if (!paymentStatus?.active_payment) return;
+    
+    try {
+      setProcessing(true);
+      
+      // Use existing payment reference to open popup
+      if (paymentStatus.active_payment.payment_method === 'midtrans') {
+        // Load Snap script if not already loaded
+        if (!window.snap) {
+          const script = document.createElement('script');
+          script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
+          script.setAttribute('data-client-key', 'SB-Mid-client-UtRW_uI4F5Wz6Pv8Tq8TQ');
+          script.onload = () => {
+            // Open popup after script loads
+            window.snap.pay(paymentStatus.active_payment.payment_reference, {
+              onSuccess: (result: any) => {
+                console.log('Payment success:', result);
+                addPayment(result);
+                navigate(`/payment/success?order_id=${orderId}`, {
+                  state: { orderId: orderId }
+                });
+              },
+              onPending: (result: any) => {
+                console.log('Payment pending:', result);
+                addPayment(result);
+                navigate(`/payment/success?order_id=${orderId}`, {
+                  state: { orderId: orderId }
+                });
+              },
+              onError: (result: any) => {
+                console.log('Payment error:', result);
+                setError('Pembayaran gagal: ' + (result.message || 'Unknown error'));
+                setProcessing(false);
+              },
+              onClose: () => {
+                console.log('Payment popup closed by user');
+                setProcessing(false);
+                // Don't redirect, just reset the processing state
+              }
+            });
+          };
+          script.onerror = () => {
+            setError('Gagal memuat Snap script');
+            setProcessing(false);
+          };
+          document.head.appendChild(script);
+        } else {
+          // Script already loaded, open popup directly
+          window.snap.pay(paymentStatus.active_payment.payment_reference, {
+            onSuccess: (result: any) => {
+              console.log('Payment success:', result);
+              addPayment(result);
+              navigate(`/payment/success?order_id=${orderId}`, {
+                state: { orderId: orderId }
+              });
+            },
+            onPending: (result: any) => {
+              console.log('Payment pending:', result);
+              addPayment(result);
+              navigate(`/payment/success?order_id=${orderId}`, {
+                state: { orderId: orderId }
+              });
+            },
+            onError: (result: any) => {
+              console.log('Payment error:', result);
+              setError('Pembayaran gagal: ' + (result.message || 'Unknown error'));
+              setProcessing(false);
+            },
+            onClose: () => {
+              console.log('Payment popup closed by user');
+              setProcessing(false);
+              // Don't redirect, just reset the processing state
+            }
+          });
+        }
+      } else {
+        // For other payment methods, redirect to their respective pages
+        setError('Metode pembayaran ini tidak mendukung lanjutan pembayaran. Silakan batalkan dan buat pembayaran baru.');
+        setProcessing(false);
+      }
+    } catch (error: any) {
+      console.error('Continue payment error:', error);
+      setError('Gagal melanjutkan pembayaran: ' + (error.message || 'Unknown error'));
+      setProcessing(false);
+    }
+  };
 
   useEffect(() => {
     if (orderId) {
       fetchOrder();
+      fetchPaymentMethods();
+      checkPaymentStatus();
+      
+      // Get selected payment method from location state
+      const state = location.state as any;
+      if (state?.selectedPaymentMethod) {
+        setSelectedMethod(state.selectedPaymentMethod);
+      }
     }
-  }, [orderId]);
+  }, [orderId, location.state]);
 
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', py: 4 }}>
         <Container maxWidth="xl">
           <Typography>Loading...</Typography>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (currencyLoading) {
+    return (
+      <Box sx={{ minHeight: '100vh', py: 4 }}>
+        <Container maxWidth="xl">
+          <Alert severity="info" sx={{ maxWidth: 600, mx: 'auto' }}>
+            Memuat kurs mata uang...
+          </Alert>
+        </Container>
+      </Box>
+    );
+  }
+
+  if (currencyError) {
+    return (
+      <Box sx={{ minHeight: '100vh', py: 4 }}>
+        <Container maxWidth="xl">
+          <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
+            Gagal memuat kurs mata uang: {currencyError}
+          </Alert>
         </Container>
       </Box>
     );
@@ -209,99 +377,132 @@ export default function PaymentPage() {
             Pembayaran Order #{order.id.slice(-8).toUpperCase()}
           </Typography>
           <Typography variant="body1" color="text.secondary">
-            Lakukan pembayaran menggunakan PayPal Payment Gateway
+            Pilih metode pembayaran yang paling nyaman untuk Anda
           </Typography>
         </Box>
 
         <Grid container spacing={4}>
-          {/* PayPal Payment */}
+          {/* Payment Methods Selection */}
           <Grid item xs={12} lg={8}>
+            {/* Active Payment Status Alert */}
+            {paymentStatus?.has_active_payment && (
+              <Card sx={{ mb: 4, border: '2px solid', borderColor: 'warning.main' }}>
+                <CardContent>
+                  <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
+                    <Box sx={{ color: 'warning.main' }}>
+                      <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                        <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                      </svg>
+                    </Box>
+                    <Typography variant="h6" fontWeight={600} color="warning.main">
+                      Sesi Pembayaran Aktif
+                    </Typography>
+                  </Stack>
+                  
+                  <Typography variant="body1" sx={{ mb: 2 }}>
+                    Anda sudah memiliki sesi pembayaran aktif dengan metode <strong>{paymentStatus.active_payment.payment_method}</strong>.
+                    Sesi ini akan berakhir pada <strong>{formatDate(paymentStatus.active_payment.expires_at)}</strong>.
+                  </Typography>
+                  
+                  <Stack direction="row" spacing={2}>
+                    <Button
+                      variant="outlined"
+                      color="warning"
+                      onClick={cancelActivePayment}
+                      disabled={processing}
+                      startIcon={processing ? <CircularProgress size={16} /> : null}
+                    >
+                      {processing ? 'Membatalkan...' : 'Batalkan Sesi Pembayaran'}
+                    </Button>
+                    
+                    <Button
+                      variant="contained"
+                      color="warning"
+                      onClick={handleContinuePayment}
+                      disabled={processing}
+                      startIcon={processing ? <CircularProgress size={16} /> : null}
+                    >
+                      {processing ? 'Membuka Pembayaran...' : 'Lanjutkan Pembayaran'}
+                    </Button>
+                  </Stack>
+                </CardContent>
+              </Card>
+            )}
+
             <Card sx={{ mb: 4 }}>
               <CardContent>
                 <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-                  Metode Pembayaran - PayPal
+                  Metode Pembayaran
                 </Typography>
 
-                {/* PayPal Info */}
-                <Box sx={{ 
-                  p: 3, 
-                  backgroundColor: '#f8f9fa', 
-                  borderRadius: 2, 
-                  mb: 3,
-                  border: '1px solid #e9ecef'
-                }}>
-                  <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 2 }}>
-                    <CreditCardIcon sx={{ fontSize: '2rem', color: '#003087' }} />
-                    <Box>
-                      <Typography variant="h6" fontWeight={600} color="#003087">
-                        PayPal Payment Gateway
-                      </Typography>
+                {/* Midtrans Payment Method */}
+                <Box
+                  sx={{
+                    p: 3,
+                    border: `2px solid ${theme.palette.primary.main}`,
+                    borderRadius: 2,
+                    backgroundColor: theme.palette.primary.light + '10',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <Stack direction="row" spacing={2} alignItems="center">
+                    <CreditCardIcon sx={{ fontSize: '2rem', color: theme.palette.primary.main }} />
+                    
+                    <Box sx={{ flex: 1 }}>
+                      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5 }}>
+                        <Typography variant="subtitle1" fontWeight={600}>
+                          Midtrans
+                        </Typography>
+                        <Box
+                          sx={{
+                            backgroundColor: theme.palette.success.main,
+                            color: 'white',
+                            px: 1,
+                            py: 0.25,
+                            borderRadius: 1,
+                            fontSize: '0.7rem',
+                            fontWeight: 600,
+                          }}
+                        >
+                          Dipilih
+                        </Box>
+                      </Stack>
                       <Typography variant="body2" color="text.secondary">
-                        Pembayaran aman dan terpercaya dengan PayPal
+                        Pembayaran aman dengan berbagai metode: Kartu Kredit/Debit, E-Wallet, Bank Transfer, dan lainnya
                       </Typography>
                     </Box>
                   </Stack>
-                  
-                  <Alert severity="success" sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Keunggulan PayPal:</strong><br />
-                      • Pembayaran instan dan aman<br />
-                      • Dilindungi oleh PayPal Buyer Protection<br />
-                      • Tidak perlu berbagi informasi kartu kredit<br />
-                      • Mendukung berbagai mata uang
-                    </Typography>
-                  </Alert>
-                  
-                  <Alert severity="warning" sx={{ mb: 2 }}>
-                    <Typography variant="body2">
-                      <strong>Mode Sandbox:</strong> Ini adalah environment testing PayPal. 
-                      Gunakan akun PayPal sandbox untuk testing. Tidak ada transaksi sungguhan.
-                    </Typography>
-                  </Alert>
                 </Box>
-
-                {/* PayPal Payment Button */}
-                <PayPalPaymentButton
-                  order={order}
-                  onSuccess={(payment) => {
-                    console.log('Payment success, navigating with order ID:', order.id);
-                    addPayment(payment);
-                    // Navigate with both state and URL parameter for redundancy
-                    navigate(`/payment/success?order_id=${order.id}`, {
-                      state: { orderId: order.id }
-                    });
-                  }}
-                  onError={(error) => setError(error)}
-                />
               </CardContent>
             </Card>
 
-            {/* PayPal Information */}
+            {/* Payment Button */}
             <Card>
               <CardContent>
-                <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                  Informasi PayPal
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
+                  Pembayaran Midtrans
                 </Typography>
-                
-                <Stack spacing={2}>
-                  <Typography variant="body1">
-                    <strong>Cara Pembayaran PayPal:</strong>
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    1. Klik tombol "Bayar dengan PayPal" di atas<br />
-                    2. Anda akan diarahkan ke halaman PayPal<br />
-                    3. Login ke akun PayPal Anda<br />
-                    4. Konfirmasi pembayaran<br />
-                    5. Anda akan diarahkan kembali ke halaman sukses
-                  </Typography>
-                  
-                  <Alert severity="info">
+
+                {!paymentStatus?.has_active_payment && (
+                  <MidtransPaymentButton
+                    order={order}
+                    onSuccess={(payment) => {
+                      console.log('Midtrans payment success');
+                      addPayment(payment);
+                    }}
+                    onError={(error) => setError(error)}
+                  />
+                )}
+
+                {paymentStatus?.has_active_payment && (
+                  <Alert severity="warning" sx={{ mt: 2 }}>
                     <Typography variant="body2">
-                      <strong>Catatan:</strong> Jika Anda belum memiliki akun PayPal, 
-                      Anda dapat membuat akun baru langsung di halaman PayPal.
+                      <strong>Sesi pembayaran aktif terdeteksi!</strong><br />
+                      Anda sudah memiliki sesi pembayaran yang aktif. 
+                      Batalkan sesi pembayaran untuk membuat pembayaran baru atau lanjutkan pembayaran yang sudah ada.
                     </Typography>
                   </Alert>
-                </Stack>
+                )}
               </CardContent>
             </Card>
           </Grid>

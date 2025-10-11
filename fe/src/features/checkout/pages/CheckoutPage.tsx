@@ -8,7 +8,6 @@ import {
   CardContent,
   Button,
   useTheme,
-  Breadcrumbs,
   Link,
   Divider,
 } from '@mui/material';
@@ -26,30 +25,24 @@ import { CartItem } from '@/features/cart/types';
 import { PaymentMethod } from '@/features/orders/types';
 import CheckoutSummary from '../components/CheckoutSummary';
 import AddressSelector from '../components/AddressSelector';
-import PaymentMethodSelector from '../components/PaymentMethodSelector';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function CheckoutPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { formatPrice, loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   const [loading, setLoading] = useState(true);
   const [creatingOrder, setCreatingOrder] = useState(false);
+  const [orderCreated, setOrderCreated] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>('midtrans'); // Auto-select Midtrans
   const [shippingCost, setShippingCost] = useState(15000); // Default shipping cost
 
   const { items: cartItems, clearCart } = useCartStore();
   const { addOrder, setPaymentMethods, paymentMethods } = useOrderStore();
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
 
   // Filter available cart items
   const availableItems = cartItems.filter(item => item.product_variant.product.deleted_at === null);
@@ -77,11 +70,6 @@ export default function CheckoutPage() {
       return;
     }
 
-    if (!selectedPaymentMethod) {
-      setError('Pilih metode pembayaran terlebih dahulu');
-      return;
-    }
-
     if (availableItems.length === 0) {
       setError('Tidak ada item yang tersedia untuk checkout');
       return;
@@ -91,6 +79,7 @@ export default function CheckoutPage() {
       setCreatingOrder(true);
       setError(null);
 
+      // Create order first
       const response = await orderApi.createOrder({
         address_id: selectedAddress,
         shipping_cost: shippingCost
@@ -98,11 +87,14 @@ export default function CheckoutPage() {
 
       if (response.success) {
         addOrder(response.data);
+        setOrderCreated(true);
         clearCart();
-        // Redirect to payment page instead of order detail
-        navigate(`/payment/${response.data.id}`, { 
+        
+        // Always redirect to orders page
+        navigate(`/orders/${(response.data as any).order_id}`, { 
           state: { 
-            message: 'Order berhasil dibuat! Silakan lakukan pembayaran.' 
+            message: 'Order berhasil dibuat! Silakan lakukan pembayaran.',
+            selectedPaymentMethod: selectedPaymentMethod
           } 
         });
       }
@@ -115,14 +107,15 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
-    if (cartItems.length === 0) {
+    // Only redirect to cart if we're not in the middle of creating an order and order hasn't been created
+    if (cartItems.length === 0 && !creatingOrder && !orderCreated) {
       navigate('/cart');
       return;
     }
 
     fetchPaymentMethods();
     setLoading(false);
-  }, [cartItems.length, navigate]);
+  }, [cartItems.length, navigate, creatingOrder, orderCreated]);
 
   if (loading) {
     return (
@@ -155,47 +148,11 @@ export default function CheckoutPage() {
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
-        {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 4 }}>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <Home sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Beranda
-          </Link>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/cart')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <ShoppingCart sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Keranjang
-          </Link>
-          <Typography variant="body2" color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            <Payment sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Checkout
-          </Typography>
-        </Breadcrumbs>
+
 
         {/* Page Header */}
-        <Box sx={{ mb: 4 }}>
-          <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
             Checkout
           </Typography>
           <Typography variant="body1" color="text.secondary">
@@ -207,6 +164,20 @@ export default function CheckoutPage() {
         {error && (
           <Alert severity="error" sx={{ mb: 4 }} onClose={() => setError(null)}>
             {error}
+          </Alert>
+        )}
+
+        {/* Currency Loading State */}
+        {currencyLoading && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Loading exchange rates...
+          </Alert>
+        )}
+
+        {/* Currency Error State */}
+        {currencyError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Failed to load exchange rates. Prices will be displayed in default currency.
           </Alert>
         )}
 
@@ -230,27 +201,28 @@ export default function CheckoutPage() {
                 onAddressSelect={setSelectedAddress}
               />
 
-              {/* Payment Method Selection */}
-              <PaymentMethodSelector
-                paymentMethods={paymentMethods}
-                selectedMethod={selectedPaymentMethod}
-                onMethodSelect={setSelectedPaymentMethod}
-              />
-
               {/* Shipping Cost */}
-              <Card>
-                <CardContent>
+              <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <CardContent sx={{ p: 3 }}>
                   <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
                     Biaya Pengiriman
                   </Typography>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center">
-                    <Typography variant="body1">
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    py: 2,
+                    px: 2,
+                    backgroundColor: 'grey.50',
+                    borderRadius: 2,
+                  }}>
+                    <Typography variant="body1" fontWeight={500}>
                       Standard Delivery (2-3 hari kerja)
                     </Typography>
                     <Typography variant="h6" color="primary.main" fontWeight={700}>
                       {formatPrice(shippingCost)}
                     </Typography>
-                  </Stack>
+                  </Box>
                 </CardContent>
               </Card>
             </Stack>
@@ -269,7 +241,8 @@ export default function CheckoutPage() {
               total={total}
               onCreateOrder={handleCreateOrder}
               creatingOrder={creatingOrder}
-              disabled={!selectedAddress || !selectedPaymentMethod}
+              disabled={!selectedAddress}
+              selectedPaymentMethod={selectedPaymentMethod}
             />
           </Box>
         </Box>

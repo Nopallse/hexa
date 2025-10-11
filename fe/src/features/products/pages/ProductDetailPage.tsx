@@ -54,16 +54,7 @@ import { cartApi } from '@/features/cart/services/cartApi';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { getProductImageUrl } from '@/utils/image';
-
-// Simple price formatter for IDR
-const formatPrice = (amount: number): string => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
-};
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -77,6 +68,7 @@ export default function ProductDetailPage() {
   const theme = useTheme();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { formatPrice, formatPriceRange } = useCurrencyConversion();
   
   // State
   const [product, setProduct] = useState<Product | null>(null);
@@ -186,15 +178,6 @@ export default function ProductDetailPage() {
       setSelectedOptions({});
     }
   }, [product]);
-
-  // Format price helper
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
 
   // Get variant groups for option selection
   const getVariantGroups = () => {
@@ -429,7 +412,7 @@ export default function ProductDetailPage() {
                   {product.product_variants && product.product_variants.length > 0 ? (
                     <Box>
                       <Typography variant="h4" color="primary" fontWeight="bold">
-                        {product.price_range?.display || 'Harga bervariasi'}
+                        {formatPriceRange(product.product_variants)}
                       </Typography>
                       <Typography variant="body2" color="textSecondary">
                         Total Stok: {product.total_stock || 0} unit

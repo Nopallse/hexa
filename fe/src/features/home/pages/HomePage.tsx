@@ -5,6 +5,7 @@ import {
   Button, 
   Card, 
   CardContent, 
+  CardMedia,
   useTheme,
   Chip,
   Stack,
@@ -13,6 +14,9 @@ import {
   Avatar,
   Skeleton,
   Alert,
+  Grid,
+  Paper,
+  Rating,
 } from '@mui/material';
 import { 
   ShoppingBag, 
@@ -25,11 +29,20 @@ import {
   Support,
   Favorite,
   Visibility,
+  AccessTime,
+  People,
+  ThumbUp,
+  NavigateBefore as PrevIcon,
+  NavigateNext as NextIcon,
+  WhatsApp as WhatsAppIcon,
+  Instagram as InstagramIcon,
 } from '@mui/icons-material';
+
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { categoryApi } from '@/features/categories/services/categoryApi';
 import { Category } from '@/types/global';
+import { getCategoryImageUrl } from '@/utils/image';
 
 export default function HomePage() {
   const theme = useTheme();
@@ -37,6 +50,32 @@ export default function HomePage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [currentSlide, setCurrentSlide] = useState(0);
+
+  // Banner images data
+  const bannerImages = [
+    {
+      id: 1,
+      image: '/images/handmade-banner.jpg',
+      title: 'Handmade Collection',
+      subtitle: 'Discover unique crochet and macrame creations',
+      alt: 'Handmade Craft Collection - Three women showcasing colorful crochet products'
+    },
+    {
+      id: 2,
+      image: '/images/handmade-banner2.png',
+      title: 'Crafted with Love',
+      subtitle: 'Every piece tells a story of dedication and passion',
+      alt: 'Crafting process showing hands creating beautiful handmade items'
+    },
+    {
+      id: 3,
+      image: '/images/handmade-banner3.png',
+      title: 'Custom Design',
+      subtitle: 'Personalized creations tailored to your unique style',
+      alt: 'Custom handmade products showcase'
+    }
+  ];
 
   useEffect(() => {
     const fetchCategories = async () => {
@@ -55,262 +94,798 @@ export default function HomePage() {
     fetchCategories();
   }, []);
 
+  // Auto-slide effect
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % bannerImages.length);
+    }, 5000); // Change slide every 5 seconds
+
+    return () => clearInterval(interval);
+  }, [bannerImages.length]);
+
+  const nextSlide = () => {
+    setCurrentSlide((prev) => (prev + 1) % bannerImages.length);
+  };
+
+  const prevSlide = () => {
+    setCurrentSlide((prev) => (prev - 1 + bannerImages.length) % bannerImages.length);
+  };
+
   const handleCategoryClick = (category: Category) => {
     navigate(`/products?category=${category.id}`);
   };
 
   return (
     <Box>
-      {/* Hero Section - Modern Craft Aesthetic */}
-      <Box
-        sx={{
-          background: `
-            linear-gradient(135deg, 
-              rgba(150, 130, 219, 0.95) 0%, 
-              rgba(166, 130, 219, 0.9) 50%, 
-              rgba(196, 181, 232, 0.85) 100%
-            ),
-            url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M50 0L60 40L100 50L60 60L50 100L40 60L0 50L40 40Z'/%3E%3C/g%3E%3C/svg%3E")
-          `,
-          color: 'white',
-          py: { xs: 8, md: 16 },
-          textAlign: 'center',
+      {/* Banner Slider Section */}
+      <Box sx={{ 
           position: 'relative',
+        width: '100%', 
+        height: { xs: '60vh', sm: '70vh', md: '80vh' },
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 20% 80%, rgba(255, 255, 255, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 80% 20%, rgba(255, 255, 255, 0.08) 0%, transparent 50%),
-              linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.05) 50%, transparent 70%)
-            `,
-            animation: 'craftFloat 25s ease-in-out infinite',
-          },
-          '&::after': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              repeating-linear-gradient(
-                45deg,
-                transparent,
-                transparent 2px,
-                rgba(255, 255, 255, 0.02) 2px,
-                rgba(255, 255, 255, 0.02) 4px
-              )
-            `,
-            animation: 'textureMove 30s linear infinite',
-          },
-          '@keyframes craftFloat': {
-            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
-            '33%': { transform: 'translateY(-10px) rotate(1deg)' },
-            '66%': { transform: 'translateY(5px) rotate(-1deg)' },
-          },
-          '@keyframes textureMove': {
-            '0%': { transform: 'translateX(0px) translateY(0px)' },
-            '100%': { transform: 'translateX(20px) translateY(20px)' },
-          },
-        }}
-      >
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
-          <Typography 
-            variant="h1" 
-            component="h1" 
-            gutterBottom 
-            fontWeight={700}
+        borderRadius: 0,
+      }}>
+        {/* Slider Images */}
+        {bannerImages.map((banner, index) => (
+          <Box
+            key={banner.id}
             sx={{
-              fontSize: { xs: '2.8rem', md: '4.5rem' },
-              mb: 4,
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8f4ff 50%, #e8e0ff 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
-              letterSpacing: '-0.02em',
-              fontFamily: '"Playfair Display", "Georgia", serif',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+              width: '100%',
+              height: '100%',
+              opacity: currentSlide === index ? 1 : 0,
+              transition: 'opacity 1s ease-in-out',
+              zIndex: 1,
             }}
           >
-            Selamat Datang di Hexa Crochet
+            <CardMedia
+              component="img"
+              image={banner.image}
+              alt={banner.alt}
+              sx={{
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                objectPosition: 'center',
+              }}
+            />
+            
+            {/* Overlay with Content */}
+            <Box
+              sx={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+                background: 'linear-gradient(45deg, rgba(0,0,0,0.3) 0%, rgba(0,0,0,0.1) 100%)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 2,
+              }}
+            >
+              <Container maxWidth="lg">
+                <Box sx={{ textAlign: 'center', color: 'white' }}>
+          <Typography 
+                    variant="h2"
+            component="h1" 
+            gutterBottom 
+            sx={{
+                      fontWeight: 700,
+                      fontSize: { xs: '2rem', sm: '3rem', md: '4rem' },
+              fontFamily: '"Playfair Display", "Georgia", serif',
+                      textShadow: '2px 2px 4px rgba(0,0,0,0.5)',
+                      mb: 2,
+            }}
+          >
+                    {banner.title}
           </Typography>
           <Typography 
             variant="h5" 
-            paragraph 
             sx={{ 
-              opacity: 0.95,
-              fontSize: { xs: '1.2rem', md: '1.6rem' },
-              maxWidth: '700px',
-              mx: 'auto',
-              mb: 6,
               fontWeight: 300,
-              lineHeight: 1.6,
-              fontStyle: 'italic',
-              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
-            }}
-          >
-            Temukan koleksi rajutan handmade berkualitas tinggi dengan desain unik dan menarik
+                      fontSize: { xs: '1rem', sm: '1.2rem', md: '1.5rem' },
+                      textShadow: '1px 1px 2px rgba(0,0,0,0.5)',
+                      mb: 4,
+                      maxWidth: '600px',
+                      mx: 'auto',
+                    }}
+                  >
+                    {banner.subtitle}
           </Typography>
-          
-          <Stack 
-            direction={{ xs: 'column', sm: 'row' }} 
-            spacing={2} 
-            justifyContent="center"
-            sx={{ mb: 6 }}
-          >
-            <Button
-              variant="contained"
-              size="large"
-              component={Link}
-              to="/products"
-              endIcon={<ArrowForward />}
-              sx={{
-                bgcolor: 'rgba(255, 255, 255, 0.95)',
-                color: 'primary.main',
-                px: 5,
-                py: 2,
-                fontSize: '1.2rem',
-                fontWeight: 600,
-                borderRadius: 4,
-                boxShadow: '0 12px 40px rgba(0,0,0,0.15)',
-                backdropFilter: 'blur(20px)',
-                border: '1px solid rgba(255, 255, 255, 0.3)',
-                textTransform: 'none',
-                letterSpacing: '0.5px',
-                '&:hover': {
-                  bgcolor: 'rgba(255, 255, 255, 1)',
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 16px 50px rgba(0,0,0,0.2)',
-                },
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              Jelajahi Produk
-            </Button>
-            <Button
-              variant="outlined"
-              size="large"
-              endIcon={<Visibility />}
-              onClick={() => {
-                const categoriesSection = document.getElementById('categories-section');
-                categoriesSection?.scrollIntoView({ behavior: 'smooth' });
-              }}
-              sx={{
-                borderColor: 'rgba(255, 255, 255, 0.6)',
-                color: 'white',
-                px: 5,
-                py: 2,
-                fontSize: '1.2rem',
-                fontWeight: 600,
-                borderRadius: 4,
-                backdropFilter: 'blur(20px)',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                borderWidth: 2,
-                textTransform: 'none',
-                letterSpacing: '0.5px',
-                '&:hover': {
-                  borderColor: 'rgba(255, 255, 255, 0.9)',
-                  bgcolor: 'rgba(255, 255, 255, 0.2)',
-                  transform: 'translateY(-3px)',
-                  boxShadow: '0 16px 50px rgba(255, 255, 255, 0.1)',
-                },
-                transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-              }}
-            >
-              Lihat Kategori
-            </Button>
+                  <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+           
           </Stack>
-
-          {/* Stats - Craft Aesthetic */}
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
-              gap: 3,
-              maxWidth: '800px',
-              mx: 'auto',
-            }}
-          >
-            {[
-              { label: 'Produk', value: '500+', icon: <ShoppingBag />, color: '#E8B4B8' },
-              { label: 'Kategori', value: '20+', icon: <CategoryIcon />, color: '#B8E6B8' },
-              { label: 'Pelanggan', value: '1000+', icon: <Favorite />, color: '#B8D4E8' },
-              { label: 'Rating', value: '4.9', icon: <Star />, color: '#F4E4C1' },
-            ].map((stat, index) => (
-              <Box
-                key={index}
-                sx={{
-                  textAlign: 'center',
-                  p: 3,
-                  borderRadius: 3,
-                  backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                  backdropFilter: 'blur(20px)',
-                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    background: `linear-gradient(135deg, ${stat.color}20, transparent)`,
-                    opacity: 0.6,
-                  },
-                  '&:hover': {
-                    transform: 'translateY(-4px)',
-                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)',
-                  },
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                }}
-              >
-                <Box sx={{ color: 'white', mb: 2, position: 'relative', zIndex: 1 }}>
-                  {stat.icon}
                 </Box>
-                <Typography 
-                  variant="h3" 
-                  fontWeight={700} 
-                  color="white"
+              </Container>
+            </Box>
+          </Box>
+        ))}
+
+        {/* Navigation Arrows */}
+        <IconButton
+          onClick={prevSlide}
+            sx={{
+            position: 'absolute',
+            left: { xs: 10, sm: 20 },
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 3,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            color: 'white',
+            '&:hover': {
+              backgroundColor: 'rgba(255,255,255,0.3)',
+            },
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <PrevIcon sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }} />
+        </IconButton>
+
+        <IconButton
+          onClick={nextSlide}
+                sx={{
+                    position: 'absolute',
+            right: { xs: 10, sm: 20 },
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: 3,
+            backgroundColor: 'rgba(255,255,255,0.2)',
+            color: 'white',
+                  '&:hover': {
+              backgroundColor: 'rgba(255,255,255,0.3)',
+            },
+            transition: 'all 0.3s ease',
+          }}
+        >
+          <NextIcon sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }} />
+        </IconButton>
+
+        {/* Dots Indicator */}
+        <Box
                   sx={{ 
-                    position: 'relative', 
-                    zIndex: 1,
-                    textShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {stat.value}
-                </Typography>
-                <Typography 
-                  variant="body2" 
-                  color="rgba(255, 255, 255, 0.9)"
+            position: 'absolute',
+            bottom: { xs: 20, sm: 30 },
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 3,
+            display: 'flex',
+            gap: 1,
+          }}
+        >
+          {bannerImages.map((_, index) => (
+            <Box
+              key={index}
+              onClick={() => setCurrentSlide(index)}
                   sx={{ 
-                    position: 'relative', 
-                    zIndex: 1,
-                    fontWeight: 500,
-                    letterSpacing: '0.5px',
-                  }}
-                >
-                  {stat.label}
-                </Typography>
-              </Box>
+                width: { xs: 8, sm: 12 },
+                height: { xs: 8, sm: 12 },
+                borderRadius: '50%',
+                backgroundColor: currentSlide === index ? 'white' : 'rgba(255,255,255,0.5)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                '&:hover': {
+                  backgroundColor: 'white',
+                  transform: 'scale(1.2)',
+                },
+              }}
+            />
             ))}
           </Box>
-        </Container>
       </Box>
 
-      {/* Categories Section - Modern Craft Aesthetic */}
-      <Container maxWidth="xl" sx={{ py: 12 }} id="categories-section">
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
+      {/* Categories Section - Dynamic & Natural */}
+      <Container maxWidth="xl" sx={{ py: { xs: 8, md: 12 } }} id="categories-section">
+        <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 } }}>
         <Typography
           variant="h3"
           component="h2"
           gutterBottom
+            fontWeight={700}
+            sx={{
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 3,
+              fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' },
+              fontFamily: '"Playfair Display", "Georgia", serif',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Handmade Collection
+        </Typography>
+          <Typography 
+            variant="h6" 
+            color="text.secondary" 
+            sx={{ 
+              maxWidth: '500px', 
+              mx: 'auto',
+              fontSize: { xs: '0.9rem', md: '1.1rem' },
+              fontWeight: 300,
+              lineHeight: 1.6,
+              fontStyle: 'italic',
+            }}
+          >
+                </Typography>
+          </Box>
+
+        {loading ? (
+          <Grid container spacing={4}>
+            {[...Array(6)].map((_, index) => (
+              <Grid item xs={12} sm={6} md={4} key={index}>
+                <Card sx={{ borderRadius: 4, overflow: 'hidden', height: '100%' }}>
+                  <Skeleton variant="rectangular" width="100%" height={200} />
+                  <CardContent>
+                    <Skeleton variant="text" width="80%" height={30} />
+                </CardContent>
+              </Card>
+              </Grid>
+            ))}
+          </Grid>
+        ) : error ? (
+          <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
+            {error}
+          </Alert>
+        ) : (
+          <Grid container spacing={4}>
+            {categories.map((category, index) => (
+              <Grid item xs={6} sm={6} md={4} key={category.id}>
+                <Box
+                  sx={{
+                    position: 'relative',
+                    transform: `rotate(${index % 2 === 0 ? '-2deg' : '1deg'})`,
+                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                    '&:hover': {
+                      transform: `rotate(0deg) translateY(-8px)`,
+                      zIndex: 2,
+                    },
+                  }}
+                >
+                  <Card
+                    sx={{
+                      height: '100%',
+                      cursor: 'pointer',
+                      borderRadius: { xs: 3, md: 4 },
+                      overflow: 'hidden',
+                      position: 'relative',
+                      background: 'white',
+                      border: `2px solid ${theme.palette.primary.light}30`,
+                      boxShadow: `0 8px 32px ${theme.palette.primary.main}10`,
+                      '&:hover': {
+                        boxShadow: `0 20px 60px ${theme.palette.primary.main}20`,
+                        '& .category-image': {
+                          transform: 'scale(1.05) rotate(2deg)',
+                        },
+                        '& .category-overlay': {
+                          opacity: 1,
+                        },
+                        '& .category-name': {
+                          transform: 'scale(1.05)',
+                        },
+                      },
+                    }}
+                    onClick={() => handleCategoryClick(category)}
+                  >
+                    <CardActionArea sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                      {/* Category Image with Name Overlay */}
+                      <Box
+                        sx={{
+                          aspectRatio: '1/1',
+                          position: 'relative',
+                          overflow: 'hidden',
+                          background: `linear-gradient(45deg, ${theme.palette.primary.light}15, ${theme.palette.secondary.light}15)`,
+                        }}
+                      >
+                        <CardMedia
+                          component="img"
+                          image={getCategoryImageUrl(category.image)}
+                          alt={category.name}
+                          className="category-image"
+                          sx={{
+                            objectFit: 'cover',
+                            transition: 'transform 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                            width: '100%',
+                            height: '100%',
+                          }}
+                        />
+                        {/* Name Overlay */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            background: 'linear-gradient(135deg, rgba(0, 0, 0, 0.3) 0%, rgba(0, 0, 0, 0.7) 100%)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            opacity: 0,
+                            transition: 'opacity 0.3s ease',
+                          }}
+                          className="category-overlay"
+                        >
+                          <Typography
+                            variant="h4"
+                            fontWeight={700}
+                            className="category-name"
+                            sx={{
+                              color: 'white',
+                              textAlign: 'center',
+                              fontFamily: '"Playfair Display", "Georgia", serif',
+                              letterSpacing: '-0.01em',
+                              textShadow: '0 2px 8px rgba(0,0,0,0.7)',
+                              px: 2,
+                              fontSize: { xs: '1.3rem', sm: '1.6rem', md: '1.8rem' },
+                              transform: 'scale(0.95)',
+                              transition: 'transform 0.3s ease',
+                            }}
+                          >
+                            {category.name}
+                          </Typography>
+                        </Box>
+
+                        {/* Decorative Elements */}
+                        <Box
+                          sx={{
+                            position: 'absolute',
+                            top: 12,
+                            right: 12,
+                            width: 20,
+                            height: 20,
+                            borderRadius: '50%',
+                            background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                            opacity: 0.7,
+                            animation: 'pulse 2s infinite',
+                            '@keyframes pulse': {
+                              '0%': { transform: 'scale(1)', opacity: 0.7 },
+                              '50%': { transform: 'scale(1.2)', opacity: 0.4 },
+                              '100%': { transform: 'scale(1)', opacity: 0.7 },
+                            },
+                          }}
+                        />
+                      </Box>
+                    </CardActionArea>
+                  </Card>
+                </Box>
+              </Grid>
+            ))}
+          </Grid>
+        )}
+
+        <Box sx={{ textAlign: 'center', mt: 6 }}>
+          <Button
+            variant="contained"
+            size="large"
+            component={Link}
+            to="/products"
+            endIcon={<ArrowForward />}
+            sx={{
+              px: 5,
+              py: 2,
+              fontSize: '1.1rem',
+              fontWeight: 700,
+              borderRadius: '50px',
+              background: `linear-gradient(45deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+              boxShadow: `0 8px 24px ${theme.palette.primary.main}30`,
+              transform: 'rotate(-1deg)',
+              transition: 'all 0.3s ease',
+              '&:hover': {
+                transform: 'rotate(0deg) translateY(-3px)',
+                boxShadow: `0 12px 32px ${theme.palette.primary.main}40`,
+                background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+              },
+            }}
+          >
+            Jelajahi Semua Produk
+          </Button>
+        </Box>
+      </Container>
+
+      {/* Featured Products Section - Playful & Dynamic */}
+      <Box sx={{ 
+        background: `linear-gradient(135deg, ${theme.palette.grey[50]} 0%, ${theme.palette.primary.light}05 100%)`,
+        py: { xs: 8, md: 12 },
+                          position: 'relative',
+        overflow: 'hidden',
+                          '&::before': {
+                            content: '""',
+                            position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%239688d9' fill-opacity='0.03'%3E%3Ccircle cx='30' cy='30' r='2'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+          zIndex: 0,
+        },
+      }}>
+        <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 1 }}>
+          <Box sx={{ textAlign: 'center', mb: { xs: 6, md: 8 } }}>
+            <Typography
+              variant="h3"
+              component="h2"
+              gutterBottom
+              fontWeight={700}
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 3,
+                fontSize: { xs: '2rem', sm: '2.5rem', md: '3.5rem' },
+                fontFamily: '"Playfair Display", "Georgia", serif',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Featured Handmade
+            </Typography>
+            <Typography 
+              variant="h6" 
+              color="text.secondary" 
+                          sx={{ 
+                maxWidth: '500px', 
+                mx: 'auto',
+                fontSize: { xs: '0.9rem', md: '1.1rem' },
+                fontWeight: 300,
+                lineHeight: 1.6,
+                fontStyle: 'italic',
+              }}
+            >
+            </Typography>
+          </Box>
+
+          <Grid container spacing={4}>
+            {[
+              {
+                id: '1',
+                name: 'Crochet Pillow',
+                price: 'Rp 150.000',
+                image: '/images/featured-1.jpg',
+              },
+              {
+                id: '2',
+                name: 'Crochet Bag',
+                price: 'Rp 200.000',
+                image: '/images/featured-2.jpg',
+              },
+              {
+                id: '3',
+                name: 'Crochet Scarf',
+                price: 'Rp 180.000',
+                image: '/images/featured-3.jpg',
+              },
+              {
+                id: '4',
+                name: 'Crochet Hat',
+                price: 'Rp 120.000',
+                image: '/images/featured-4.jpg',
+              },
+            ].map((product, index) => (
+              <Grid item xs={12} sm={6} md={3} key={product.id}>
+              <Card
+                sx={{
+                    height: '100%',
+                    transition: 'all 0.3s ease',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    background: 'white',
+                    border: `1px solid ${theme.palette.grey[200]}`,
+                    '&:hover': {
+                      transform: 'translateY(-4px)',
+                      boxShadow: `0 12px 24px ${theme.palette.primary.main}15`,
+                    },
+                  }}
+                >
+                  <CardActionArea sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    {/* Product Image */}
+                    <Box sx={{ height: 250 }}>
+                      <CardMedia
+                        component="img"
+                        height="250"
+                        image={product.image}
+                        alt={product.name}
+                      sx={{ 
+                          objectFit: 'cover',
+                          width: '100%',
+                          }} 
+                        />
+          </Box>
+
+                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={600}
+                      sx={{
+                          mb: 2,
+                        fontFamily: '"Playfair Display", "Georgia", serif',
+                        color: 'text.primary',
+                      }}
+                    >
+                        {product.name}
+                </Typography>
+
+                    <Typography 
+                        variant="h6"
+                        fontWeight={700}
+                        color="primary.main"
+                      >
+                        {product.price}
+                </Typography>
+              </CardContent>
+                  </CardActionArea>
+            </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+          <Box sx={{ textAlign: 'center', mt: 6 }}>
+          <Button
+              variant="outlined"
+            size="large"
+            component={Link}
+            to="/products"
+              endIcon={<ArrowForward />}
+              sx={{
+                px: 4,
+                py: 1.5,
+                fontSize: '1.1rem',
+                fontWeight: 600,
+                borderRadius: 3,
+              }}
+            >
+              Lihat Semua Produk
+            </Button>
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Latest Products Section */}
+      <Box sx={{ bgcolor: 'grey.50', py: 12 }}>
+        <Container maxWidth="xl">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography
+              variant="h3"
+              component="h2"
+                        gutterBottom
+              fontWeight={700}
+                        sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                          mb: 3,
+                fontSize: { xs: '2.2rem', md: '3.5rem' },
+                          fontFamily: '"Playfair Display", "Georgia", serif',
+                letterSpacing: '-0.02em',
+                        }}
+                      >
+              Latest Handmade
+                </Typography>
+                        <Typography
+              variant="h6" 
+                          color="text.secondary"
+                          sx={{
+                maxWidth: '600px', 
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.2rem' },
+                fontWeight: 300,
+                            lineHeight: 1.6,
+                          }}
+                        >
+                </Typography>
+          </Box>
+
+          <Grid container spacing={4}>
+            {[
+              {
+                id: '1',
+                name: 'Crochet Blanket',
+                price: 'Rp 350.000',
+                image: '/images/latest-1.jpg',
+                isNew: true,
+                category: 'Home Decor',
+              },
+              {
+                id: '2',
+                name: 'Macrame Wall Hanging',
+                price: 'Rp 280.000',
+                image: '/images/latest-2.jpg',
+                isNew: true,
+                category: 'Wall Art',
+              },
+              {
+                id: '3',
+                name: 'Crochet Sweater',
+                price: 'Rp 450.000',
+                image: '/images/latest-3.jpg',
+                isNew: true,
+                category: 'Fashion',
+              },
+              {
+                id: '4',
+                name: 'Handwoven Basket',
+                price: 'Rp 180.000',
+                image: '/images/latest-4.jpg',
+                isNew: true,
+                category: 'Storage',
+              },
+              {
+                id: '5',
+                name: 'Crochet Plant Hanger',
+                price: 'Rp 120.000',
+                image: '/images/latest-5.jpg',
+                isNew: true,
+                category: 'Garden',
+              },
+              {
+                id: '6',
+                name: 'Macrame Table Runner',
+                price: 'Rp 200.000',
+                image: '/images/latest-6.jpg',
+                isNew: true,
+                category: 'Table Decor',
+              },
+            ].map((product, index) => (
+              <Grid item xs={12} sm={6} md={4} key={product.id}>
+                <Card
+                  sx={{
+                    height: '100%',
+                    transition: 'all 0.3s ease',
+                    borderRadius: 4,
+                    overflow: 'hidden',
+                    background: 'white',
+                    border: `1px solid ${theme.palette.grey[200]}`,
+                    position: 'relative',
+                    '&:hover': {
+                      transform: 'translateY(-8px)',
+                      boxShadow: `0 20px 40px ${theme.palette.primary.main}20`,
+                    },
+                  }}
+                >
+                  <CardActionArea sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    {/* Product Image */}
+                    <Box sx={{ position: 'relative', height: 250 }}>
+                      <CardMedia
+                        component="img"
+                        height="250"
+                        image={product.image}
+                        alt={product.name}
+                        sx={{
+                          objectFit: 'cover',
+                          width: '100%',
+                        }}
+                      />
+                      {/* New Badge */}
+                      {product.isNew && (
+                      <Chip
+                          label="NEW"
+                          size="small"
+                        sx={{
+                            position: 'absolute',
+                            top: 12,
+                            left: 12,
+                            bgcolor: 'success.main',
+                            color: 'white',
+                            fontWeight: 700,
+                            fontSize: '0.7rem',
+                            height: 24,
+                          }}
+                        />
+                      )}
+                      {/* Category Badge */}
+                      <Chip
+                        label={product.category}
+                        size="small"
+                        sx={{
+                          position: 'absolute',
+                          top: 12,
+                          right: 12,
+                          bgcolor: 'rgba(255, 255, 255, 0.9)',
+                          color: 'text.primary',
+                          fontWeight: 600,
+                          fontSize: '0.7rem',
+                          height: 24,
+                        }}
+                      />
+                    </Box>
+
+                    <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <Typography
+                        variant="h6"
+                        fontWeight={600}
+                        sx={{
+                          mb: 1,
+                          fontFamily: '"Playfair Display", "Georgia", serif',
+                          color: 'text.primary',
+                        }}
+                      >
+                        {product.name}
+                      </Typography>
+
+                      <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{
+                          mb: 2,
+                          fontSize: '0.9rem',
+                        }}
+                      >
+                        {product.category}
+                      </Typography>
+
+                      <Box sx={{ mt: 'auto' }}>
+                        <Typography
+                          variant="h6"
+                          fontWeight={700}
+                          color="primary.main"
+                          sx={{ mb: 2 }}
+                        >
+                          {product.price}
+                        </Typography>
+                        
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          sx={{
+                          borderRadius: 3,
+                            py: 1,
+                            fontWeight: 600,
+                            borderColor: theme.palette.primary.main,
+                            color: theme.palette.primary.main,
+                          '&:hover': {
+                              bgcolor: theme.palette.primary.main,
+                              color: 'white',
+                              transform: 'translateY(-1px)',
+                          },
+                        }}
+                        >
+                          View Details
+                        </Button>
+                      </Box>
+              </CardContent>
+                  </CardActionArea>
+            </Card>
+              </Grid>
+            ))}
+          </Grid>
+
+        <Box sx={{ textAlign: 'center', mt: 6 }}>
+          <Button
+              variant="contained"
+            size="large"
+            component={Link}
+              to="/products?sort=newest"
+            endIcon={<ArrowForward />}
+            sx={{
+              px: 4,
+              py: 1.5,
+              fontSize: '1.1rem',
+              fontWeight: 600,
+              borderRadius: 3,
+                background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                '&:hover': {
+                  background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
+                  transform: 'translateY(-2px)',
+                },
+            }}
+          >
+              View All Latest Products
+          </Button>
+        </Box>
+      </Container>
+      </Box>
+
+      {/* Video Section */}
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <Box sx={{ textAlign: 'center', mb: 8 }}>
+          <Typography
+            variant="h3"
+            component="h2"
+            gutterBottom
             fontWeight={700}
             sx={{
               background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
@@ -323,382 +898,961 @@ export default function HomePage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Kategori Produk
-        </Typography>
+            Watch Our Craft
+          </Typography>
           <Typography 
             variant="h6" 
             color="text.secondary" 
             sx={{ 
-              maxWidth: '700px', 
+              maxWidth: '600px', 
               mx: 'auto',
-              fontSize: { xs: '1.1rem', md: '1.3rem' },
+              fontSize: { xs: '1rem', md: '1.2rem' },
               fontWeight: 300,
               lineHeight: 1.6,
-              fontStyle: 'italic',
             }}
           >
-            Jelajahi berbagai kategori produk rajutan berkualitas tinggi yang kami sediakan
-                </Typography>
-          </Box>
-
-        {loading ? (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-              gap: 3,
-            }}
-          >
-            {[...Array(6)].map((_, index) => (
-              <Card key={index} sx={{ height: '100%' }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Skeleton variant="circular" width={60} height={60} sx={{ mx: 'auto', mb: 2 }} />
-                  <Skeleton variant="text" height={32} sx={{ mb: 1 }} />
-                  <Skeleton variant="text" height={20} sx={{ mb: 2 }} />
-                  <Skeleton variant="rectangular" height={24} width={100} sx={{ mx: 'auto' }} />
-                </CardContent>
-              </Card>
-            ))}
-          </Box>
-        ) : error ? (
-          <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
-            {error}
-          </Alert>
-        ) : (
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
-              gap: 3,
-            }}
-          >
-            {categories.map((category) => (
-              <Card
-                key={category.id}
-                sx={{
-                    height: '100%',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    cursor: 'pointer',
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                    position: 'relative',
-                    background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
-                    border: `1px solid ${theme.palette.primary.light}20`,
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: `
-                        radial-gradient(circle at 20% 20%, ${theme.palette.primary.light}15 0%, transparent 50%),
-                        radial-gradient(circle at 80% 80%, ${theme.palette.secondary.light}15 0%, transparent 50%)
-                      `,
-                      opacity: 0,
-                      transition: 'opacity 0.3s ease',
-                    },
-                    '&:hover': {
-                      transform: 'translateY(-12px)',
-                      boxShadow: `0 25px 50px ${theme.palette.primary.main}25`,
-                      '&::before': {
-                        opacity: 1,
-                      },
-                    },
-                  }}
-                  onClick={() => handleCategoryClick(category)}
-                >
-                  <CardActionArea sx={{ height: '100%' }}>
-                    <CardContent sx={{ p: 5, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                      <Box
-                        sx={{
-                          width: 100,
-                          height: 100,
-                          mx: 'auto',
-                          mb: 4,
-                          borderRadius: '50%',
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.primary.light} 100%)`,
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          position: 'relative',
-                          '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: -2,
-                            left: -2,
-                            right: -2,
-                            bottom: -2,
-                            borderRadius: '50%',
-                            background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main}, ${theme.palette.primary.light})`,
-                            zIndex: -1,
-                            opacity: 0.3,
-                          },
-                        }}
-                      >
-                        <CategoryIcon 
-                          sx={{ 
-                            fontSize: '2.5rem', 
-                            color: 'white',
-                            filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.1))',
-                          }} 
-                        />
-          </Box>
-
-                      <Typography
-                        variant="h5"
-                        fontWeight={600}
-                        gutterBottom
-                        sx={{
-                          mb: 3,
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          color: 'text.primary',
-                          fontFamily: '"Playfair Display", "Georgia", serif',
-                          letterSpacing: '-0.01em',
-                        }}
-                      >
-                        {category.name}
-                </Typography>
-
-                      {category.description && (
-                        <Typography
-                          variant="body2"
-                          color="text.secondary"
-                          sx={{
-                            flex: 1,
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 3,
-                            WebkitBoxOrient: 'vertical',
-                            mb: 4,
-                            lineHeight: 1.6,
-                            fontStyle: 'italic',
-                          }}
-                        >
-                          {category.description}
-                </Typography>
-                      )}
-
-                      <Chip
-                        label="Jelajahi Produk"
-                        sx={{
-                          fontWeight: 600,
-                          fontSize: '0.9rem',
-                          px: 2,
-                          py: 1,
-                          borderRadius: 3,
-                          background: `linear-gradient(135deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                          color: 'white',
-                          border: 'none',
-                          '&:hover': {
-                            background: `linear-gradient(135deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
-                            transform: 'scale(1.05)',
-                          },
-                          transition: 'all 0.3s ease',
-                        }}
-                      />
-              </CardContent>
-                  </CardActionArea>
-            </Card>
-            ))}
-          </Box>
-        )}
-
-        <Box sx={{ textAlign: 'center', mt: 6 }}>
-          <Button
-            variant="outlined"
-            size="large"
-            component={Link}
-            to="/products"
-            endIcon={<ArrowForward />}
-            sx={{
-              px: 4,
-              py: 1.5,
-              fontSize: '1.1rem',
-              fontWeight: 600,
-              borderRadius: 3,
-            }}
-          >
-            Lihat Semua Produk
-          </Button>
+            Lihat bagaimana kami membuat setiap produk dengan tangan yang terampil
+          </Typography>
         </Box>
-      </Container>
 
-      {/* Features Section - Modern Craft Aesthetic */}
+        <Grid container spacing={6} alignItems="center">
+          <Grid item xs={12} md={6}>
       <Box 
         sx={{ 
-          background: `
-            linear-gradient(135deg, #faf8ff 0%, #f0f4ff 50%, #f8f4ff 100%),
-            url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23E8B4B8' fill-opacity='0.03'%3E%3Cpath d='M30 0L35 20L55 30L35 40L30 60L25 40L5 30L25 20Z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")
-          `,
-          py: 12,
           position: 'relative',
-          '&::before': {
-            content: '""',
+                borderRadius: 4,
+                overflow: 'hidden',
+                boxShadow: `0 20px 40px ${theme.palette.primary.main}20`,
+                '&:hover': {
+                  transform: 'scale(1.02)',
+                  transition: 'transform 0.3s ease',
+                },
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'relative',
+                  width: '100%',
+                  height: 0,
+                  paddingBottom: '56.25%', // 16:9 aspect ratio
+                  background: `linear-gradient(135deg, ${theme.palette.primary.light}20, ${theme.palette.secondary.light}20)`,
+                }}
+              >
+                <Box
+                  sx={{
             position: 'absolute',
             top: 0,
             left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 10% 20%, rgba(232, 180, 184, 0.05) 0%, transparent 50%),
-              radial-gradient(circle at 90% 80%, rgba(184, 212, 232, 0.05) 0%, transparent 50%)
-            `,
+                    width: '100%',
+                    height: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    cursor: 'pointer',
+                    '&:hover': {
+                      background: 'rgba(0, 0, 0, 0.4)',
           },
         }}
       >
-        <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 1 }}>
+                  <Box
+                    sx={{
+                      width: 80,
+                      height: 80,
+                      borderRadius: '50%',
+                      bgcolor: 'rgba(255, 255, 255, 0.9)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        transform: 'scale(1.1)',
+                        bgcolor: 'white',
+                      },
+                    }}
+                  >
+                    <Box
+                      sx={{
+                        width: 0,
+                        height: 0,
+                        borderLeft: `20px solid ${theme.palette.primary.main}`,
+                        borderTop: '12px solid transparent',
+                        borderBottom: '12px solid transparent',
+                        marginLeft: '4px',
+                      }}
+                    />
+                  </Box>
+                </Box>
+                <CardMedia
+                  component="img"
+                  image="/images/video-thumbnail.jpg"
+                  alt="Crafting process video"
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    objectFit: 'cover',
+                  }}
+                />
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+              <Typography
+                variant="h4"
+                fontWeight={600}
+                sx={{
+                  mb: 3,
+                  fontFamily: '"Playfair Display", "Georgia", serif',
+                  color: 'text.primary',
+                }}
+              >
+                The Art of Handmade
+              </Typography>
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{
+                  mb: 4,
+                  lineHeight: 1.7,
+                  fontSize: '1.1rem',
+                }}
+              >
+                Setiap produk yang kami buat adalah hasil dari keahlian tangan yang telah diasah selama bertahun-tahun. Dalam video ini, Anda dapat melihat proses pembuatan yang detail dan penuh dedikasi.
+              </Typography>
+              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.primary.light + '20',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: theme.palette.primary.main,
+                    }}
+                  >
+                    <Star sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="body1" color="text.secondary">
+                    Proses pembuatan step-by-step
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.secondary.light + '20',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: theme.palette.secondary.main,
+                    }}
+                  >
+                    <Favorite sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="body1" color="text.secondary">
+                    Teknik kerajinan tradisional
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box
+                    sx={{
+                      width: 40,
+                      height: 40,
+                      borderRadius: '50%',
+                      bgcolor: theme.palette.craft.blush + '20',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: theme.palette.craft.blush,
+                    }}
+                  >
+                    <Security sx={{ fontSize: 20 }} />
+                  </Box>
+                  <Typography variant="body1" color="text.secondary">
+                    Quality control yang ketat
+                  </Typography>
+                </Box>
+              </Box>
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* Stats Section */}
+      <Box sx={{ bgcolor: 'primary.light', py: 8 }}>
+        <Container maxWidth="lg">
+          <Grid container spacing={4} justifyContent="center">
+            {[
+              { icon: <ShoppingBag sx={{ fontSize: 40 }} />, value: '500+', label: 'Handmade Products' },
+              { icon: <CategoryIcon sx={{ fontSize: 40 }} />, value: '20+', label: 'Categories' },
+              { icon: <People sx={{ fontSize: 40 }} />, value: '10K+', label: 'Happy Customers' },
+              { icon: <ThumbUp sx={{ fontSize: 40 }} />, value: '99%', label: 'Satisfaction Rate' },
+            ].map((stat, index) => (
+              <Grid item xs={6} sm={3} md={3} key={index} textAlign="center">
+                <Box
+                  sx={{
+                    color: 'primary.dark',
+                    mb: 2,
+                    display: 'inline-flex',
+                    p: 2,
+                    borderRadius: '50%',
+                    bgcolor: 'rgba(255,255,255,0.7)',
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                  }}
+                >
+                  {stat.icon}
+                </Box>
+                <Typography variant="h4" fontWeight={700} color="primary.dark">
+                  {stat.value}
+                </Typography>
+                <Typography variant="body1" color="primary.dark" sx={{ opacity: 0.9 }}>
+                  {stat.label}
+                </Typography>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* About Handmade Section */}
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <Box sx={{ textAlign: 'center', mb: 8 }}>
         <Typography
           variant="h3"
           component="h2"
-          textAlign="center"
           gutterBottom
             fontWeight={700}
             sx={{ 
-              mb: 8,
               background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
               backgroundClip: 'text',
               WebkitBackgroundClip: 'text',
               WebkitTextFillColor: 'transparent',
+              mb: 3,
               fontSize: { xs: '2.2rem', md: '3.5rem' },
               fontFamily: '"Playfair Display", "Georgia", serif',
               letterSpacing: '-0.02em',
             }}
         >
-          Mengapa Memilih Kami?
+            Crafted with Love
         </Typography>
-        
-          <Box
-            sx={{
-              display: 'grid',
-              gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
-              gap: 4,
+          <Typography 
+            variant="h6" 
+            color="text.secondary" 
+            sx={{ 
+              maxWidth: '600px', 
+              mx: 'auto',
+              fontSize: { xs: '1rem', md: '1.2rem' },
+              fontWeight: 300,
+              lineHeight: 1.6,
             }}
           >
+            Setiap produk dibuat dengan cinta dan keahlian tangan yang teliti
+          </Typography>
+        </Box>
+
+        <Grid container spacing={6} alignItems="center">
+          <Grid item xs={12} md={6}>
+            <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
+              <Typography
+                variant="h4"
+                fontWeight={600}
+                sx={{
+                  mb: 3,
+                  fontFamily: '"Playfair Display", "Georgia", serif',
+                  color: 'text.primary',
+                }}
+              >
+                Kualitas Premium
+              </Typography>
+              <Typography
+                variant="body1"
+                color="text.secondary"
+                sx={{
+                  mb: 4,
+                  lineHeight: 1.7,
+                  fontSize: '1.1rem',
+                }}
+              >
+                Kami menggunakan bahan berkualitas tinggi dan teknik kerajinan tradisional yang telah diwariskan turun-temurun. Setiap jahitan dibuat dengan presisi dan setiap detail diperhatikan dengan seksama.
+              </Typography>
+              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', md: 'flex-start' } }}>
+                <Chip
+                  label="100% Handmade"
+                  sx={{
+                    bgcolor: theme.palette.primary.light,
+                    color: theme.palette.primary.dark,
+                    fontWeight: 600,
+                  }}
+                />
+                <Chip
+                  label="Premium Materials"
+                  sx={{
+                    bgcolor: theme.palette.secondary.light,
+                    color: theme.palette.secondary.dark,
+                    fontWeight: 600,
+                  }}
+                />
+                <Chip
+                  label="Unique Design"
+                  sx={{
+                    bgcolor: theme.palette.craft.blush + '40',
+                    color: theme.palette.craft.blush,
+                    fontWeight: 600,
+                  }}
+                />
+              </Box>
+            </Box>
+          </Grid>
+          <Grid item xs={12} md={6}>
+          <Box
+            sx={{
+                height: 400,
+                borderRadius: 4,
+                overflow: 'hidden',
+                background: `linear-gradient(135deg, ${theme.palette.primary.light}20, ${theme.palette.secondary.light}20)`,
+              }}
+            >
+              <CardMedia
+                component="img"
+                height="400"
+                image="/images/craft-process.jpg"
+                alt="Crafting process"
+                sx={{
+                  objectFit: 'cover',
+                  width: '100%',
+                }}
+              />
+            </Box>
+          </Grid>
+        </Grid>
+      </Container>
+
+      {/* Process Section */}
+      <Box sx={{ bgcolor: 'grey.50', py: 12 }}>
+        <Container maxWidth="lg">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography
+              variant="h3"
+              component="h2"
+              gutterBottom
+              fontWeight={700}
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 3,
+                fontSize: { xs: '2.2rem', md: '3.5rem' },
+                fontFamily: '"Playfair Display", "Georgia", serif',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Our Process
+            </Typography>
+            <Typography 
+              variant="h6" 
+              color="text.secondary" 
+              sx={{ 
+                maxWidth: '600px', 
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.2rem' },
+                fontWeight: 300,
+                lineHeight: 1.6,
+              }}
+            >
+              Dari ide hingga produk jadi, setiap langkah dilakukan dengan hati
+            </Typography>
+          </Box>
+
+          <Grid container spacing={4}>
             {[
               {
-                icon: <Star sx={{ fontSize: 48, color: 'primary.main' }} />,
-                title: 'Kualitas Premium',
-                description: 'Semua produk dibuat dengan bahan berkualitas tinggi dan dikerjakan dengan teliti oleh pengrajin berpengalaman.',
-                color: 'primary.main',
+                step: '01',
+                title: 'Design',
+                description: 'Membuat desain unik yang sesuai dengan tren terkini',
+                icon: <Star sx={{ fontSize: 40 }} />,
               },
               {
-                icon: <ShoppingBag sx={{ fontSize: 48, color: 'secondary.main' }} />,
-                title: 'Mudah Berbelanja',
-                description: 'Platform yang user-friendly dengan proses pemesanan yang mudah dan sistem pembayaran yang aman.',
-                color: 'secondary.main',
+                step: '02',
+                title: 'Material Selection',
+                description: 'Memilih bahan berkualitas terbaik untuk hasil optimal',
+                icon: <ShoppingBag sx={{ fontSize: 40 }} />,
               },
               {
-                icon: <LocalShipping sx={{ fontSize: 48, color: 'success.main' }} />,
-                title: 'Pengiriman Cepat',
-                description: 'Pengiriman cepat dan aman ke seluruh Indonesia dengan tracking real-time untuk setiap pesanan.',
-                color: 'success.main',
+                step: '03',
+                title: 'Crafting',
+                description: 'Proses pembuatan dengan teknik kerajinan tradisional',
+                icon: <Favorite sx={{ fontSize: 40 }} />,
               },
               {
-                icon: <Security sx={{ fontSize: 48, color: 'info.main' }} />,
-                title: 'Garansi Kualitas',
-                description: 'Semua produk dilengkapi dengan garansi kualitas dan jaminan kepuasan pelanggan 100%.',
-                color: 'info.main',
+                step: '04',
+                title: 'Quality Check',
+                description: 'Pemeriksaan kualitas menyeluruh sebelum pengiriman',
+                icon: <Security sx={{ fontSize: 40 }} />,
               },
-              {
-                icon: <Support sx={{ fontSize: 48, color: 'warning.main' }} />,
-                title: 'Customer Service 24/7',
-                description: 'Tim customer service yang siap membantu Anda 24/7 untuk menjawab pertanyaan dan menangani keluhan.',
-                color: 'warning.main',
-              },
-              {
-                icon: <TrendingUp sx={{ fontSize: 48, color: 'error.main' }} />,
-                title: 'Inovasi Terus Menerus',
-                description: 'Kami terus berinovasi dengan desain dan produk terbaru untuk memenuhi kebutuhan pelanggan.',
-                color: 'error.main',
-              },
-            ].map((feature, index) => (
+            ].map((process, index) => (
+              <Grid item xs={12} sm={6} md={3} key={index}>
               <Card
-                key={index}
                 sx={{
                     height: '100%',
                     textAlign: 'center',
                     p: 4,
                     borderRadius: 4,
-                    background: 'linear-gradient(135deg, #ffffff 0%, #faf8ff 100%)',
-                    border: `1px solid ${theme.palette.primary.light}20`,
-                    position: 'relative',
-                    overflow: 'hidden',
-                    transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      background: `linear-gradient(135deg, ${feature.color}10, transparent)`,
-                      opacity: 0,
-                      transition: 'opacity 0.3s ease',
-                    },
+                    background: 'white',
+                    border: `1px solid ${theme.palette.grey[200]}`,
+                    transition: 'all 0.3s ease',
                     '&:hover': {
                       transform: 'translateY(-8px)',
-                      boxShadow: `0 20px 40px ${feature.color}20`,
-                      '&::before': {
-                        opacity: 1,
-                      },
+                      boxShadow: `0 20px 40px ${theme.palette.primary.main}15`,
                     },
                   }}
                 >
-                  <CardContent sx={{ position: 'relative', zIndex: 1 }}>
                     <Box 
                       sx={{ 
-                        mb: 4,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
                         width: 80,
                         height: 80,
-                        mx: 'auto',
                         borderRadius: '50%',
-                        background: `linear-gradient(135deg, ${feature.color}20, ${feature.color}10)`,
-                        border: `2px solid ${feature.color}30`,
-                      }}
-                    >
-                      {feature.icon}
+                      bgcolor: theme.palette.primary.light + '20',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      mx: 'auto',
+                      mb: 3,
+                      color: theme.palette.primary.main,
+                    }}
+                  >
+                    {process.icon}
           </Box>
                     <Typography 
-                      variant="h5" 
-                      gutterBottom 
+                    variant="h6"
+                    fontWeight={700}
+                    sx={{
+                      mb: 2,
+                      color: theme.palette.primary.main,
+                      fontSize: '2rem',
+                      fontFamily: '"Playfair Display", "Georgia", serif',
+                    }}
+                  >
+                    {process.step}
+                  </Typography>
+                  <Typography
+                    variant="h6"
                       fontWeight={600}
                       sx={{
+                      mb: 2,
+                      fontFamily: '"Playfair Display", "Georgia", serif',
+                    }}
+                  >
+                    {process.title}
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    color="text.secondary"
+                    sx={{ lineHeight: 1.6 }}
+                  >
+                    {process.description}
+                  </Typography>
+                </Card>
+              </Grid>
+            ))}
+          </Grid>
+        </Container>
+      </Box>
+
+      {/* Testimonials Section */}
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <Box sx={{ textAlign: 'center', mb: 8 }}>
+          <Typography
+            variant="h3"
+            component="h2"
+            gutterBottom
+            fontWeight={700}
+            sx={{
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
                         mb: 3,
+              fontSize: { xs: '2.2rem', md: '3.5rem' },
                         fontFamily: '"Playfair Display", "Georgia", serif',
-                        letterSpacing: '-0.01em',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            What Our Customers Say
+          </Typography>
+          <Typography 
+            variant="h6" 
+            color="text.secondary" 
+            sx={{ 
+              maxWidth: '600px', 
+              mx: 'auto',
+              fontSize: { xs: '1rem', md: '1.2rem' },
+              fontWeight: 300,
+              lineHeight: 1.6,
+            }}
+          >
+            Pengalaman nyata dari pelanggan yang puas dengan produk handmade kami
+          </Typography>
+        </Box>
+
+        <Grid container spacing={4}>
+          {[
+            {
+              id: '1',
+              name: 'Sarah Putri',
+              location: 'Jakarta',
+              rating: 5,
+              comment: 'Produk rajutan yang sangat berkualitas! Desainnya unik dan bahan yang digunakan sangat nyaman. Pelayanan customer service juga sangat responsif.',
+              avatar: '/images/avatar-1.jpg',
+              product: 'Crochet Blanket',
+              verified: true,
+            },
+            {
+              id: '2',
+              name: 'Ahmad Rizki',
+              location: 'Bandung',
+              rating: 5,
+              comment: 'Pengiriman cepat dan produk sesuai dengan yang diharapkan. Kualitas rajutan sangat bagus dan tahan lama. Recommended banget!',
+              avatar: '/images/avatar-2.jpg',
+              product: 'Macrame Wall Hanging',
+              verified: true,
+            },
+            {
+              id: '3',
+              name: 'Maya Sari',
+              location: 'Surabaya',
+              rating: 5,
+              comment: 'Hexa Crochet benar-benar memberikan produk berkualitas tinggi. Desainnya modern dan sesuai dengan tren terkini. Akan repeat order lagi!',
+              avatar: '/images/avatar-3.jpg',
+              product: 'Crochet Sweater',
+              verified: true,
+            },
+          ].map((testimonial, index) => (
+            <Grid item xs={12} md={4} key={testimonial.id}>
+              <Card
+                sx={{
+                  height: '100%',
+                  p: 4,
+                  borderRadius: 4,
+                  background: 'white',
+                  border: `1px solid ${theme.palette.grey[200]}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  justifyContent: 'space-between',
+                  transition: 'all 0.3s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-8px)',
+                    boxShadow: `0 20px 40px ${theme.palette.primary.main}15`,
+                  },
+                }}
+              >
+                <Box sx={{ mb: 3 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                    <Rating value={testimonial.rating} readOnly size="small" />
+                    {testimonial.verified && (
+                      <Chip
+                        label="Verified"
+                        size="small"
+                        sx={{
+                          ml: 2,
+                          bgcolor: 'success.main',
+                          color: 'white',
+                          fontSize: '0.7rem',
+                          height: 20,
+                        }}
+                      />
+                    )}
+                  </Box>
+                  <Typography 
+                    variant="body1" 
+                    color="text.primary" 
+                    sx={{ 
+                      mb: 3,
+                      fontStyle: 'italic',
+                      lineHeight: 1.6,
+                      fontSize: '1rem',
+                    }}
+                  >
+                    "{testimonial.comment}"
+                  </Typography>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary"
+                    sx={{
+                      display: 'block',
+                      fontWeight: 500,
+                    }}
+                  >
+                    Produk: {testimonial.product}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                  <Avatar 
+                    src={testimonial.avatar} 
+                    alt={testimonial.name}
+                    sx={{ 
+                      mr: 2,
+                      width: 48,
+                      height: 48,
+                      border: `2px solid ${theme.palette.primary.light}`,
+                    }}
+                  />
+                  <Box>
+                    <Typography variant="subtitle1" fontWeight={600}>
+                      {testimonial.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {testimonial.location}
+                    </Typography>
+                  </Box>
+                </Box>
+              </Card>
+            </Grid>
+          ))}
+        </Grid>
+      </Container>
+
+      {/* FAQ Section */}
+      <Box sx={{ bgcolor: 'grey.50', py: 12 }}>
+        <Container maxWidth="md">
+          <Box sx={{ textAlign: 'center', mb: 8 }}>
+            <Typography
+              variant="h3"
+              component="h2"
+              gutterBottom
+              fontWeight={700}
+              sx={{
+                background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                mb: 3,
+                fontSize: { xs: '2.2rem', md: '3.5rem' },
+                fontFamily: '"Playfair Display", "Georgia", serif',
+                letterSpacing: '-0.02em',
+              }}
+            >
+              Frequently Asked Questions
+            </Typography>
+            <Typography 
+              variant="h6" 
+              color="text.secondary" 
+              sx={{ 
+                maxWidth: '600px', 
+                mx: 'auto',
+                fontSize: { xs: '1rem', md: '1.2rem' },
+                fontWeight: 300,
+                lineHeight: 1.6,
+              }}
+            >
+              Pertanyaan yang sering diajukan tentang produk handmade kami
+            </Typography>
+          </Box>
+
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {[
+              {
+                question: 'Apakah semua produk benar-benar handmade?',
+                answer: 'Ya, semua produk kami dibuat 100% dengan tangan oleh pengrajin berpengalaman. Kami tidak menggunakan mesin dalam proses pembuatan.',
+              },
+              {
+                question: 'Berapa lama waktu pembuatan produk?',
+                answer: 'Waktu pembuatan bervariasi tergantung kompleksitas produk. Produk sederhana membutuhkan 3-5 hari, sedangkan produk kompleks bisa memakan waktu 1-2 minggu.',
+              },
+              {
+                question: 'Apakah produk bisa dikustomisasi?',
+                answer: 'Tentu saja! Kami menerima custom order dengan warna, ukuran, dan desain sesuai keinginan Anda. Silakan hubungi customer service untuk konsultasi.',
+              },
+              {
+                question: 'Bagaimana cara merawat produk handmade?',
+                answer: 'Setiap produk dilengkapi dengan panduan perawatan. Umumnya, cuci dengan air dingin, hindari mesin cuci, dan keringkan dengan cara diangin-anginkan.',
+              },
+              {
+                question: 'Apakah ada garansi untuk produk?',
+                answer: 'Kami memberikan garansi kualitas 30 hari untuk semua produk. Jika ada kerusakan karena cacat produksi, kami akan menggantinya tanpa biaya tambahan.',
+              },
+            ].map((faq, index) => (
+              <Paper
+                key={index}
+                sx={{
+                  p: 3,
+                  borderRadius: 3,
+                  background: 'white',
+                  border: `1px solid ${theme.palette.grey[200]}`,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    boxShadow: `0 8px 24px ${theme.palette.primary.main}10`,
+                    transform: 'translateY(-2px)',
+                  },
+                }}
+              >
+                <Typography
+                  variant="h6"
+                  fontWeight={600}
+                  sx={{
+                    mb: 2,
                         color: 'text.primary',
+                    fontFamily: '"Playfair Display", "Georgia", serif',
                       }}
                     >
-                      {feature.title}
+                  {faq.question}
                 </Typography>
                     <Typography 
                       variant="body1" 
                       color="text.secondary" 
+                  sx={{ lineHeight: 1.6 }}
+                >
+                  {faq.answer}
+                </Typography>
+              </Paper>
+            ))}
+          </Box>
+        </Container>
+      </Box>
+
+      {/* Social Media Section */}
+      <Container maxWidth="lg" sx={{ py: 12 }}>
+        <Box sx={{ textAlign: 'center', mb: 8 }}>
+          <Typography
+            variant="h3"
+            component="h2"
+            gutterBottom
+            fontWeight={700}
                       sx={{ 
-                        lineHeight: 1.7,
-                        fontStyle: 'italic',
+              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              mb: 3,
+              fontSize: { xs: '2.2rem', md: '3.5rem' },
+              fontFamily: '"Playfair Display", "Georgia", serif',
+              letterSpacing: '-0.02em',
+            }}
+          >
+            Follow Our Journey
+          </Typography>
+          <Typography 
+            variant="h6" 
+            color="text.secondary" 
+            sx={{ 
+              maxWidth: '600px', 
+              mx: 'auto',
+              fontSize: { xs: '1rem', md: '1.2rem' },
                         fontWeight: 300,
+              lineHeight: 1.6,
                       }}
                     >
-                      {feature.description}
+            Ikuti perjalanan kami di berbagai platform sosial media untuk melihat proses pembuatan dan inspirasi terbaru
                 </Typography>
-              </CardContent>
-            </Card>
+        </Box>
+
+         <Box sx={{ display: 'flex', justifyContent: 'center', gap: 3, flexWrap: 'wrap' }}>
+           {[
+             {
+               platform: 'Instagram',
+               handle: '@hexacrochet',
+               icon: <InstagramIcon sx={{ fontSize: 28, color: theme.palette.primary.main }} />,
+               color: theme.palette.primary.main,
+               link: 'https://instagram.com/hexacrochet',
+             },
+             {
+               platform: 'TikTok',
+               handle: '@hexacrochet',
+               icon: (
+                 <img
+                   src="/images/tiktok.svg"
+                   alt="TikTok"
+                   style={{ width: 24, height: 24, display: 'block' }}
+                 />
+               ),
+               color: theme.palette.primary.main,
+               link: 'https://tiktok.com/@hexacrochet',
+             },
+             {
+               platform: 'YouTube',
+               handle: 'Hexa Crochet',
+               icon: (
+                 <img
+                   src="/images/youtube.svg"
+                   alt="YouTube"
+                   style={{ width: 28, height: 28, display: 'block' }}
+                 />
+               ),
+               color: theme.palette.primary.main,
+               link: 'https://youtube.com/@hexacrochet',
+             },
+             {
+               platform: 'Shopee',
+               handle: 'hexacrochet',
+               icon: <img src="/images/logo-shopee.svg" alt="Shopee" style={{ width: 24, height: 24, display: 'block' }} />,
+               color: '#FF5722',
+               link: 'https://shopee.co.id/hexacrochet',
+             },
+           ].map((social, index) => (
+             <Box
+               key={index}
+               sx={{
+                 display: 'flex',
+                 alignItems: 'center',
+                 gap: 2,
+                 p: 2,
+                 borderRadius: 3,
+                 background: 'white',
+                 border: `1px solid ${theme.palette.grey[200]}`,
+                 transition: 'all 0.2s ease',
+                 cursor: 'pointer',
+                 minWidth: 200,
+                 '&:hover': {
+                   borderColor: theme.palette.primary.light,
+                   boxShadow: `0 4px 12px ${theme.palette.primary.main}10`,
+                 },
+               }}
+               onClick={() => window.open(social.link, '_blank')}
+             >
+               <Box
+                 sx={{
+                   width: 40,
+                   height: 40,
+                   borderRadius: '50%',
+                   bgcolor: theme.palette.primary.light + '20',
+                   display: 'flex',
+                   alignItems: 'center',
+                   justifyContent: 'center',
+                   fontSize: '1.2rem',
+                 }}
+               >
+                 {social.icon}
+               </Box>
+               
+               <Box sx={{ flex: 1 }}>
+                 <Typography
+                   variant="body2"
+                   fontWeight={600}
+                   sx={{
+                     color: 'text.primary',
+                     fontSize: '0.9rem',
+                   }}
+                 >
+                   {social.platform}
+                 </Typography>
+                 
+                 <Typography
+                   variant="caption"
+                   color="text.secondary"
+                   sx={{
+                     fontSize: '0.8rem',
+                   }}
+                 >
+                   {social.handle}
+                 </Typography>
+               </Box>
+               
+               <ArrowForward sx={{ fontSize: 16, color: theme.palette.primary.main }} />
+             </Box>
+           ))}
+         </Box>
+
+        <Box sx={{ textAlign: 'center', mt: 6 }}>
+          <Typography
+            variant="body1"
+            color="text.secondary"
+            sx={{ mb: 3 }}
+          >
+            Jangan lupa tag kami di postingan Anda dengan hashtag
+          </Typography>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
+            {['#HexaCrochet', '#HandmadeIndonesia', '#CrochetLove', '#MacrameArt'].map((hashtag, index) => (
+              <Chip
+                key={index}
+                label={hashtag}
+                sx={{
+                  bgcolor: theme.palette.primary.light + '20',
+                  color: theme.palette.primary.main,
+                  fontWeight: 600,
+                  fontSize: '0.9rem',
+                }}
+              />
             ))}
+          </Box>
+        </Box>
+      </Container>
+
+      {/* Newsletter Section */}
+      <Box sx={{ bgcolor: 'grey.50', py: 8 }}>
+        <Container maxWidth="md">
+          <Box sx={{ textAlign: 'center' }}>
+            <Typography
+              variant="h4"
+              fontWeight={700}
+              gutterBottom
+              sx={{
+                mb: 2,
+                fontFamily: '"Playfair Display", "Georgia", serif',
+                letterSpacing: '-0.01em',
+              }}
+            >
+              Stay Updated
+            </Typography>
+            <Typography
+              variant="body1"
+              color="text.secondary"
+              sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}
+            >
+              Dapatkan informasi produk terbaru dan tips perawatan kerajinan tangan langsung di inbox Anda
+            </Typography>
+            <Box
+              component="form"
+              sx={{
+                display: 'flex',
+                gap: 2,
+                flexDirection: { xs: 'column', sm: 'row' },
+                alignItems: 'center',
+                justifyContent: 'center',
+                maxWidth: 500,
+                mx: 'auto',
+              }}
+            >
+              <Box sx={{ flex: 1, minWidth: 0 }}>
+                <input
+                  type="email"
+                  placeholder="Masukkan email Anda"
+                  style={{
+                    width: '100%',
+                    padding: '12px 16px',
+                    border: `1px solid ${theme.palette.grey[300]}`,
+                    borderRadius: '8px',
+                    fontSize: '1rem',
+                    outline: 'none',
+                  }}
+                />
+              </Box>
+              <Button
+                variant="contained"
+                sx={{
+                  px: 3,
+                  py: 1.5,
+                  borderRadius: 2,
+                  fontWeight: 600,
+                  whiteSpace: 'nowrap',
+                }}
+              >
+                Subscribe
+              </Button>
+            </Box>
         </Box>
       </Container>
       </Box>
 
-      {/* CTA Section - Modern Craft Aesthetic */}
+      {/* CTA Section */}
       <Box
         sx={{
           background: `
@@ -706,30 +1860,16 @@ export default function HomePage() {
               rgba(150, 130, 219, 0.95) 0%, 
               rgba(166, 130, 219, 0.9) 50%, 
               rgba(196, 181, 232, 0.85) 100%
-            ),
-            url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.02'%3E%3Cpath d='M40 0L50 30L80 40L50 50L40 80L30 50L0 40L30 30Z'/%3E%3C/g%3E%3C/svg%3E")
+            )
           `,
           color: 'white',
           py: 12,
           textAlign: 'center',
           position: 'relative',
           overflow: 'hidden',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            background: `
-              radial-gradient(circle at 30% 70%, rgba(232, 180, 184, 0.1) 0%, transparent 50%),
-              radial-gradient(circle at 70% 30%, rgba(184, 212, 232, 0.1) 0%, transparent 50%)
-            `,
-            animation: 'craftFloat 20s ease-in-out infinite',
-          },
         }}
       >
-        <Container maxWidth="md" sx={{ position: 'relative', zIndex: 1 }}>
+        <Container maxWidth="md">
           <Typography 
             variant="h3" 
             gutterBottom 
@@ -739,29 +1879,23 @@ export default function HomePage() {
               fontSize: { xs: '2.2rem', md: '3.5rem' },
               fontFamily: '"Playfair Display", "Georgia", serif',
               letterSpacing: '-0.02em',
-              background: 'linear-gradient(135deg, #ffffff 0%, #f8f4ff 50%, #e8e0ff 100%)',
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              textShadow: '0 2px 4px rgba(0,0,0,0.1)',
             }}
           >
-            Siap Mulai Berbelanja?
+            Discover Handmade Beauty
           </Typography>
           <Typography 
             variant="h6" 
             paragraph 
             sx={{ 
-              opacity: 0.95, 
+              opacity: 0.9,
               mb: 6,
-              fontSize: { xs: '1.2rem', md: '1.4rem' },
+              fontSize: { xs: '1rem', md: '1.2rem' },
+              maxWidth: 600,
+              mx: 'auto',
               fontWeight: 300,
-              lineHeight: 1.6,
-              fontStyle: 'italic',
-              textShadow: '0 1px 2px rgba(0,0,0,0.1)',
             }}
           >
-            Jelajahi koleksi lengkap kami dan temukan produk rajutan favorit Anda
+            Jelajahi koleksi kerajinan tangan unik kami dan temukan keindahan dalam setiap detail
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
           <Button
@@ -782,15 +1916,15 @@ export default function HomePage() {
                   bgcolor: 'grey.100',
                   transform: 'translateY(-2px)',
                 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
           >
-            Mulai Belanja Sekarang
+              Explore Collection
           </Button>
             <Button
               variant="outlined"
               size="large"
-              endIcon={<Support />}
+              component={Link}
+              to="/about"
               sx={{
                 borderColor: 'rgba(255, 255, 255, 0.5)',
                 color: 'white',
@@ -803,10 +1937,9 @@ export default function HomePage() {
                   borderColor: 'white',
                   bgcolor: 'rgba(255, 255, 255, 0.1)',
                 },
-                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               }}
             >
-              Hubungi Kami
+              Our Story
             </Button>
           </Stack>
         </Container>
@@ -814,4 +1947,3 @@ export default function HomePage() {
     </Box>
   );
 }
-

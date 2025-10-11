@@ -85,6 +85,9 @@ export interface PaymentMethod {
   icon: string;
   available: boolean;
   requires_approval?: boolean;
+  is_local?: boolean;
+  is_international?: boolean;
+  supported_methods?: string[];
 }
 
 export interface OrderResponse {

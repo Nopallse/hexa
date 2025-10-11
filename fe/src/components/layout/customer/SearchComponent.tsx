@@ -93,7 +93,7 @@ export default function SearchComponent({
               <InputAdornment position="start">
                 <SearchIcon 
                   sx={{ 
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: theme.palette.grey[500],
                     fontSize: '1.25rem',
                   }} 
                 />
@@ -106,10 +106,10 @@ export default function SearchComponent({
                   onClick={handleClear}
                   edge="end"
                   sx={{
-                    color: 'rgba(255, 255, 255, 0.7)',
+                    color: theme.palette.grey[500],
                     '&:hover': {
-                      color: 'white',
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      color: theme.palette.primary.main,
+                      backgroundColor: theme.palette.primary.light + '20',
                     },
                   }}
                 >
@@ -118,37 +118,35 @@ export default function SearchComponent({
               </InputAdornment>
             ),
             sx: {
-              backgroundColor: 'rgba(255, 255, 255, 0.12)',
-              borderRadius: 3,
-              backdropFilter: 'blur(10px)',
+              backgroundColor: 'white',
+              borderRadius: '50px',
+              border: `1px solid ${theme.palette.grey[300]}`,
               '&:hover': {
-                backgroundColor: 'rgba(255, 255, 255, 0.18)',
+                backgroundColor: 'white',
                 transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                borderColor: theme.palette.primary.light,
               },
               '&.Mui-focused': {
-                backgroundColor: 'rgba(255, 255, 255, 0.25)',
+                backgroundColor: 'white',
                 transform: 'translateY(-1px)',
-                boxShadow: '0 6px 20px rgba(0,0,0,0.2)',
+                boxShadow: '0 6px 20px rgba(0,0,0,0.15)',
+                borderColor: theme.palette.primary.main,
               },
               '& .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                borderWidth: 1,
+                border: 'none',
               },
               '&:hover .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'rgba(255, 255, 255, 0.4)',
+                border: 'none',
               },
               '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                borderColor: 'rgba(255, 255, 255, 0.6)',
-                borderWidth: 2,
+                border: 'none',
               },
               '& .MuiInputBase-input': {
-                color: 'white',
+                color: theme.palette.text.primary,
                 fontWeight: 500,
                 '&::placeholder': {
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  opacity: 1,
-                  fontWeight: 400,
+                  color: theme.palette.grey[500],
                 },
               },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',

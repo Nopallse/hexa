@@ -6,7 +6,6 @@ import {
   Alert,
   Skeleton,
   useTheme,
-  Breadcrumbs,
   Link,
   Tabs,
   Tab,
@@ -23,10 +22,12 @@ import { Order, OrderQueryParams } from '../types';
 import { orderApi } from '../services/orderApi';
 import { useOrderStore } from '../store/orderStore';
 import OrderCard from '../components/OrderCard';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function OrderListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -44,7 +45,7 @@ export default function OrderListPage() {
   const statusTabs = [
     { label: 'Semua', value: '' },
     { label: 'Pending', value: 'pending' },
-    { label: 'Confirmed', value: 'confirmed' },
+    { label: 'Processing', value: 'processing' },
     { label: 'Shipped', value: 'shipped' },
     { label: 'Delivered', value: 'delivered' },
     { label: 'Cancelled', value: 'cancelled' },
@@ -97,14 +98,6 @@ export default function OrderListPage() {
     fetchOrders();
   }, []);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
   // Loading skeleton
   const renderSkeleton = () => (
     <Stack spacing={2}>
@@ -118,42 +111,7 @@ export default function OrderListPage() {
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
         {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 4 }}>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <Home sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Beranda
-          </Link>
-          <Link
-            component="button"
-            variant="body2"
-            onClick={() => navigate('/products')}
-            sx={{
-              display: 'flex',
-              alignItems: 'center',
-              textDecoration: 'none',
-              color: 'text.secondary',
-              '&:hover': { color: 'primary.main' },
-            }}
-          >
-            <ShoppingBag sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Produk
-          </Link>
-          <Typography variant="body2" color="text.primary" sx={{ display: 'flex', alignItems: 'center' }}>
-            <Receipt sx={{ mr: 0.5, fontSize: '1rem' }} />
-            Pesanan
-          </Typography>
-        </Breadcrumbs>
+        
 
         {/* Page Header */}
         <Box sx={{ mb: 4 }}>
@@ -164,6 +122,20 @@ export default function OrderListPage() {
             Kelola dan lacak pesanan Anda
           </Typography>
         </Box>
+
+        {/* Currency Loading State */}
+        {currencyLoading && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Loading exchange rates...
+          </Alert>
+        )}
+
+        {/* Currency Error State */}
+        {currencyError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Failed to load exchange rates. Prices will be displayed in default currency.
+          </Alert>
+        )}
 
         {/* Error Alert */}
         {error && (

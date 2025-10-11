@@ -18,22 +18,15 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import { orderApi } from '@/features/orders/services/orderApi';
 import { Order } from '@/features/orders/types';
-
-// Simple price formatter for IDR
-const formatPrice = (amount: number): string => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
-};
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function PaymentSuccessPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  
+  const { formatPrice, loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   // Get order ID from URL parameter or navigation state
   const orderIdFromUrl = searchParams.get('order_id');

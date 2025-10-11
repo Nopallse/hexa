@@ -29,27 +29,24 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Order } from '../types';
 import { orderApi } from '../services/orderApi';
 import { useOrderStore } from '../store/orderStore';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import MidtransPaymentButton from '@/features/payments/components/MidtransPaymentButton';
 
 export default function OrderDetailPage() {
   const theme = useTheme();
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { formatPrice, loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<Order | null>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [paymentSuccess, setPaymentSuccess] = useState<string | null>(null);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
 
   const { setCurrentOrder } = useOrderStore();
-
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -65,8 +62,8 @@ export default function OrderDetailPage() {
     switch (status) {
       case 'pending':
         return 'warning';
-      case 'confirmed':
-        return 'info';
+      case 'processing':
+        return 'primary';
       case 'shipped':
         return 'primary';
       case 'delivered':
@@ -82,8 +79,8 @@ export default function OrderDetailPage() {
     switch (status) {
       case 'pending':
         return 'Menunggu Konfirmasi';
-      case 'confirmed':
-        return 'Dikonfirmasi';
+      case 'processing':
+        return 'Sedang Diproses';
       case 'shipped':
         return 'Dikirim';
       case 'delivered':
@@ -148,6 +145,20 @@ export default function OrderDetailPage() {
     }
   };
 
+  const handlePaymentSuccess = (payment: any) => {
+    console.log('Payment successful:', payment);
+    setPaymentSuccess('Pembayaran berhasil! Status pesanan akan diperbarui.');
+    setPaymentError(null);
+    // Refresh order data to get updated payment status
+    fetchOrder();
+  };
+
+  const handlePaymentError = (error: string) => {
+    console.error('Payment error:', error);
+    setPaymentError(error);
+    setPaymentSuccess(null);
+  };
+
   const handleCancelOrder = async () => {
     if (!order || !window.confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
       return;
@@ -200,7 +211,7 @@ export default function OrderDetailPage() {
     <Box sx={{ minHeight: '100vh', py: 4 }}>
       <Container maxWidth="xl">
         {/* Breadcrumbs */}
-        <Breadcrumbs sx={{ mb: 4 }}>
+        <Breadcrumbs sx={{ mb: 3 }}>
           <Link
             component="button"
             variant="body2"
@@ -240,24 +251,53 @@ export default function OrderDetailPage() {
         <Button
           startIcon={<ArrowBack />}
           onClick={() => navigate('/orders')}
-          sx={{ mb: 4 }}
+          sx={{ 
+            mb: 3,
+            borderRadius: 2,
+            fontWeight: 500,
+            color: 'text.secondary',
+            '&:hover': { 
+              color: 'primary.main',
+              backgroundColor: 'primary.light',
+            },
+          }}
         >
           Kembali ke Daftar Pesanan
         </Button>
 
-        {/* Success Message */}
-        {location.state?.message && (
-          <Alert severity="success" sx={{ mb: 4 }}>
-            {location.state.message}
+        {/* Payment Success/Error Messages */}
+        {paymentSuccess && (
+          <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
+            {paymentSuccess}
+          </Alert>
+        )}
+
+        {paymentError && (
+          <Alert severity="error" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setPaymentError(null)}>
+            {paymentError}
+          </Alert>
+        )}
+
+        {/* Currency Loading State */}
+        {currencyLoading && (
+          <Alert severity="info" sx={{ mb: 2, borderRadius: 2 }}>
+            Loading exchange rates...
+          </Alert>
+        )}
+
+        {/* Currency Error State */}
+        {currencyError && (
+          <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }}>
+            Failed to load exchange rates. Prices will be displayed in default currency.
           </Alert>
         )}
 
         {/* Order Header */}
-        <Card sx={{ mb: 4 }}>
-          <CardContent>
+        <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+          <CardContent sx={{ p: 3 }}>
             <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="flex-start" spacing={2}>
               <Box>
-                <Typography variant="h4" fontWeight={700} sx={{ mb: 1 }}>
+                <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
                   Order #{order.id.slice(-8).toUpperCase()}
                 </Typography>
                 <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
@@ -268,11 +308,13 @@ export default function OrderDetailPage() {
                     label={getStatusLabel(order.status)}
                     color={getStatusColor(order.status) as any}
                     variant="outlined"
+                    sx={{ borderRadius: 2 }}
                   />
                   <Chip
                     label={getPaymentStatusLabel(order.payment_status)}
                     color={getPaymentStatusColor(order.payment_status) as any}
                     variant="outlined"
+                    sx={{ borderRadius: 2 }}
                   />
                 </Stack>
               </Box>
@@ -284,7 +326,13 @@ export default function OrderDetailPage() {
                   onClick={handleCancelOrder}
                   disabled={cancelling}
                   color="error"
-                  sx={{ borderRadius: 2 }}
+                  sx={{ 
+                    borderRadius: 2,
+                    fontWeight: 500,
+                    '&:hover': {
+                      backgroundColor: 'error.light',
+                    },
+                  }}
                 >
                   {cancelling ? 'Membatalkan...' : 'Batalkan Pesanan'}
                 </Button>
@@ -296,16 +344,16 @@ export default function OrderDetailPage() {
         <Grid container spacing={4}>
           {/* Order Items */}
           <Grid item xs={12} lg={8}>
-            <Card sx={{ mb: 4 }}>
-              <CardContent>
-                <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
+            <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
                   Item Pesanan ({order.order_items.length})
                 </Typography>
-                <Stack spacing={3}>
+                <Stack spacing={2}>
                   {order.order_items.map((item) => {
                     const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
                     
-  return (
+                    return (
                       <Box
                         key={item.id}
                         sx={{
@@ -314,53 +362,88 @@ export default function OrderDetailPage() {
                           gap: 3,
                           p: 3,
                           borderRadius: 2,
-                          backgroundColor: '#f8f9fa',
-                          border: `1px solid ${theme.palette.grey[200]}`,
+                          backgroundColor: 'grey.50',
+                          border: 'none',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            backgroundColor: 'grey.100',
+                          },
                         }}
                       >
-                        <Avatar
-                          src={primaryImage || `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name)}`}
-                          alt={item.product_variant.product.name}
-                          sx={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: 2,
-                            flexShrink: 0,
-                          }}
-                          variant="rounded"
-                        />
-                        
+                        {/* Product Image */}
+                        <Box sx={{ flexShrink: 0 }}>
+                          <Avatar
+                            src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
+                            alt={item.product_variant.product.name}
+                            sx={{
+                              width: 80,
+                              height: 80,
+                              borderRadius: 2,
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            }}
+                            variant="rounded"
+                          />
+                        </Box>
+
+                        {/* Product Info */}
                         <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography variant="h6" fontWeight={600} sx={{ mb: 1 }}>
+                          <Typography 
+                            variant="h6" 
+                            fontWeight={600} 
+                            sx={{ 
+                              mb: 1, 
+                              color: 'text.primary',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              lineHeight: 1.3,
+                              fontSize: '1rem',
+                            }}
+                            title={item.product_variant.product.name}
+                          >
                             {item.product_variant.product.name}
                           </Typography>
-                          <Typography variant="subtitle1" color="primary.main" fontWeight={600} sx={{ mb: 1 }}>
-                            {item.product_variant.variant_name}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            SKU: {item.product_variant.sku}
-                          </Typography>
+                          
+                          {/* Variant Options */}
                           {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
-                            <Stack direction="row" spacing={1} sx={{ mb: 1, flexWrap: 'wrap', gap: 0.5 }}>
+                            <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
                               {item.product_variant.variant_options.map((option, index) => (
                                 <Chip
                                   key={index}
-                                  label={`${option.option_name}: ${option.option_value}`}
+                                  label={`${option.option_value}`}
                                   size="small"
                                   variant="outlined"
-                                  sx={{ fontSize: '0.75rem' }}
+                                  sx={{ 
+                                    fontSize: '0.7rem',
+                                    height: 20,
+                                    borderColor: 'primary.main',
+                                    color: 'primary.main',
+                                    '& .MuiChip-label': {
+                                      px: 1,
+                                    }
+                                  }}
                                 />
                               ))}
                             </Stack>
                           )}
-                          <Typography variant="body2" color="text.secondary">
-                            Qty: {item.quantity} × {formatPrice(item.price)}
+
+                    
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
+                            Qty: {item.quantity} × {formatPrice(Number(item.price))}
                           </Typography>
                         </Box>
-                        
-                        <Typography variant="h6" color="primary.main" fontWeight={700}>
-                          {formatPrice(item.price * item.quantity)}
-                        </Typography>
+
+                        {/* Price */}
+                        <Box sx={{ textAlign: 'right', minWidth: 100 }}>
+                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                            Total
+                          </Typography>
+                          <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: '1rem' }}>
+                            {formatPrice(Number(item.price) * Number(item.quantity))}
+                          </Typography>
+                        </Box>
                       </Box>
                     );
                   })}
@@ -370,46 +453,70 @@ export default function OrderDetailPage() {
 
             {/* Shipping Information */}
             {order.shipping && (
-              <Card sx={{ mb: 4 }}>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
+              <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
                     Informasi Pengiriman
                   </Typography>
                   <Grid container spacing={2}>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Kurir
-                      </Typography>
-                      <Typography variant="body1" fontWeight={600}>
-                        {order.shipping.courier}
-                      </Typography>
+                      <Box sx={{ 
+                        p: 2,
+                        backgroundColor: 'grey.50',
+                        borderRadius: 2,
+                      }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                          Kurir
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {order.shipping.courier}
+                        </Typography>
+                      </Box>
                     </Grid>
                     <Grid item xs={12} sm={6}>
-                      <Typography variant="subtitle2" color="text.secondary">
-                        Status Pengiriman
-                      </Typography>
-                      <Typography variant="body1" fontWeight={600}>
-                        {order.shipping.shipping_status}
-                      </Typography>
+                      <Box sx={{ 
+                        p: 2,
+                        backgroundColor: 'grey.50',
+                        borderRadius: 2,
+                      }}>
+                        <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                          Status Pengiriman
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {order.shipping.shipping_status}
+                        </Typography>
+                      </Box>
                     </Grid>
                     {order.shipping.tracking_number && (
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Nomor Resi
-                        </Typography>
-                        <Typography variant="body1" fontWeight={600} color="primary.main">
-                          {order.shipping.tracking_number}
-                        </Typography>
+                        <Box sx={{ 
+                          p: 2,
+                          backgroundColor: 'primary.light',
+                          borderRadius: 2,
+                        }}>
+                          <Typography variant="subtitle2" color="primary.dark" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                            Nomor Resi
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600} color="primary.main">
+                            {order.shipping.tracking_number}
+                          </Typography>
+                        </Box>
                       </Grid>
                     )}
                     {order.shipping.estimated_delivery && (
                       <Grid item xs={12} sm={6}>
-                        <Typography variant="subtitle2" color="text.secondary">
-                          Estimasi Sampai
-                        </Typography>
-                        <Typography variant="body1" fontWeight={600}>
-                          {formatDate(order.shipping.estimated_delivery)}
-                        </Typography>
+                        <Box sx={{ 
+                          p: 2,
+                          backgroundColor: 'grey.50',
+                          borderRadius: 2,
+                        }}>
+                          <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                            Estimasi Sampai
+                          </Typography>
+                          <Typography variant="body1" fontWeight={600}>
+                            {formatDate(order.shipping.estimated_delivery)}
+                          </Typography>
+                        </Box>
                       </Grid>
                     )}
                   </Grid>
@@ -417,93 +524,69 @@ export default function OrderDetailPage() {
               </Card>
             )}
 
-            {/* Payment Information */}
-            {order.payments && order.payments.length > 0 && (
-              <Card>
-                <CardContent>
-                  <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
-                    Riwayat Pembayaran
-                  </Typography>
-                  <Stack spacing={2}>
-                    {order.payments.map((payment) => (
-                      <Box
-                        key={payment.id}
-                        sx={{
-                          p: 2,
-                          borderRadius: 2,
-                          backgroundColor: '#f8f9fa',
-                          border: `1px solid ${theme.palette.grey[200]}`,
-                        }}
-                      >
-                        <Stack direction="row" justifyContent="space-between" alignItems="center">
-                          <Box>
-                            <Typography variant="subtitle1" fontWeight={600}>
-                              {payment.payment_method}
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary">
-                              {formatDate(payment.payment_date)}
-                            </Typography>
-                            {payment.payment_reference && (
-                              <Typography variant="body2" color="text.secondary">
-                                Ref: {payment.payment_reference}
-                              </Typography>
-                            )}
-                          </Box>
-                          <Box sx={{ textAlign: 'right' }}>
-                            <Typography variant="h6" fontWeight={700} color="primary.main">
-                              {formatPrice(payment.amount)}
-                            </Typography>
-                            <Chip
-                              label={payment.payment_status}
-                              color={getPaymentStatusColor(payment.payment_status) as any}
-                              size="small"
-                              variant="outlined"
-                            />
-                          </Box>
-                        </Stack>
-                      </Box>
-                    ))}
-                  </Stack>
-                </CardContent>
-              </Card>
-            )}
           </Grid>
 
           {/* Order Summary */}
           <Grid item xs={12} lg={4}>
-            <Card sx={{ position: 'sticky', top: 24 }}>
-              <CardContent>
-                <Typography variant="h6" fontWeight={600} sx={{ mb: 3 }}>
+            <Card sx={{ 
+              position: 'sticky', 
+              top: 24,
+              borderRadius: 2,
+              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+              border: 'none',
+            }}>
+              <CardContent sx={{ p: 3 }}>
+                <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
                   Ringkasan Pesanan
                 </Typography>
                 
                 <Stack spacing={2}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body1">
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    py: 2,
+                    px: 2,
+                    backgroundColor: 'grey.50',
+                    borderRadius: 2,
+                  }}>
+                    <Typography variant="body1" fontWeight={500}>
                       Subtotal
                     </Typography>
                     <Typography variant="body1" fontWeight={600}>
-                      {formatPrice(order.total_amount)}
+                      {formatPrice(Number(order.total_amount))}
                     </Typography>
                   </Box>
 
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="body1">
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    py: 2,
+                    px: 2,
+                    backgroundColor: 'grey.50',
+                    borderRadius: 2,
+                  }}>
+                    <Typography variant="body1" fontWeight={500}>
                       Biaya Pengiriman
                     </Typography>
                     <Typography variant="body1" fontWeight={600}>
-                      {formatPrice(order.shipping_cost)}
+                      {formatPrice(Number(order.shipping_cost))}
                     </Typography>
                   </Box>
 
-                  <Divider />
-
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <Typography variant="h6" fontWeight={700}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    justifyContent: 'space-between',
+                    py: 2,
+                    px: 2,
+                    backgroundColor: 'primary.main',
+                    borderRadius: 2,
+                    color: 'white',
+                  }}>
+                    <Typography variant="h6" fontWeight={600}>
                       Total
                     </Typography>
-                    <Typography variant="h6" fontWeight={700} color="primary.main">
-                      {formatPrice(order.total_amount + order.shipping_cost)}
+                    <Typography variant="h6" fontWeight={700}>
+                      {formatPrice(Number(order.total_amount) + Number(order.shipping_cost))}
                     </Typography>
                   </Box>
                 </Stack>
@@ -511,42 +594,33 @@ export default function OrderDetailPage() {
                 <Divider sx={{ my: 3 }} />
 
                 {/* Delivery Address */}
-                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
                   Alamat Pengiriman
                 </Typography>
                 <Box
                   sx={{
                     p: 2,
                     borderRadius: 2,
-                    backgroundColor: '#f8f9fa',
-                    border: `1px solid ${theme.palette.grey[200]}`,
+                    backgroundColor: 'grey.50',
                   }}
                 >
                   <Typography variant="body1" fontWeight={600}>
                     {order.address.address_line}
-          </Typography>
+                  </Typography>
                   <Typography variant="body2" color="text.secondary">
                     {order.address.city}, {order.address.province} {order.address.postal_code}
-          </Typography>
-        </Box>
+                  </Typography>
+                </Box>
 
                 {order.payment_status === 'unpaid' && order.status !== 'cancelled' && (
                   <>
                     <Divider sx={{ my: 3 }} />
-                    <Button
-                      variant="contained"
-                      size="large"
-                      startIcon={<PaymentIcon />}
-                      onClick={() => navigate(`/payment/${order.id}`)}
-                      fullWidth
-                      sx={{
-                        py: 1.5,
-                        borderRadius: 2,
-                        fontWeight: 600,
-                      }}
-                    >
-                      Bayar Sekarang
-                    </Button>
+                    <MidtransPaymentButton
+                      order={order}
+                      onSuccess={handlePaymentSuccess}
+                      onError={handlePaymentError}
+                      paymentMethod="bank_transfer"
+                    />
                   </>
                 )}
               </CardContent>

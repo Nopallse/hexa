@@ -17,6 +17,7 @@ interface CartState {
   updateQuantity: (cartItemId: string, quantity: number) => Promise<void>;
   clearCart: () => Promise<void>;
   syncWithServer: () => Promise<void>;
+  refreshCartCount: () => Promise<void>;
   getCartSummary: () => { totalItems: number; totalPrice: number };
 }
 
@@ -55,9 +56,13 @@ export const useCartStore = create<CartState>()(
 
           const summary = calculateCartSummary(updatedItems);
           
+          // Get updated count from server
+          const summaryResponse = await axiosInstance.get<{ data: { totalItems: number; itemCount: number } }>('/cart/summary');
+          const serverSummary = summaryResponse.data.data;
+          
           set({
             items: updatedItems,
-            totalItems: summary.totalItems,
+            totalItems: serverSummary.totalItems, // Use server count
             totalPrice: summary.totalPrice,
             isLoading: false,
             error: null,
@@ -80,9 +85,13 @@ export const useCartStore = create<CartState>()(
           const updatedItems = currentItems.filter(item => item.id !== cartItemId);
           const summary = calculateCartSummary(updatedItems);
 
+          // Get updated count from server
+          const summaryResponse = await axiosInstance.get<{ data: { totalItems: number; itemCount: number } }>('/cart/summary');
+          const serverSummary = summaryResponse.data.data;
+
           set({
             items: updatedItems,
-            totalItems: summary.totalItems,
+            totalItems: serverSummary.totalItems, // Use server count
             totalPrice: summary.totalPrice,
             isLoading: false,
             error: null,
@@ -114,9 +123,13 @@ export const useCartStore = create<CartState>()(
           );
           const summary = calculateCartSummary(updatedItems);
 
+          // Get updated count from server
+          const summaryResponse = await axiosInstance.get<{ data: { totalItems: number; itemCount: number } }>('/cart/summary');
+          const serverSummary = summaryResponse.data.data;
+
           set({
             items: updatedItems,
-            totalItems: summary.totalItems,
+            totalItems: serverSummary.totalItems, // Use server count
             totalPrice: summary.totalPrice,
             isLoading: false,
             error: null,
@@ -154,13 +167,19 @@ export const useCartStore = create<CartState>()(
       syncWithServer: async () => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.get<{ data: CartItem[] }>('/cart');
-          const items = response.data.data;
+          // Get both cart items and summary
+          const [cartResponse, summaryResponse] = await Promise.all([
+            axiosInstance.get<{ data: CartItem[] }>('/cart'),
+            axiosInstance.get<{ data: { totalItems: number; itemCount: number } }>('/cart/summary')
+          ]);
+          
+          const items = cartResponse.data.data;
           const summary = calculateCartSummary(items);
+          const serverSummary = summaryResponse.data.data;
 
           set({
             items,
-            totalItems: summary.totalItems,
+            totalItems: serverSummary.totalItems, // Use server count
             totalPrice: summary.totalPrice,
             isLoading: false,
             error: null,
@@ -176,6 +195,19 @@ export const useCartStore = create<CartState>()(
       getCartSummary: () => {
         const items = get().items;
         return calculateCartSummary(items);
+      },
+
+      refreshCartCount: async () => {
+        try {
+          const response = await axiosInstance.get<{ data: { totalItems: number; itemCount: number } }>('/cart/summary');
+          const serverSummary = response.data.data;
+
+          set({
+            totalItems: serverSummary.totalItems,
+          });
+        } catch (error: any) {
+          console.error('Failed to refresh cart count:', error);
+        }
       },
     }),
     {

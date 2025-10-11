@@ -14,16 +14,7 @@ import {
   Payment as PaymentIcon,
 } from '@mui/icons-material';
 import { CartItem } from '@/features/cart/types';
-
-// Simple price formatter for IDR
-const formatPrice = (amount: number): string => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
-};
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface CheckoutSummaryProps {
   items: CartItem[];
@@ -33,6 +24,7 @@ interface CheckoutSummaryProps {
   onCreateOrder: () => void;
   creatingOrder: boolean;
   disabled: boolean;
+  selectedPaymentMethod?: string | null;
 }
 
 export default function CheckoutSummary({
@@ -43,13 +35,21 @@ export default function CheckoutSummary({
   onCreateOrder,
   creatingOrder,
   disabled,
+  selectedPaymentMethod,
 }: CheckoutSummaryProps) {
   const theme = useTheme();
+  const { formatPrice } = useCurrencyConversion();
 
   return (
-    <Card sx={{ position: 'sticky', top: 24 }}>
-      <CardContent>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
+    <Card sx={{ 
+      position: 'sticky', 
+      top: 24,
+      borderRadius: 2,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      border: 'none',
+    }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
           Ringkasan Pesanan
         </Typography>
 
@@ -71,18 +71,18 @@ export default function CheckoutSummary({
                     gap: 2,
                     p: 2,
                     borderRadius: 2,
-                    backgroundColor: '#f8f9fa',
-                    border: `1px solid ${theme.palette.grey[200]}`,
+                    backgroundColor: 'grey.50',
                   }}
                 >
                   <Avatar
-                    src={primaryImage || `https://placehold.co/50x50/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name)}`}
+                    src={primaryImage || `https://placehold.co/50x50/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
                     alt={item.product_variant.product.name}
                     sx={{
                       width: 50,
                       height: 50,
-                      borderRadius: 1.5,
+                      borderRadius: 2,
                       flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                     }}
                     variant="rounded"
                   >
@@ -90,13 +90,23 @@ export default function CheckoutSummary({
                   </Avatar>
                   
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 0.5 }}>
+                    <Typography 
+                      variant="subtitle2" 
+                      fontWeight={600} 
+                      sx={{ 
+                        mb: 0.5,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      }}
+                      title={item.product_variant.product.name}
+                    >
                       {item.product_variant.product.name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                       {item.product_variant.variant_name}
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
                       Qty: {item.quantity}
                     </Typography>
                   </Box>
@@ -105,6 +115,7 @@ export default function CheckoutSummary({
                     variant="body2"
                     fontWeight={600}
                     color="primary.main"
+                    sx={{ fontSize: '0.9rem' }}
                   >
                     {formatPrice(parseFloat(item.product_variant.price) * item.quantity)}
                   </Typography>
@@ -118,41 +129,51 @@ export default function CheckoutSummary({
 
         {/* Price Breakdown */}
         <Stack spacing={2}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body1">
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            py: 2,
+            px: 2,
+            backgroundColor: 'grey.50',
+            borderRadius: 2,
+          }}>
+            <Typography variant="body1" fontWeight={500}>
               Subtotal
             </Typography>
-            <Typography
-              variant="body1"
-              fontWeight={600}
-            >
+            <Typography variant="body1" fontWeight={600}>
               {formatPrice(subtotal)}
             </Typography>
           </Box>
 
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body1">
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            py: 2,
+            px: 2,
+            backgroundColor: 'grey.50',
+            borderRadius: 2,
+          }}>
+            <Typography variant="body1" fontWeight={500}>
               Biaya Pengiriman
             </Typography>
-            <Typography
-              variant="body1"
-              fontWeight={600}
-            >
+            <Typography variant="body1" fontWeight={600}>
               {formatPrice(shippingCost)}
             </Typography>
           </Box>
 
-          <Divider />
-
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="h6" fontWeight={700}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            py: 2,
+            px: 2,
+            backgroundColor: 'primary.main',
+            borderRadius: 2,
+            color: 'white',
+          }}>
+            <Typography variant="h6" fontWeight={600}>
               Total
             </Typography>
-            <Typography
-              variant="h6"
-              fontWeight={700}
-              color="primary.main"
-            >
+            <Typography variant="h6" fontWeight={700}>
               {formatPrice(total)}
             </Typography>
           </Box>
@@ -160,7 +181,7 @@ export default function CheckoutSummary({
 
         <Divider sx={{ my: 3 }} />
 
-        {/* Create Order & PayPal Payment Button */}
+        {/* Create Order & Payment Button */}
         <Button
           variant="contained"
           size="large"
@@ -169,24 +190,23 @@ export default function CheckoutSummary({
           disabled={disabled || creatingOrder}
           fullWidth
           sx={{
-            py: 2,
+            py: 1.5,
             borderRadius: 2,
             fontWeight: 600,
-            fontSize: '1.1rem',
-            backgroundColor: '#003087',
+            fontSize: '1rem',
+            backgroundColor: 'primary.main',
             '&:hover': {
-              backgroundColor: '#002366',
+              backgroundColor: 'primary.dark',
+            },
+            '&:disabled': {
+              backgroundColor: 'grey.300',
+              color: 'grey.500',
             },
           }}
         >
-          {creatingOrder ? 'Membuat Order...' : 'Buat Order & Bayar dengan PayPal'}
+          {creatingOrder ? 'Membuat Order...' : 'Buat Order & Bayar'}
         </Button>
-        
-        <Box sx={{ mt: 2, textAlign: 'center' }}>
-          <Typography variant="caption" color="text.secondary">
-            Pembayaran aman dengan PayPal Payment Gateway
-          </Typography>
-        </Box>
+
 
         <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
           Dengan melanjutkan, Anda menyetujui syarat dan ketentuan kami

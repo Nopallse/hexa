@@ -86,28 +86,28 @@ const theme = createTheme({
     },
     // Craft Aesthetic Colors
     success: {
-      main: '#B8E6B8',      // Mint green - craft pastel
-      light: '#D4F0D4',
-      dark: '#9CD69C',
-      contrastText: '#2E7D32',
+      main: '#27AE60',      // Green yang lebih kontras
+      light: '#D4EDDA',
+      dark: '#1E8449',
+      contrastText: '#FFFFFF',
     },
     info: {
-      main: '#B8D4E8',      // Sky blue - craft pastel
+      main: '#3498DB',       // Blue yang lebih kontras
       light: '#D1E5F0',
-      dark: '#9BC2D8',
-      contrastText: '#1565C0',
+      dark: '#2980B9',
+      contrastText: '#FFFFFF',
     },
     warning: {
-      main: '#F4E4C1',      // Cream - craft pastel
-      light: '#F8EDD1',
-      dark: '#E8D4A1',
-      contrastText: '#E65100',
+      main: '#F39C12',       // Orange yang lebih kontras
+      light: '#FFF3CD',
+      dark: '#D68910',
+      contrastText: '#FFFFFF',
     },
     error: {
-      main: '#E8B4B8',      // Blush pink - craft pastel
-      light: '#F0C8CC',
-      dark: '#D49CA0',
-      contrastText: '#C62828',
+      main: '#E74C3C',       // Red yang lebih kontras
+      light: '#F8D7DA',
+      dark: '#C0392B',
+      contrastText: '#FFFFFF',
     },
     background: {
       default: '#FAF8FF',   // Soft lavender background
@@ -119,12 +119,12 @@ const theme = createTheme({
     },
     // Craft-specific colors
     craft: {
-      blush: '#E8B4B8',
-      mint: '#B8E6B8',
-      sky: '#B8D4E8',
-      cream: '#F4E4C1',
-      lavender: '#E8E0FF',
-      rose: '#F8E8E8',
+      blush: '#E74C3C',      // Menggunakan error color yang lebih kontras
+      mint: '#27AE60',       // Menggunakan success color yang lebih kontras
+      sky: '#3498DB',        // Menggunakan info color yang lebih kontras
+      cream: '#F39C12',      // Menggunakan warning color yang lebih kontras
+      lavender: '#E8E0FF',   // Tetap soft untuk background
+      rose: '#F8E8E8',       // Tetap soft untuk background
     },
   },
   typography: {

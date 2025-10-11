@@ -18,16 +18,7 @@ import { useNavigate } from 'react-router-dom';
 import { CartItem } from '../types';
 import { cartApi } from '../services/cartApi';
 import { useCartStore } from '../store/cartStore';
-
-// Simple price formatter for IDR
-const formatPrice = (amount: number): string => {
-  return new Intl.NumberFormat('id-ID', {
-    style: 'currency',
-    currency: 'IDR',
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0
-  }).format(amount);
-};
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface CartSummaryProps {
   items: CartItem[];
@@ -38,6 +29,7 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
   const theme = useTheme();
   const navigate = useNavigate();
   const [clearing, setClearing] = useState(false);
+  const { formatPrice } = useCurrencyConversion();
   
   const { clearCart, getTotalItems, getTotalPrice } = useCartStore();
 
@@ -79,47 +71,78 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
   const totalPrice = availableItems.reduce((sum, item) => sum + (parseFloat(item.product_variant.price) * item.quantity), 0);
 
   return (
-    <Card sx={{ position: 'sticky', top: 24 }}>
-      <CardContent>
-        <Typography variant="h6" fontWeight={700} sx={{ mb: 3 }}>
+    <Card sx={{ 
+      position: 'sticky', 
+      top: 24,
+      borderRadius: 2,
+      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+      border: 'none',
+    }}>
+      <CardContent sx={{ p: 3 }}>
+        <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
           Ringkasan Belanja
         </Typography>
 
         <Stack spacing={2}>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body1">
+          {/* Item Count */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            py: 2,
+            px: 2,
+            backgroundColor: 'grey.50',
+            borderRadius: 2,
+          }}>
+            <Typography variant="body1" fontWeight={500}>
               Total Item ({totalItems})
             </Typography>
-            <Typography variant="body1" fontWeight={600}>
+            <Typography variant="h6" fontWeight={600} color="primary.main">
               {totalPrice > 0 ? formatCartPrice(totalPrice) : 'Rp 0'}
             </Typography>
           </Box>
 
+          {/* Deleted Items Warning */}
           {deletedItems.length > 0 && (
-            <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-              <Typography variant="body2" color="error.main">
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              py: 1.5,
+              px: 2,
+              backgroundColor: 'error.light',
+              borderRadius: 2,
+            }}>
+              <Typography variant="body2" color="error.dark" fontWeight={500}>
                 Item tidak tersedia ({deletedItems.length})
               </Typography>
-              <Typography variant="body2" color="error.main">
+              <Typography variant="body2" color="error.dark" fontWeight={500}>
                 Tidak dihitung
               </Typography>
             </Box>
           )}
 
-          <Divider />
-
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="h6" fontWeight={700}>
+          {/* Total Price */}
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            py: 2,
+            px: 2,
+            backgroundColor: 'primary.main',
+            borderRadius: 2,
+            color: 'white',
+          }}>
+            <Typography variant="h6" fontWeight={600}>
               Total Belanja
             </Typography>
-            <Typography variant="h6" fontWeight={700} color="primary.main">
+            <Typography variant="h5" fontWeight={700}>
               {formatPrice(totalPrice)}
             </Typography>
           </Box>
 
-          <Divider />
-
-          <Stack spacing={2}>
+          {/* Action Buttons */}
+          <Stack spacing={1.5}>
             <Button
               variant="contained"
               size="large"
@@ -132,6 +155,14 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
                 borderRadius: 2,
                 fontWeight: 600,
                 fontSize: '1rem',
+                backgroundColor: 'primary.main',
+                '&:hover': {
+                  backgroundColor: 'primary.dark',
+                },
+                '&:disabled': {
+                  backgroundColor: 'grey.300',
+                  color: 'grey.500',
+                },
               }}
             >
               {totalItems === 0 ? 'Keranjang Kosong' : 'Lanjut ke Checkout'}
@@ -145,12 +176,17 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
                 onClick={handleClearCart}
                 disabled={clearing}
                 fullWidth
-                color="error"
                 sx={{
                   py: 1.5,
                   borderRadius: 2,
-                  fontWeight: 600,
-                  fontSize: '1rem',
+                  fontWeight: 500,
+                  fontSize: '0.9rem',
+                  borderColor: 'error.main',
+                  color: 'error.main',
+                  '&:hover': {
+                    backgroundColor: 'error.light',
+                    borderColor: 'error.dark',
+                  },
                 }}
               >
                 {clearing ? 'Mengosongkan...' : 'Kosongkan Keranjang'}

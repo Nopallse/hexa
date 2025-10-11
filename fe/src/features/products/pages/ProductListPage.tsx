@@ -10,10 +10,19 @@
   Breadcrumbs,
   Link,
   Grid,
+  useMediaQuery,
+  Drawer,
+  IconButton,
+  Fab,
+  FormControl,
+  Select,
+  MenuItem,
 } from '@mui/material';
 import { 
   Home, 
   ShoppingBag,
+  FilterList,
+  Close,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -23,17 +32,21 @@ import { Product, ProductQueryParams } from '../types';
 import ProductTopFilter from '../components/ProductTopFilter';
 import ProductSidebarFilter from '../components/ProductSidebarFilter';
 import ProductCard from '../components/ProductCard';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function ProductListPage() {
   const theme = useTheme();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   // State
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   
   // Pagination
   const [pagination, setPagination] = useState({
@@ -139,9 +152,21 @@ export default function ProductListPage() {
   );
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', py: { xs: 2, md: 4 } }}>
       <Container maxWidth="xl">
-
+        {/* Currency Loading State */}
+        {currencyLoading && (
+          <Alert severity="info" sx={{ mb: 2 }}>
+            Loading exchange rates...
+          </Alert>
+        )}
+        
+        {/* Currency Error State */}
+        {currencyError && (
+          <Alert severity="warning" sx={{ mb: 2 }}>
+            Failed to load exchange rates. Prices will be displayed in default currency.
+          </Alert>
+        )}
 
         {/* Main Content with Sidebar */}
         <Box sx={{ 
@@ -150,35 +175,70 @@ export default function ProductListPage() {
           gap: 4, 
           alignItems: 'flex-start' 
         }}>
-          {/* Sidebar Filter */}
-          <Box sx={{ 
-            width: { xs: '100%', md: '300px' }, 
-            flexShrink: 0,
-            order: { xs: 1, md: 1 }
-          }}>
-            <ProductSidebarFilter
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              categories={categories}
-              loading={loading}
-            />
-          </Box>
+          {/* Desktop Sidebar Filter */}
+          {!isMobile && (
+            <Box sx={{ 
+              width: '300px', 
+              flexShrink: 0,
+            }}>
+              <ProductSidebarFilter
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                categories={categories}
+                loading={loading}
+              />
+            </Box>
+          )}
 
           {/* Main Content Area */}
           <Box sx={{ 
             flex: 1, 
             minWidth: 0,
-            order: { xs: 2, md: 2 }
           }}>
-            {/* Top Filter */}
-            <ProductTopFilter
-              filters={filters}
-              onFilterChange={handleFilterChange}
-              loading={loading}
-            />
+            {/* Top Filter with Mobile Filter Button */}
+            <Box sx={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: 2, 
+              mb: 3,
+              flexWrap: 'wrap'
+            }}>
+              <Box sx={{ flex: 1, minWidth: 200 }}>
+                <ProductTopFilter
+                  filters={filters}
+                  onFilterChange={handleFilterChange}
+                  loading={loading}
+                />
+              </Box>
+              
+              {/* Mobile Filter Button */}
+              {isMobile && (
+                <Fab
+                  size="medium"
+                  color="primary"
+                  onClick={() => setMobileFilterOpen(true)}
+                  sx={{
+                    position: 'fixed',
+                    bottom: 20,
+                    right: 20,
+                    zIndex: 1000,
+                    boxShadow: '0 4px 20px rgba(0,0,0,0.15)',
+                  }}
+                >
+                  <FilterList />
+                </Fab>
+              )}
+            </Box>
 
             {/* Results Header */}
-            <Box sx={{ mb: 4 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              mb: 3,
+              flexWrap: 'wrap',
+              gap: 2
+            }}>
               <Typography variant="h6" color="text.primary" fontWeight={600}>
                 {loading ? (
                   <Skeleton width={200} />
@@ -186,6 +246,28 @@ export default function ProductListPage() {
                   `Menampilkan ${products.length} dari ${pagination.total} produk`
                 )}
               </Typography>
+              
+              {/* Sort Options */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                <Typography variant="body2" color="text.secondary">
+                  Urutkan:
+                </Typography>
+                <Box sx={{ minWidth: 150 }}>
+                  <FormControl size="small" fullWidth>
+                    <Select
+                      value={filters.sort || 'created_at'}
+                      onChange={(e) => handleFilterChange({ ...filters, sort: e.target.value as any, page: 1 })}
+                      sx={{ borderRadius: 2 }}
+                    >
+                      <MenuItem value="created_at">Terbaru</MenuItem>
+                      <MenuItem value="name">Nama A-Z</MenuItem>
+                      <MenuItem value="price">Harga Terendah</MenuItem>
+                      <MenuItem value="price_desc">Harga Tertinggi</MenuItem>
+                      <MenuItem value="sold_count">Terlaris</MenuItem>
+                    </Select>
+                  </FormControl>
+                </Box>
+              </Box>
             </Box>
 
             {/* Products Grid */}
@@ -233,6 +315,46 @@ export default function ProductListPage() {
             )}
           </Box>
         </Box>
+
+        {/* Mobile Filter Drawer */}
+        <Drawer
+          anchor="right"
+          open={mobileFilterOpen}
+          onClose={() => setMobileFilterOpen(false)}
+          sx={{
+            '& .MuiDrawer-paper': {
+              width: { xs: '100%', sm: 400 },
+              maxWidth: '90vw',
+            },
+          }}
+        >
+          <Box sx={{ p: 3 }}>
+            <Box sx={{ 
+              display: 'flex', 
+              justifyContent: 'space-between', 
+              alignItems: 'center', 
+              mb: 3 
+            }}>
+              <Typography variant="h6" fontWeight={700}>
+                Filter Produk
+              </Typography>
+              <IconButton onClick={() => setMobileFilterOpen(false)}>
+                <Close />
+              </IconButton>
+            </Box>
+            
+            <ProductSidebarFilter
+              filters={filters}
+              onFilterChange={(newFilters) => {
+                handleFilterChange(newFilters);
+                setMobileFilterOpen(false);
+              }}
+              categories={categories}
+              loading={loading}
+              variant="mobile"
+            />
+          </Box>
+        </Drawer>
 
         {/* Pagination */}
         {!loading && !error && products.length > 0 && pagination.pages > 1 && (
