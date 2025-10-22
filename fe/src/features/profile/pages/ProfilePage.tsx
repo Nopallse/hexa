@@ -24,6 +24,8 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  Switch,
+  FormControlLabel,
 } from '@mui/material';
 import {
   Person as PersonIcon,
@@ -39,8 +41,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
-import { addressApi } from '@/features/addresses/services/addressApi';
-import { Address } from '@/features/addresses/types';
+import { addressApi, Address } from '@/features/addresses/services/addressApi';
+import AreaAutocomplete from '@/components/common/AreaAutocomplete';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -98,14 +100,34 @@ export default function ProfilePage() {
   const [showAddressDialog, setShowAddressDialog] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [addressFormData, setAddressFormData] = useState({
+    recipient_name: '',
+    phone_number: '',
     address_line: '',
     city: '',
     province: '',
     postal_code: '',
+    country: 'ID',
     is_primary: false,
   });
   const [addressFormLoading, setAddressFormLoading] = useState(false);
   const [addressFormError, setAddressFormError] = useState<string | null>(null);
+  
+  // Area autocomplete state
+  const [selectedArea, setSelectedArea] = useState<any>(null);
+  
+  // Supported countries
+  const supportedCountries = [
+    { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+    { code: 'US', name: 'United States', flag: '🇺🇸' },
+    { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+    { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+    { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+    { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
+    { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
+    { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+    { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+    { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+  ];
   
   // Form state
   const [formData, setFormData] = useState({
@@ -136,7 +158,7 @@ export default function ProfilePage() {
         setAddressesLoading(true);
         setAddressesError(null);
         const response = await addressApi.getAddresses();
-        if (response.success) {
+        if (response.success && response.data) {
           setAddresses(response.data);
         } else {
           setAddressesError(response.error || 'Gagal memuat alamat');
@@ -204,12 +226,16 @@ export default function ProfilePage() {
   const handleAddAddress = () => {
     setEditingAddress(null);
     setAddressFormData({
+      recipient_name: '',
+      phone_number: '',
       address_line: '',
       city: '',
       province: '',
       postal_code: '',
+      country: 'ID',
       is_primary: false,
     });
+    setSelectedArea(null);
     setAddressFormError(null);
     setShowAddressDialog(true);
   };
@@ -217,10 +243,13 @@ export default function ProfilePage() {
   const handleEditAddress = (address: Address) => {
     setEditingAddress(address);
     setAddressFormData({
+      recipient_name: address.recipient_name,
+      phone_number: address.phone_number,
       address_line: address.address_line,
       city: address.city,
       province: address.province,
       postal_code: address.postal_code,
+      country: address.country,
       is_primary: address.is_primary,
     });
     setAddressFormError(null);
@@ -241,6 +270,18 @@ export default function ProfilePage() {
     }));
   };
 
+  const handleAreaSelect = (area: any) => {
+    setSelectedArea(area);
+    if (area) {
+      setAddressFormData(prev => ({
+        ...prev,
+        city: area.administrative_division_level_2_name,
+        province: area.administrative_division_level_1_name,
+        postal_code: area.postal_code.toString()
+      }));
+    }
+  };
+
   const handleAddressFormSubmit = async () => {
     try {
       setAddressFormLoading(true);
@@ -252,7 +293,7 @@ export default function ProfilePage() {
         if (response.success) {
           // Refresh addresses
           const addressesResponse = await addressApi.getAddresses();
-          if (addressesResponse.success) {
+          if (addressesResponse.success && addressesResponse.data) {
             setAddresses(addressesResponse.data);
           }
           setShowAddressDialog(false);
@@ -265,7 +306,7 @@ export default function ProfilePage() {
         if (response.success) {
           // Refresh addresses
           const addressesResponse = await addressApi.getAddresses();
-          if (addressesResponse.success) {
+          if (addressesResponse.success && addressesResponse.data) {
             setAddresses(addressesResponse.data);
           }
           setShowAddressDialog(false);
@@ -296,7 +337,7 @@ export default function ProfilePage() {
       if (response.success) {
         // Refresh addresses
         const addressesResponse = await addressApi.getAddresses();
-        if (addressesResponse.success) {
+        if (addressesResponse.success && addressesResponse.data) {
           setAddresses(addressesResponse.data);
         }
       } else {
@@ -304,6 +345,23 @@ export default function ProfilePage() {
       }
     } catch (err: any) {
       setAddressesError(err.message || 'Gagal menghapus alamat');
+    }
+  };
+
+  const handleSetPrimary = async (address: Address) => {
+    try {
+      const response = await addressApi.setPrimaryAddress(address.id);
+      if (response.success) {
+        // Refresh addresses
+        const addressesResponse = await addressApi.getAddresses();
+        if (addressesResponse.success && addressesResponse.data) {
+          setAddresses(addressesResponse.data);
+        }
+      } else {
+        setAddressesError(response.error || 'Gagal mengubah alamat utama');
+      }
+    } catch (err: any) {
+      setAddressesError(err.message || 'Gagal mengubah alamat utama');
     }
   };
 
@@ -780,15 +838,15 @@ export default function ProfilePage() {
                   }}>
                     <CardContent sx={{ p: 3, flexGrow: 1 }}>
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
-                        <Typography 
-                          variant="h6" 
-                          sx={{ 
-                            fontWeight: 600,
-                            color: 'text.primary'
-                          }}
-                        >
-                          Alamat Utama
-                        </Typography>
+                      <Typography 
+                        variant="h6" 
+                        sx={{ 
+                          fontWeight: 600,
+                          color: 'text.primary'
+                        }}
+                      >
+                        {address.recipient_name}
+                      </Typography>
                         {address.is_primary && (
                           <Box sx={{ 
                             backgroundColor: 'primary.main', 
@@ -804,11 +862,18 @@ export default function ProfilePage() {
                         )}
                       </Box>
                       
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                        {address.phone_number}
+                      </Typography>
+                      
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {address.address_line}
                       </Typography>
                       <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {address.city}, {address.province} {address.postal_code}
+                      </Typography>
+                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {supportedCountries.find(c => c.code === address.country)?.flag} {supportedCountries.find(c => c.code === address.country)?.name}
                       </Typography>
                       
                       <Box sx={{ display: 'flex', gap: 1, mt: 'auto' }}>
@@ -826,20 +891,36 @@ export default function ProfilePage() {
                           Edit
                         </Button>
                         {!address.is_primary && (
-                          <Button
-                            variant="outlined"
-                            color="error"
-                            size="small"
-                            onClick={() => handleDeleteAddress(address)}
-                            sx={{
-                              borderRadius: 2,
-                              textTransform: 'none',
-                              fontWeight: 500,
-                              fontSize: '0.75rem',
-                            }}
-                          >
-                            Hapus
-                          </Button>
+                          <>
+                            <Button
+                              variant="outlined"
+                              color="primary"
+                              size="small"
+                              onClick={() => handleSetPrimary(address)}
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              Set Utama
+                            </Button>
+                            <Button
+                              variant="outlined"
+                              color="error"
+                              size="small"
+                              onClick={() => handleDeleteAddress(address)}
+                              sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                fontSize: '0.75rem',
+                              }}
+                            >
+                              Hapus
+                            </Button>
+                          </>
                         )}
                       </Box>
                     </CardContent>
@@ -880,6 +961,38 @@ export default function ProfilePage() {
 
           {/* Address Form */}
           <Grid container spacing={3}>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Nama Penerima"
+                value={addressFormData.recipient_name}
+                onChange={handleAddressFormChange('recipient_name')}
+                variant="outlined"
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+            </Grid>
+            
+            <Grid item xs={12} sm={6}>
+              <TextField
+                fullWidth
+                label="Nomor Telepon"
+                value={addressFormData.phone_number}
+                onChange={handleAddressFormChange('phone_number')}
+                variant="outlined"
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': {
+                    borderRadius: 2,
+                  },
+                }}
+              />
+            </Grid>
+            
             <Grid item xs={12}>
               <TextField
                 fullWidth
@@ -887,12 +1000,71 @@ export default function ProfilePage() {
                 value={addressFormData.address_line}
                 onChange={handleAddressFormChange('address_line')}
                 variant="outlined"
+                placeholder="Masukkan alamat lengkap (nama jalan, nomor rumah, dll)"
+                required
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
                   },
                 }}
               />
+            </Grid>
+            
+            <Grid item xs={12}>
+              <FormControl fullWidth>
+                <InputLabel>Negara</InputLabel>
+                <Select
+                  value={addressFormData.country}
+                  onChange={(e) => setAddressFormData(prev => ({
+                    ...prev,
+                    country: e.target.value,
+                    // Reset area when country changes
+                    city: '',
+                    province: '',
+                    postal_code: ''
+                  }))}
+                  sx={{
+                    borderRadius: 2,
+                  }}
+                >
+                  {supportedCountries.map((country) => (
+                    <MenuItem key={country.code} value={country.code}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <span>{country.flag}</span>
+                        <span>{country.name}</span>
+                      </Box>
+                    </MenuItem>
+                  ))}
+                </Select>
+              </FormControl>
+            </Grid>
+            
+            <Grid item xs={12}>
+              {addressFormData.country === 'ID' ? (
+                <AreaAutocomplete
+                  label="Pilih Area"
+                  placeholder="Ketik nama kota, kecamatan, atau kode pos..."
+                  value={selectedArea}
+                  onChange={handleAreaSelect}
+                  required
+                  countries="ID"
+                  limit={10}
+                />
+              ) : (
+                <TextField
+                  fullWidth
+                  label="Manual Address Entry"
+                  placeholder="Enter address details manually for international addresses"
+                  variant="outlined"
+                  disabled
+                  helperText={`Area autocomplete is only available for Indonesia. Please fill the fields below manually for ${supportedCountries.find(c => c.code === addressFormData.country)?.name}.`}
+                  sx={{
+                    '& .MuiOutlinedInput-root': {
+                      borderRadius: 2,
+                    },
+                  }}
+                />
+              )}
             </Grid>
             
             <Grid item xs={12} sm={6}>
@@ -902,6 +1074,15 @@ export default function ProfilePage() {
                 value={addressFormData.city}
                 onChange={handleAddressFormChange('city')}
                 variant="outlined"
+                disabled={addressFormData.country === 'ID' && !!selectedArea}
+                helperText={
+                  addressFormData.country === 'ID' && selectedArea 
+                    ? "Otomatis terisi dari area yang dipilih" 
+                    : addressFormData.country === 'ID'
+                    ? "Masukkan nama kota atau pilih dari area autocomplete"
+                    : `Masukkan nama kota untuk ${supportedCountries.find(c => c.code === addressFormData.country)?.name}`
+                }
+                required
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
@@ -913,10 +1094,19 @@ export default function ProfilePage() {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Provinsi"
+                label="Provinsi/State"
                 value={addressFormData.province}
                 onChange={handleAddressFormChange('province')}
                 variant="outlined"
+                disabled={addressFormData.country === 'ID' && !!selectedArea}
+                helperText={
+                  addressFormData.country === 'ID' && selectedArea 
+                    ? "Otomatis terisi dari area yang dipilih" 
+                    : addressFormData.country === 'ID'
+                    ? "Masukkan nama provinsi atau pilih dari area autocomplete"
+                    : `Masukkan nama provinsi/state untuk ${supportedCountries.find(c => c.code === addressFormData.country)?.name}`
+                }
+                required
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
@@ -928,10 +1118,19 @@ export default function ProfilePage() {
             <Grid item xs={12} sm={6}>
               <TextField
                 fullWidth
-                label="Kode Pos"
+                label="Kode Pos/ZIP Code"
                 value={addressFormData.postal_code}
                 onChange={handleAddressFormChange('postal_code')}
                 variant="outlined"
+                disabled={addressFormData.country === 'ID' && !!selectedArea}
+                helperText={
+                  addressFormData.country === 'ID' && selectedArea 
+                    ? "Otomatis terisi dari area yang dipilih" 
+                    : addressFormData.country === 'ID'
+                    ? "Masukkan kode pos atau pilih dari area autocomplete"
+                    : `Masukkan kode pos/ZIP code untuk ${supportedCountries.find(c => c.code === addressFormData.country)?.name}`
+                }
+                required
                 sx={{
                   '& .MuiOutlinedInput-root': {
                     borderRadius: 2,
@@ -940,25 +1139,47 @@ export default function ProfilePage() {
               />
             </Grid>
             
-            <Grid item xs={12} sm={6}>
-              <FormControl fullWidth>
-                <InputLabel>Status Alamat</InputLabel>
-                <Select
-                  value={addressFormData.is_primary ? 'primary' : 'secondary'}
-                  onChange={(e) => setAddressFormData(prev => ({
-                    ...prev,
-                    is_primary: e.target.value === 'primary'
-                  }))}
-                  sx={{
-                    borderRadius: 2,
-                  }}
-                >
-                  <MenuItem value="primary">Alamat Utama</MenuItem>
-                  <MenuItem value="secondary">Alamat Tambahan</MenuItem>
-                </Select>
-              </FormControl>
+            <Grid item xs={12}>
+              <FormControlLabel
+                control={
+                  <Switch
+                    checked={addressFormData.is_primary}
+                    onChange={(e) => setAddressFormData(prev => ({
+                      ...prev,
+                      is_primary: e.target.checked
+                    }))}
+                    color="primary"
+                  />
+                }
+                label={
+                  <Box>
+                    <Typography variant="body1" fontWeight={500}>
+                      Set sebagai Alamat Utama
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {addressFormData.is_primary 
+                        ? 'Alamat ini akan menjadi alamat utama untuk pengiriman'
+                        : 'Alamat ini akan menjadi alamat tambahan'
+                      }
+                    </Typography>
+                  </Box>
+                }
+                sx={{ alignItems: 'flex-start', mt: 1 }}
+              />
             </Grid>
           </Grid>
+
+          {/* Selected Area Info */}
+          {selectedArea && (
+            <Box sx={{ mt: 3, p: 2, backgroundColor: 'primary.light', borderRadius: 2 }}>
+              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1, color: 'primary.dark' }}>
+                Area yang Dipilih:
+              </Typography>
+              <Typography variant="body2" sx={{ color: 'primary.dark' }}>
+                {selectedArea.administrative_division_level_3_name}, {selectedArea.administrative_division_level_2_name}, {selectedArea.administrative_division_level_1_name} - {selectedArea.postal_code}
+              </Typography>
+            </Box>
+          )}
 
           {/* Form Actions */}
           <Box sx={{ display: 'flex', gap: 2, mt: 4, justifyContent: 'flex-end' }}>

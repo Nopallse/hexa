@@ -8,6 +8,7 @@ import {
   Box,
   Avatar,
   useTheme,
+  Chip,
 } from '@mui/material';
 import {
   ShoppingCart as ShoppingCartIcon,
@@ -15,6 +16,7 @@ import {
 } from '@mui/icons-material';
 import { CartItem } from '@/features/cart/types';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import { ShippingMethod } from '../types/shipping';
 
 interface CheckoutSummaryProps {
   items: CartItem[];
@@ -25,6 +27,7 @@ interface CheckoutSummaryProps {
   creatingOrder: boolean;
   disabled: boolean;
   selectedPaymentMethod?: string | null;
+  selectedShippingMethod?: ShippingMethod | null;
 }
 
 export default function CheckoutSummary({
@@ -36,9 +39,40 @@ export default function CheckoutSummary({
   creatingOrder,
   disabled,
   selectedPaymentMethod,
+  selectedShippingMethod,
 }: CheckoutSummaryProps) {
   const theme = useTheme();
   const { formatPrice } = useCurrencyConversion();
+
+  const getProviderLabel = (provider: string) => {
+    switch (provider) {
+      case 'biteship':
+        return '🚚 Biteship';
+      case 'fedex':
+        return '📦 FedEx';
+      case 'fedex-estimated':
+        return '📦 FedEx (Est.)';
+      case 'indonesia-estimated':
+        return '🇮🇩 Indonesia (Est.)';
+      default:
+        return '📦 Shipping';
+    }
+  };
+
+  const getProviderColor = (provider: string) => {
+    switch (provider) {
+      case 'biteship':
+        return 'primary';
+      case 'fedex':
+        return 'error';
+      case 'fedex-estimated':
+        return 'warning';
+      case 'indonesia-estimated':
+        return 'info';
+      default:
+        return 'default';
+    }
+  };
 
   return (
     <Card sx={{ 
@@ -148,14 +182,32 @@ export default function CheckoutSummary({
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between',
+            alignItems: 'center',
             py: 2,
             px: 2,
             backgroundColor: 'grey.50',
             borderRadius: 2,
           }}>
-            <Typography variant="body1" fontWeight={500}>
-              Biaya Pengiriman
-            </Typography>
+            <Box>
+              <Typography variant="body1" fontWeight={500}>
+                Biaya Pengiriman
+              </Typography>
+              {selectedShippingMethod && (
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedShippingMethod.courier_name} - {selectedShippingMethod.courier_service_name}
+                  </Typography>
+                  {selectedShippingMethod.provider && (
+                    <Chip
+                      label={getProviderLabel(selectedShippingMethod.provider)}
+                      size="small"
+                      color={getProviderColor(selectedShippingMethod.provider) as any}
+                      variant="outlined"
+                    />
+                  )}
+                </Box>
+              )}
+            </Box>
             <Typography variant="body1" fontWeight={600}>
               {formatPrice(shippingCost)}
             </Typography>

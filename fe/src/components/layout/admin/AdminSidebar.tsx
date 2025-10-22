@@ -16,6 +16,7 @@ import {
   ShoppingCart as OrdersIcon,
   Payment as PaymentIcon,
   People as UsersIcon,
+  LocalShipping as ShippingIcon,
   ExpandLess,
   ExpandMore,
 } from '@mui/icons-material';
@@ -53,6 +54,11 @@ const menuItems: MenuItem[] = [
     title: 'Pesanan',
     icon: <OrdersIcon />,
     path: '/admin/orders',
+  },
+  {
+    title: 'Pengiriman',
+    icon: <ShippingIcon />,
+    path: '/admin/shipping',
   },
   {
     title: 'Pembayaran',

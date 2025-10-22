@@ -13,6 +13,8 @@ import ProtectedRoute from '@/components/common/ProtectedRoute';
 
 // Lazy load pages
 const HomePage = lazy(() => import('@/features/home/pages/HomePage'));
+const ContactPage = lazy(() => import('@/features/home/pages/ContactPage'));
+const AboutPage = lazy(() => import('@/features/home/pages/AboutPage'));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
@@ -35,9 +37,6 @@ const PaymentCancelPage = lazy(() => import('@/features/payments/pages/PaymentCa
 const ProfilePage = lazy(() => import('@/features/profile/pages/ProfilePage'));
 const AccountSettingsPage = lazy(() => import('@/features/profile/pages/AccountSettingsPage'));
 
-const AddressListPage = lazy(() => import('@/features/addresses/pages/AddressListPage'));
-const AddAddressPage = lazy(() => import('@/features/addresses/pages/AddAddressPage'));
-const EditAddressPage = lazy(() => import('@/features/addresses/pages/EditAddressPage'));
 
 // Admin pages
 const AdminDashboardPage = lazy(() => import('@/features/admin/dashboard/pages/DashboardPage'));
@@ -55,6 +54,7 @@ const AdminEditCategoryPage = lazy(() => import('@/features/admin/categories/pag
 const AdminDeletedCategoriesPage = lazy(() => import('@/features/admin/categories/pages/DeletedCategoriesPage'));
 const AdminOrderManagementPage = lazy(() => import('@/features/admin/orders/pages/OrderManagementPage'));
 const AdminOrderDetailPage = lazy(() => import('@/features/admin/orders/pages/OrderDetailPage'));
+const AdminShippingManagementPage = lazy(() => import('@/features/admin/shipping/pages/ShippingManagementPage'));
 const AdminPaymentListPage = lazy(() => import('@/features/admin/payments/pages/PaymentListPage'));
 const AdminUserListPage = lazy(() => import('@/features/admin/users/pages/UserListPage'));
 const AdminUserDetailPage = lazy(() => import('@/features/admin/users/pages/UserDetailPage'));
@@ -136,6 +136,22 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <ProductListPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'contact',
+        element: (
+          <SuspenseWrapper>
+            <ContactPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'about',
+        element: (
+          <SuspenseWrapper>
+            <AboutPage />
           </SuspenseWrapper>
         ),
       },
@@ -229,36 +245,6 @@ export const router = createBrowserRouter([
           <ProtectedRoute requireUser>
             <SuspenseWrapper>
               <AccountSettingsPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'addresses',
-        element: (
-          <ProtectedRoute requireUser>
-            <SuspenseWrapper>
-              <AddressListPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'addresses/add',
-        element: (
-          <ProtectedRoute requireUser>
-            <SuspenseWrapper>
-              <AddAddressPage />
-            </SuspenseWrapper>
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: 'addresses/:id/edit',
-        element: (
-          <ProtectedRoute requireUser>
-            <SuspenseWrapper>
-              <EditAddressPage />
             </SuspenseWrapper>
           </ProtectedRoute>
         ),
@@ -392,6 +378,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <AdminOrderDetailPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'shipping',
+        element: (
+          <SuspenseWrapper>
+            <AdminShippingManagementPage />
           </SuspenseWrapper>
         ),
       },

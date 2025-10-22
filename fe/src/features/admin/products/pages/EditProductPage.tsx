@@ -24,6 +24,11 @@ interface Product {
   price: string | null;
   stock: number | null;
   pre_order: number;
+  // Physical dimensions for shipping calculation
+  length?: number | null;
+  width?: number | null;
+  height?: number | null;
+  weight?: number | null;
   created_at: string;
   updated_at: string;
   deleted_at?: string | null;

@@ -58,6 +58,27 @@ const simpleProductSchema = z.object({
     .int('Pre-order harus berupa bilangan bulat')
     .min(0, 'Pre-order tidak boleh negatif')
     .max(365, 'Pre-order maksimal 365 hari'),
+  // Physical dimensions for shipping calculation
+  length: z
+    .number()
+    .min(0, 'Panjang tidak boleh negatif')
+    .max(9999, 'Panjang maksimal 9999 cm')
+    .optional(),
+  width: z
+    .number()
+    .min(0, 'Lebar tidak boleh negatif')
+    .max(9999, 'Lebar maksimal 9999 cm')
+    .optional(),
+  height: z
+    .number()
+    .min(0, 'Tinggi tidak boleh negatif')
+    .max(9999, 'Tinggi maksimal 9999 cm')
+    .optional(),
+  weight: z
+    .number()
+    .min(0, 'Berat tidak boleh negatif')
+    .max(999999, 'Berat maksimal 999999 gram')
+    .optional(),
 });
 
 // Schema untuk product dengan variant (price & stock tidak required)
@@ -85,6 +106,27 @@ const variantProductSchema = z.object({
     .int('Pre-order harus berupa bilangan bulat')
     .min(0, 'Pre-order tidak boleh negatif')
     .max(365, 'Pre-order maksimal 365 hari'),
+  // Physical dimensions for shipping calculation
+  length: z
+    .number()
+    .min(0, 'Panjang tidak boleh negatif')
+    .max(9999, 'Panjang maksimal 9999 cm')
+    .optional(),
+  width: z
+    .number()
+    .min(0, 'Lebar tidak boleh negatif')
+    .max(9999, 'Lebar maksimal 9999 cm')
+    .optional(),
+  height: z
+    .number()
+    .min(0, 'Tinggi tidak boleh negatif')
+    .max(9999, 'Tinggi maksimal 9999 cm')
+    .optional(),
+  weight: z
+    .number()
+    .min(0, 'Berat tidak boleh negatif')
+    .max(999999, 'Berat maksimal 999999 gram')
+    .optional(),
 });
 
 type ProductFormData = z.infer<typeof simpleProductSchema>;
@@ -158,6 +200,10 @@ export default function ProductForm({
       price: 0,
       stock: 0,
       pre_order: 0,
+      length: undefined,
+      width: undefined,
+      height: undefined,
+      weight: undefined,
     },
   });
 
@@ -174,6 +220,10 @@ export default function ProductForm({
         price: typeof product.price === 'string' ? parseFloat(product.price) : (product.price || 0),
         stock: product.stock || 0,
         pre_order: product.pre_order || 0,
+        length: product.length || undefined,
+        width: product.width || undefined,
+        height: product.height || undefined,
+        weight: product.weight || undefined,
       });
     }
   }, [product, mode, reset]);
@@ -225,6 +275,11 @@ export default function ProductForm({
       name: data.name,
       description: data.description || undefined,
       _imageFiles: productImages, // Add images for upload
+      // Physical dimensions for shipping calculation
+      length: data.length || undefined,
+      width: data.width || undefined,
+      height: data.height || undefined,
+      weight: data.weight || undefined,
     };
 
     // Jika tidak ada variants, gunakan price & stock dari form
@@ -546,6 +601,121 @@ export default function ProductForm({
                 />
               </Stack>
 
+              {/* Physical Dimensions Section */}
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mt: 2 }}>
+                Dimensi Fisik (untuk perhitungan shipping)
+              </Typography>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                {/* Length */}
+                <TextField
+                  {...register('length', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Panjang"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.length}
+                  helperText={errors.length?.message ? String(errors.length.message) : 'Panjang dalam cm'}
+                  disabled={isLoading}
+                  placeholder="10"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">cm</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 0.1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Width */}
+                <TextField
+                  {...register('width', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Lebar"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.width}
+                  helperText={errors.width?.message ? String(errors.width.message) : 'Lebar dalam cm'}
+                  disabled={isLoading}
+                  placeholder="10"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">cm</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 0.1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Height */}
+                <TextField
+                  {...register('height', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Tinggi"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.height}
+                  helperText={errors.height?.message ? String(errors.height.message) : 'Tinggi dalam cm'}
+                  disabled={isLoading}
+                  placeholder="1"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">cm</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 0.1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Weight */}
+                <TextField
+                  {...register('weight', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Berat"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.weight}
+                  helperText={errors.weight?.message ? String(errors.weight.message) : 'Berat dalam gram'}
+                  disabled={isLoading}
+                  placeholder="1000"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">g</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+              </Stack>
+
               <Divider sx={{ my: 3 }} />
             </>
           ) : (
@@ -621,6 +791,121 @@ export default function ProductForm({
                   placeholder="0"
                   required
                   InputProps={{
+                    inputProps: { 
+                      min: 0, 
+                      step: 1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+              </Stack>
+
+              {/* Physical Dimensions Section for Variant Mode */}
+              <Typography variant="h6" fontWeight="bold" gutterBottom sx={{ mt: 2 }}>
+                Dimensi Fisik (untuk perhitungan shipping)
+              </Typography>
+
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                {/* Length */}
+                <TextField
+                  {...register('length', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Panjang"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.length}
+                  helperText={errors.length?.message ? String(errors.length.message) : 'Panjang dalam cm'}
+                  disabled={isLoading}
+                  placeholder="10"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">cm</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 0.1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Width */}
+                <TextField
+                  {...register('width', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Lebar"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.width}
+                  helperText={errors.width?.message ? String(errors.width.message) : 'Lebar dalam cm'}
+                  disabled={isLoading}
+                  placeholder="10"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">cm</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 0.1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Height */}
+                <TextField
+                  {...register('height', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Tinggi"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.height}
+                  helperText={errors.height?.message ? String(errors.height.message) : 'Tinggi dalam cm'}
+                  disabled={isLoading}
+                  placeholder="1"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">cm</InputAdornment>,
+                    inputProps: { 
+                      min: 0, 
+                      step: 0.1,
+                      style: { textAlign: 'right' }
+                    }
+                  }}
+                />
+
+                {/* Weight */}
+                <TextField
+                  {...register('weight', { 
+                    valueAsNumber: true,
+                    setValueAs: (value) => {
+                      const numValue = parseFloat(value);
+                      return isNaN(numValue) ? undefined : numValue;
+                    }
+                  })}
+                  label="Berat"
+                  fullWidth
+                  margin="normal"
+                  type="number"
+                  error={!!errors.weight}
+                  helperText={errors.weight?.message ? String(errors.weight.message) : 'Berat dalam gram'}
+                  disabled={isLoading}
+                  placeholder="1000"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">g</InputAdornment>,
                     inputProps: { 
                       min: 0, 
                       step: 1,

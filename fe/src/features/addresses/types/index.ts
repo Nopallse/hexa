@@ -1,8 +1,8 @@
-// Address API types
-
 export interface Address {
   id: string;
   user_id: string;
+  recipient_name: string;
+  phone_number: string;
   address_line: string;
   city: string;
   province: string;
@@ -12,35 +12,22 @@ export interface Address {
   updated_at: string;
 }
 
-export interface CreateAddressRequest {
+export interface CreateAddressData {
+  recipient_name: string;
+  phone_number: string;
   address_line: string;
   city: string;
   province: string;
   postal_code: string;
-  is_primary?: boolean;
+  is_primary: boolean;
 }
 
-export interface UpdateAddressRequest {
+export interface UpdateAddressData {
+  recipient_name?: string;
+  phone_number?: string;
   address_line?: string;
   city?: string;
   province?: string;
   postal_code?: string;
   is_primary?: boolean;
-}
-
-export interface AddressResponse {
-  success: boolean;
-  data: Address;
-  message?: string;
-}
-
-export interface AddressesListResponse {
-  success: boolean;
-  data: Address[];
-}
-
-export interface ApiResponse {
-  success: boolean;
-  message?: string;
-  error?: string;
 }

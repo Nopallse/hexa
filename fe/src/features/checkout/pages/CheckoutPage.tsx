@@ -16,7 +16,7 @@ import {
   ShoppingCart,
   Payment,
 } from '@mui/icons-material';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCartStore } from '@/features/cart/store/cartStore';
 import { useOrderStore } from '@/features/orders/store/orderStore';
@@ -25,7 +25,9 @@ import { CartItem } from '@/features/cart/types';
 import { PaymentMethod } from '@/features/orders/types';
 import CheckoutSummary from '../components/CheckoutSummary';
 import AddressSelector from '../components/AddressSelector';
+import ShippingMethodSelector from '../components/ShippingMethodSelector';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import { ShippingMethod } from '../types/shipping';
 
 export default function CheckoutPage() {
   const theme = useTheme();
@@ -38,22 +40,33 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   
   const [selectedAddress, setSelectedAddress] = useState<string | null>(null);
+  const [selectedAddressData, setSelectedAddressData] = useState<any>(null);
+  const [addresses, setAddresses] = useState<any[]>([]);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>('midtrans'); // Auto-select Midtrans
+  const [selectedShippingMethod, setSelectedShippingMethod] = useState<ShippingMethod | null>(null);
   const [shippingCost, setShippingCost] = useState(15000); // Default shipping cost
 
   const { items: cartItems, clearCart } = useCartStore();
   const { addOrder, setPaymentMethods, paymentMethods } = useOrderStore();
 
-  // Filter available cart items
-  const availableItems = cartItems.filter(item => item.product_variant.product.deleted_at === null);
-
-  const subtotal = availableItems.reduce((sum, item) => 
-    sum + (parseFloat(item.product_variant.price) * item.quantity), 0
+  // Filter available cart items with memoization
+  const availableItems = React.useMemo(() => 
+    cartItems.filter(item => item.product_variant.product.deleted_at === null),
+    [cartItems]
   );
 
-  const total = subtotal + shippingCost;
+  const subtotal = React.useMemo(() => 
+    availableItems.reduce((sum, item) => 
+      sum + (parseFloat(item.product_variant.price) * item.quantity), 0
+    ), [availableItems]
+  );
 
-  const fetchPaymentMethods = async () => {
+  const total = React.useMemo(() => 
+    subtotal + shippingCost,
+    [subtotal, shippingCost]
+  );
+
+  const fetchPaymentMethods = React.useCallback(async () => {
     try {
       const response = await orderApi.getPaymentMethods();
       if (response.success) {
@@ -62,7 +75,7 @@ export default function CheckoutPage() {
     } catch (err) {
       console.error('Error fetching payment methods:', err);
     }
-  };
+  }, [setPaymentMethods]);
 
   const handleCreateOrder = async () => {
     if (!selectedAddress) {
@@ -113,9 +126,13 @@ export default function CheckoutPage() {
       return;
     }
 
-    fetchPaymentMethods();
+    // Only fetch payment methods once
+    if (paymentMethods.length === 0) {
+      fetchPaymentMethods();
+    }
+    
     setLoading(false);
-  }, [cartItems.length, navigate, creatingOrder, orderCreated]);
+  }, [cartItems.length, navigate, creatingOrder, orderCreated, fetchPaymentMethods, paymentMethods.length]);
 
   if (loading) {
     return (
@@ -198,33 +215,28 @@ export default function CheckoutPage() {
               {/* Address Selection */}
               <AddressSelector
                 selectedAddress={selectedAddress}
-                onAddressSelect={setSelectedAddress}
+                onAddressSelect={(addressId) => {
+                  setSelectedAddress(addressId);
+                  // Find address data from addresses list
+                  const addressData = addresses.find(addr => addr.id === addressId);
+                  setSelectedAddressData(addressData);
+                  // Reset shipping method when address changes
+                  setSelectedShippingMethod(null);
+                  setShippingCost(15000); // Reset to default
+                }}
+                onAddressesLoaded={setAddresses}
               />
 
-              {/* Shipping Cost */}
-              <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
-                    Biaya Pengiriman
-                  </Typography>
-                  <Box sx={{ 
-                    display: 'flex', 
-                    justifyContent: 'space-between', 
-                    alignItems: 'center',
-                    py: 2,
-                    px: 2,
-                    backgroundColor: 'grey.50',
-                    borderRadius: 2,
-                  }}>
-                    <Typography variant="body1" fontWeight={500}>
-                      Standard Delivery (2-3 hari kerja)
-                    </Typography>
-                    <Typography variant="h6" color="primary.main" fontWeight={700}>
-                      {formatPrice(shippingCost)}
-                    </Typography>
-                  </Box>
-                </CardContent>
-              </Card>
+              {/* Shipping Method Selection */}
+              <ShippingMethodSelector
+                selectedAddress={selectedAddressData}
+                cartItems={availableItems}
+                selectedMethod={selectedShippingMethod ? `${selectedShippingMethod.courier_code}_${selectedShippingMethod.courier_service_code}` : null}
+                onMethodSelect={(method: ShippingMethod) => {
+                  setSelectedShippingMethod(method);
+                  setShippingCost(method.price);
+                }}
+              />
             </Stack>
           </Box>
 
@@ -241,8 +253,9 @@ export default function CheckoutPage() {
               total={total}
               onCreateOrder={handleCreateOrder}
               creatingOrder={creatingOrder}
-              disabled={!selectedAddress}
+              disabled={!selectedAddress || !selectedShippingMethod}
               selectedPaymentMethod={selectedPaymentMethod}
+              selectedShippingMethod={selectedShippingMethod}
             />
           </Box>
         </Box>

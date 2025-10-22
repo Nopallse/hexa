@@ -143,6 +143,7 @@ export default function ProductTable({
               <TableCell align="right">Harga</TableCell>
               <TableCell align="center">Stok</TableCell>
               <TableCell align="center">Pre-order</TableCell>
+              <TableCell align="center">Dimensi</TableCell>
               <TableCell align="center">Info Varian</TableCell>
               <TableCell align="center">Aksi</TableCell>
             </TableRow>
@@ -233,6 +234,41 @@ export default function ProductTable({
                       color={product.pre_order && product.pre_order > 0 ? 'warning' : 'default'}
                       variant={product.pre_order && product.pre_order > 0 ? 'filled' : 'outlined'}
                     />
+                  </TableCell>
+
+                  <TableCell align="center">
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, alignItems: 'center' }}>
+                      {product.length && product.width && product.height ? (
+                        <Tooltip title={`${product.length}×${product.width}×${product.height} cm`}>
+                          <Chip 
+                            label={`${product.length}×${product.width}×${product.height}`}
+                            size="small"
+                            color="info"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        </Tooltip>
+                      ) : (
+                        <Chip 
+                          label="Belum diatur"
+                          size="small"
+                          color="default"
+                          variant="outlined"
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      )}
+                      {product.weight && (
+                        <Tooltip title={`${product.weight} gram`}>
+                          <Chip 
+                            label={`${product.weight}g`}
+                            size="small"
+                            color="secondary"
+                            variant="outlined"
+                            sx={{ fontSize: '0.7rem' }}
+                          />
+                        </Tooltip>
+                      )}
+                    </Box>
                   </TableCell>
 
                   <TableCell align="center">

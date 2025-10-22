@@ -1,15 +1,16 @@
 import axios, { AxiosInstance } from 'axios';
 
+console.log(import.meta.env.VITE_API_URL);
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
-
-// Buat instance axios
-const axiosInstance: AxiosInstance = axios.create({
-  baseURL: `${API_BASE_URL}/api`,
-  timeout: 10000,
+const API_CONFIG = {
+  baseURL: import.meta.env.VITE_API_URL ,
+  timeout: 30000,
   headers: {
     'Content-Type': 'application/json',
-  },
-});
+    'ngrok-skip-browser-warning': 'true',
+  }
+}
+const axiosInstance = axios.create(API_CONFIG)
+
 
 export default axiosInstance;

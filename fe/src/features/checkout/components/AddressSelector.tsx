@@ -18,7 +18,7 @@ import {
   Add as AddIcon,
   LocationOn as LocationIcon,
 } from '@mui/icons-material';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Address } from '@/features/addresses/types';
 import { addressApi } from '@/features/addresses/services/addressApi';
@@ -26,15 +26,26 @@ import { addressApi } from '@/features/addresses/services/addressApi';
 interface AddressSelectorProps {
   selectedAddress: string | null;
   onAddressSelect: (addressId: string) => void;
+  onAddressesLoaded?: (addresses: Address[]) => void;
 }
 
-export default function AddressSelector({ selectedAddress, onAddressSelect }: AddressSelectorProps) {
+export default function AddressSelector({ selectedAddress, onAddressSelect, onAddressesLoaded }: AddressSelectorProps) {
   const theme = useTheme();
   const navigate = useNavigate();
   
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Use refs to store callback functions to prevent re-renders
+  const onAddressSelectRef = useRef(onAddressSelect);
+  const onAddressesLoadedRef = useRef(onAddressesLoaded);
+
+  // Update refs when props change
+  useEffect(() => {
+    onAddressSelectRef.current = onAddressSelect;
+    onAddressesLoadedRef.current = onAddressesLoaded;
+  }, [onAddressSelect, onAddressesLoaded]);
 
   // Fetch addresses from API
   useEffect(() => {
@@ -47,11 +58,12 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
 
         if (response.success) {
           setAddresses(response.data);
+          onAddressesLoadedRef.current?.(response.data);
           
           // Auto-select primary address
           const primaryAddress = response.data.find(addr => addr.is_primary);
-          if (primaryAddress) {
-            onAddressSelect(primaryAddress.id);
+          if (primaryAddress && !selectedAddress) {
+            onAddressSelectRef.current(primaryAddress.id);
           }
         } else {
           setError('Gagal memuat alamat');
@@ -65,7 +77,7 @@ export default function AddressSelector({ selectedAddress, onAddressSelect }: Ad
     };
 
     fetchAddresses();
-  }, [onAddressSelect]);
+  }, []); // Empty dependency array - only run once
 
   const handleAddAddress = () => {
     navigate('/addresses/add', { state: { returnTo: '/checkout' } });

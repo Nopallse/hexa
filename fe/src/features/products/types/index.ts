@@ -39,6 +39,11 @@ export interface Product {
   stock: number | null; // null if has variants
   pre_order: number; // Days for pre-order
   category_id: string;
+  // Physical dimensions for shipping calculation
+  length?: number | null; // Length in cm
+  width?: number | null; // Width in cm
+  height?: number | null; // Height in cm
+  weight?: number | null; // Weight in grams
   created_at: string;
   updated_at: string;
   category: Category;
@@ -89,6 +94,11 @@ export interface CreateProductRequest {
   currency_code?: string; // Default: IDR
   stock: number;
   pre_order: number; // Days for pre-order
+  // Physical dimensions for shipping calculation
+  length?: number; // Length in cm
+  width?: number; // Width in cm
+  height?: number; // Height in cm
+  weight?: number; // Weight in grams
 }
 
 export interface UpdateProductRequest {
@@ -99,6 +109,11 @@ export interface UpdateProductRequest {
   currency_code?: string;
   stock?: number;
   pre_order?: number; // Days for pre-order
+  // Physical dimensions for shipping calculation
+  length?: number; // Length in cm
+  width?: number; // Width in cm
+  height?: number; // Height in cm
+  weight?: number; // Weight in grams
 }
 
 export interface DeletedProductsResponse {

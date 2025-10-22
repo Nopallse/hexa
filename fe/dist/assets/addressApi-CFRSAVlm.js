@@ -1,1 +1,0 @@
-import{a5 as e}from"./index-Idy1NCQZ.js";const t={getAddresses:async()=>(await e.get("/addresses")).data,addAddress:async s=>(await e.post("/addresses",s)).data,updateAddress:async(s,a)=>(await e.put(`/addresses/${s}`,a)).data,deleteAddress:async s=>(await e.delete(`/addresses/${s}`)).data};export{t as a};

@@ -5,9 +5,7 @@ import path from 'path'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react()],
-  define: {
-    'import.meta.env.VITE_API_URL': JSON.stringify(process.env.VITE_API_URL || 'http://localhost:3000'),
-  },
+
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
@@ -21,12 +19,6 @@ export default defineConfig({
     },
   },
   server: {
-    port: 5173,
-    host: true,
-    allowedHosts: [
-      'localhost',
-      '127.0.0.1',
-      'probable-grouse-firstly.ngrok-free.app',
-    ],
+    allowedHosts: true,
   },
 })
