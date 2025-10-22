@@ -28,7 +28,7 @@ const getUserAddresses = async (req, res) => {
 // Add new address
 const addAddress = async (req, res) => {
   try {
-    const { address_line, city, province, postal_code, is_primary = false } = req.body;
+    const { recipient_name, phone_number, address_line, city, province, postal_code, country = "ID", is_primary = false } = req.body;
 
     // If this is set as primary, unset other primary addresses
     if (is_primary) {
@@ -44,15 +44,17 @@ const addAddress = async (req, res) => {
     const address = await prisma.address.create({
       data: {
         user_id: req.user.id,
+        recipient_name,
+        phone_number,
         address_line,
         city,
         province,
         postal_code,
+        country,
         is_primary
       }
     });
 
-    logger.info(`New address added by ${req.user.email}`);
 
     res.status(201).json({
       success: true,
@@ -72,7 +74,7 @@ const addAddress = async (req, res) => {
 const updateAddress = async (req, res) => {
   try {
     const { id } = req.params;
-    const { address_line, city, province, postal_code, is_primary } = req.body;
+    const { recipient_name, phone_number, address_line, city, province, postal_code, country, is_primary } = req.body;
 
     // Check if address exists and belongs to user
     const existingAddress = await prisma.address.findFirst({
@@ -104,10 +106,13 @@ const updateAddress = async (req, res) => {
     const address = await prisma.address.update({
       where: { id },
       data: {
+        ...(recipient_name && { recipient_name }),
+        ...(phone_number && { phone_number }),
         ...(address_line && { address_line }),
         ...(city && { city }),
         ...(province && { province }),
         ...(postal_code && { postal_code }),
+        ...(country && { country }),
         ...(is_primary !== undefined && { is_primary })
       }
     });
@@ -161,7 +166,6 @@ const deleteAddress = async (req, res) => {
       where: { id }
     });
 
-    logger.info(`Address deleted by ${req.user.email}`);
 
     res.json({
       success: true,
@@ -176,9 +180,60 @@ const deleteAddress = async (req, res) => {
   }
 };
 
+// Set primary address
+const setPrimaryAddress = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Check if address exists and belongs to user
+    const existingAddress = await prisma.address.findFirst({
+      where: {
+        id,
+        user_id: req.user.id
+      }
+    });
+
+    if (!existingAddress) {
+      return res.status(404).json({
+        success: false,
+        error: 'Address not found'
+      });
+    }
+
+    // Unset all other primary addresses
+    await prisma.address.updateMany({
+      where: {
+        user_id: req.user.id,
+        is_primary: true
+      },
+      data: { is_primary: false }
+    });
+
+    // Set this address as primary
+    const address = await prisma.address.update({
+      where: { id },
+      data: { is_primary: true }
+    });
+
+
+    res.json({
+      success: true,
+      message: 'Address set as primary successfully',
+      data: address
+    });
+  } catch (error) {
+    logger.error('Set primary address error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to set primary address'
+    });
+  }
+};
+
 module.exports = {
   getUserAddresses,
   addAddress,
   updateAddress,
-  deleteAddress
+  deleteAddress,
+  setPrimaryAddress
 };

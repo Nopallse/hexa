@@ -79,6 +79,11 @@ model Product {
   currency_code String    @default("IDR") // Base currency: IDR, USD, EUR, etc.
   stock         Int       @default(0)
   pre_order     Int       @default(0)
+  // Physical dimensions for shipping calculation
+  length        Decimal?  @db.Decimal(8, 2) // Length in cm
+  width         Decimal?  @db.Decimal(8, 2) // Width in cm
+  height        Decimal?  @db.Decimal(8, 2) // Height in cm
+  weight        Decimal?  @db.Decimal(8, 2) // Weight in grams
   deleted_at    DateTime?
   created_at    DateTime  @default(now())
   updated_at    DateTime  @updatedAt
@@ -139,14 +144,17 @@ model ProductImage {
 }
 
 model Address {
-  id           String   @id @default(uuid())
-  user_id      String
-  address_line String
-  city         String
-  province     String
-  postal_code  String
-  is_primary   Boolean  @default(false)
-  created_at   DateTime @default(now())
+  id             String   @id @default(uuid())
+  user_id        String
+  recipient_name String   @default("")
+  phone_number   String   @default("")
+  address_line   String
+  city           String
+  province       String
+  postal_code    String
+  country        String   @default("ID") // Country code (ID, US, SG, etc.)
+  is_primary     Boolean  @default(false)
+  created_at     DateTime @default(now())
 
   // Relations
   user   User    @relation(fields: [user_id], references: [id], onDelete: Cascade)

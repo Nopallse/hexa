@@ -42,7 +42,11 @@ router.post('/', [
   body('description').optional().trim(),
   body('price').isNumeric(),
   body('pre_order').isInt({ min: 0 }),
-  body('stock').isInt({ min: 0 })
+  body('stock').isInt({ min: 0 }),
+  body('length').optional().isFloat({ min: 0 }),
+  body('width').optional().isFloat({ min: 0 }),
+  body('height').optional().isFloat({ min: 0 }),
+  body('weight').optional().isFloat({ min: 0 })
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {
@@ -64,7 +68,11 @@ router.put('/:id', [
   body('description').optional().trim(),
   body('price').optional().isNumeric(),
   body('pre_order').optional().isInt({ min: 0 }), 
-  body('stock').optional().isInt({ min: 0 })
+  body('stock').optional().isInt({ min: 0 }),
+  body('length').optional().isFloat({ min: 0 }),
+  body('width').optional().isFloat({ min: 0 }),
+  body('height').optional().isFloat({ min: 0 }),
+  body('weight').optional().isFloat({ min: 0 })
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

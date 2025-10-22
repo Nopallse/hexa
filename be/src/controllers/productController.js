@@ -98,7 +98,18 @@ const getProductById = async (req, res) => {
 // Create new product (admin only)
 const createProduct = async (req, res) => {
   try {
-    const { category_id, name, description, price, pre_order, stock } = req.body;
+    const { 
+      category_id, 
+      name, 
+      description, 
+      price, 
+      pre_order, 
+      stock,
+      length,
+      width,
+      height,
+      weight
+    } = req.body;
 
     // Check if category exists
     const category = await prisma.category.findUnique({
@@ -119,7 +130,11 @@ const createProduct = async (req, res) => {
         description,
         price: parseFloat(price),
         pre_order: parseInt(pre_order),
-        stock: parseInt(stock)
+        stock: parseInt(stock),
+        length: length ? parseFloat(length) : null,
+        width: width ? parseFloat(width) : null,
+        height: height ? parseFloat(height) : null,
+        weight: weight ? parseFloat(weight) : null
       },
       include: {
         category: {
@@ -151,7 +166,19 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
   try {
     const { id } = req.params;
-    const { category_id, name, description, price, pre_order, stock } = req.body;
+    const { 
+      category_id, 
+      name, 
+      description, 
+      price, 
+      pre_order, 
+      stock,
+      length,
+      width,
+      height,
+      weight
+    } = req.body;
+    
     console.log('=== UPDATE PRODUCT DEBUG ===');
     console.log('Product ID:', id);
     console.log('Request Body:', req.body);
@@ -159,6 +186,11 @@ const updateProduct = async (req, res) => {
     console.log('- price:', price, typeof price);
     console.log('- pre_order:', pre_order, typeof pre_order);
     console.log('- stock:', stock, typeof stock);
+    console.log('- length:', length, typeof length);
+    console.log('- width:', width, typeof width);
+    console.log('- height:', height, typeof height);
+    console.log('- weight:', weight, typeof weight);
+    
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
       where: { id }
@@ -192,7 +224,11 @@ const updateProduct = async (req, res) => {
       ...(description !== undefined && { description }),
       ...(price !== undefined && { price: parseFloat(price) }),
       ...(pre_order !== undefined && { pre_order: parseInt(pre_order) }),
-      ...(stock !== undefined && { stock: parseInt(stock) })
+      ...(stock !== undefined && { stock: parseInt(stock) }),
+      ...(length !== undefined && { length: length ? parseFloat(length) : null }),
+      ...(width !== undefined && { width: width ? parseFloat(width) : null }),
+      ...(height !== undefined && { height: height ? parseFloat(height) : null }),
+      ...(weight !== undefined && { weight: weight ? parseFloat(weight) : null })
     };
 
     console.log('Update data:', updateData);

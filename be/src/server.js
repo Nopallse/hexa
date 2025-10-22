@@ -21,6 +21,7 @@ const paymentRoutes = require('./routes/payments');
 const shippingRoutes = require('./routes/shipping');
 const userRoutes = require('./routes/users');
 const exchangeRateRoutes = require('./routes/exchangeRates');
+const cacheRoutes = require('./routes/cache');
 
 // Import cron job service
 const exchangeRateCronJob = require('./services/exchangeRateCronJob');
@@ -63,7 +64,6 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
-logger.info('Static file serving enabled for /uploads');
 
 // Health check endpoint
 app.get('/health', (req, res) => {
@@ -89,6 +89,7 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/admin/users', userRoutes);
 app.use('/api/rates', exchangeRateRoutes);
+app.use('/api/cache', cacheRoutes);
 
 app.use(express.static(distPath));
 
@@ -110,14 +111,11 @@ app.use(errorHandler);
 app.listen(PORT, async () => {
   logger.info(`🚀 Server running on port ${PORT}`);
   logger.info(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
-  logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
   
   // Initialize exchange rate cron jobs
   try {
-    logger.info('🔄 Initializing exchange rate cron jobs...');
     await exchangeRateCronJob.runInitialUpdate();
     exchangeRateCronJob.start();
-    logger.info('✅ Exchange rate cron jobs initialized successfully');
   } catch (error) {
     logger.error('❌ Failed to initialize exchange rate cron jobs:', error);
   }

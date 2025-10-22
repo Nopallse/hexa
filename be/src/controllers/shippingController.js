@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
+const BiteshipService = require('../services/biteshipService');
 
 // Get shipping info for order
 const getShippingInfo = async (req, res) => {
@@ -17,7 +18,7 @@ const getShippingInfo = async (req, res) => {
     if (!order) {
       return res.status(404).json({
         success: false,
-        error: 'Order not found'
+        error: 'Order not foundd'
       });
     }
 
@@ -205,8 +206,141 @@ const updateShipping = async (req, res) => {
   }
 };
 
+// Get areas for autocomplete
+const getAreas = async (req, res) => {
+  try {
+    const { input, countries = 'ID', type = 'single', limit = 10 } = req.query;
+
+    if (!input || input.trim().length < 2) {
+      return res.status(400).json({
+        success: false,
+        error: 'Input must be at least 2 characters'
+      });
+    }
+
+    const result = await BiteshipService.getAreas({
+      countries,
+      input: input.trim(),
+      type,
+      limit: parseInt(limit)
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data,
+      cached: result.cached || false
+    });
+  } catch (error) {
+    logger.error('Get areas error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch areas'
+    });
+  }
+};
+
+// Get shipping rates
+const getShippingRates = async (req, res) => {
+  try {
+    const { 
+      origin_postal_code, 
+      destination_postal_code,
+      origin_country = 'ID',
+      destination_country = 'ID',
+      couriers = 'jne,jnt,sicepat,pos,anteraja',
+      items = []
+    } = req.body;
+
+    if (!origin_postal_code || !destination_postal_code) {
+      return res.status(400).json({
+        success: false,
+        error: 'Origin and destination postal codes are required'
+      });
+    }
+
+    const result = await BiteshipService.getShippingRates({
+      origin_postal_code,
+      destination_postal_code,
+      origin_country,
+      destination_country,
+      couriers,
+      items
+    });
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    logger.info(`Shipping rates fetched: ${origin_country} -> ${destination_country}, provider: ${result.provider}`);
+
+    res.json({
+      success: true,
+      data: result.data,
+      provider: result.provider,
+      cached: result.cached || false,
+      origin_country,
+      destination_country
+    });
+  } catch (error) {
+    logger.error('Get shipping rates error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch shipping rates'
+    });
+  }
+};
+
+// Track shipment
+const trackShipment = async (req, res) => {
+  try {
+    const { waybillId } = req.params;
+    const { courier } = req.query; // Optional courier parameter
+
+    if (!waybillId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Waybill ID is required'
+      });
+    }
+
+    const result = await BiteshipService.trackShipment(waybillId, courier);
+
+    if (!result.success) {
+      return res.status(400).json({
+        success: false,
+        error: result.error
+      });
+    }
+
+    res.json({
+      success: true,
+      data: result.data,
+      provider: result.provider || 'biteship'
+    });
+  } catch (error) {
+    logger.error('Track shipment error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to track shipment'
+    });
+  }
+};
+
 module.exports = {
   getShippingInfo,
   createShipping,
-  updateShipping
+  updateShipping,
+  getAreas,
+  getShippingRates,
+  trackShipment
 };
