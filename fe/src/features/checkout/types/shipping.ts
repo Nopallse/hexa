@@ -3,7 +3,7 @@ export interface ShippingMethod {
   courier_code: string;
   courier_service_name: string;
   courier_service_code: string;
-  service_type: 'express' | 'standard' | 'economy';
+  service_type: 'express' | 'standard' | 'economy' | 'overnight';
   description: string;
   shipping_type: string;
   ship_type: string;

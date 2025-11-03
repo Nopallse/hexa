@@ -100,7 +100,7 @@ export default function ContactPage() {
     },
     {
       name: 'TikTok',
-      icon: <YouTubeIcon sx={{ fontSize: '1.5rem' }} />,
+      icon: <img src="/images/tiktok.svg" alt="Shopee" style={{ width: 24, height: 24, display: 'block' }} />,
       handle: '@hexacrochet',
       url: 'https://www.tiktok.com/@hexacrochet',
       color: '#000000'
@@ -114,7 +114,7 @@ export default function ContactPage() {
     },
     {
       name: 'Shopee',
-      icon: <ShopeeIcon sx={{ fontSize: '1.5rem' }} />,
+      icon: <img src="/images/logo-shopee.svg" alt="Shopee" style={{ width: 24, height: 24, display: 'block' }} />,
       handle: 'hexacrochet',
       url: 'https://shopee.co.id/hexacrochet',
       color: '#EE4D2D'
@@ -198,57 +198,7 @@ export default function ContactPage() {
               Ikuti Kami
             </Typography>
             
-            <Stack spacing={2}>
-              {socialMedia.map((social, index) => (
-                <Card
-                  key={index}
-                  sx={{
-                    borderRadius: 3,
-                    boxShadow: '0 2px 8px rgba(150, 130, 219, 0.08)',
-                    border: '1px solid rgba(150, 130, 219, 0.08)',
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    '&:hover': {
-                      boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-                      transform: 'translateY(-1px)',
-                    }
-                  }}
-                >
-                  <CardContent sx={{ p: 2 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <Box sx={{ color: social.color }}>
-                        {social.icon}
-                      </Box>
-                      <Box sx={{ flexGrow: 1 }}>
-                        <Typography variant="body1" fontWeight={600} color="text.primary">
-                          {social.name}
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary">
-                          {social.handle}
-                        </Typography>
-                      </Box>
-                      <Button
-                        variant="outlined"
-                        size="small"
-                        onClick={() => window.open(social.url, '_blank')}
-                        sx={{
-                          borderRadius: 2,
-                          textTransform: 'none',
-                          fontWeight: 500,
-                          borderColor: social.color,
-                          color: social.color,
-                          '&:hover': {
-                            backgroundColor: `${social.color}10`,
-                            borderColor: social.color
-                          }
-                        }}
-                      >
-                        Kunjungi
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              ))}
-            </Stack>
+            
           </Box>
         </Grid>
 
@@ -370,6 +320,58 @@ export default function ContactPage() {
         </Grid>
       </Grid>
 
+      <Grid container spacing={2}>
+        {socialMedia.map((social, index) => (
+          <Grid item xs={12} sm={6} key={index}>
+            <Card
+              sx={{
+                borderRadius: 3,
+                boxShadow: '0 2px 8px rgba(150, 130, 219, 0.08)',
+                border: '1px solid rgba(150, 130, 219, 0.08)',
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                '&:hover': {
+                  boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
+                  transform: 'translateY(-1px)',
+                }
+              }}
+            >
+              <CardContent sx={{ p: 2 }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ color: social.color }}>
+                    {social.icon}
+                  </Box>
+                  <Box sx={{ flexGrow: 1 }}>
+                    <Typography variant="body1" fontWeight={600} color="text.primary">
+                      {social.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary">
+                      {social.handle}
+                    </Typography>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => window.open(social.url, '_blank')}
+                    sx={{
+                      borderRadius: 2,
+                      textTransform: 'none',
+                      fontWeight: 500,
+                      borderColor: social.color,
+                      color: social.color,
+                      '&:hover': {
+                        backgroundColor: `${social.color}10`,
+                        borderColor: social.color
+                      }
+                    }}
+                  >
+                    Kunjungi
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
       {/* FAQ Section */}
       <Box sx={{ mt: 8 }}>
         <Typography variant="h4" fontWeight={700} color="text.primary" className="craft-heading" sx={{ mb: 4, textAlign: 'center' }}>

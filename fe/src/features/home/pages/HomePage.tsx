@@ -917,9 +917,9 @@ export default function HomePage() {
 
         <Grid container spacing={6} alignItems="center">
           <Grid item xs={12} md={6}>
-      <Box 
-        sx={{ 
-          position: 'relative',
+            <Box 
+              sx={{ 
+                position: 'relative',
                 borderRadius: 4,
                 overflow: 'hidden',
                 boxShadow: `0 20px 40px ${theme.palette.primary.main}20`,
@@ -935,65 +935,24 @@ export default function HomePage() {
                   width: '100%',
                   height: 0,
                   paddingBottom: '56.25%', // 16:9 aspect ratio
-                  background: `linear-gradient(135deg, ${theme.palette.primary.light}20, ${theme.palette.secondary.light}20)`,
                 }}
               >
-                <Box
-                  sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-                    width: '100%',
-                    height: '100%',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    cursor: 'pointer',
-                    '&:hover': {
-                      background: 'rgba(0, 0, 0, 0.4)',
-          },
-        }}
-      >
-                  <Box
-                    sx={{
-                      width: 80,
-                      height: 80,
-                      borderRadius: '50%',
-                      bgcolor: 'rgba(255, 255, 255, 0.9)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.3s ease',
-                      '&:hover': {
-                        transform: 'scale(1.1)',
-                        bgcolor: 'white',
-                      },
-                    }}
-                  >
-                    <Box
-                      sx={{
-                        width: 0,
-                        height: 0,
-                        borderLeft: `20px solid ${theme.palette.primary.main}`,
-                        borderTop: '12px solid transparent',
-                        borderBottom: '12px solid transparent',
-                        marginLeft: '4px',
-                      }}
-                    />
-                  </Box>
-                </Box>
-                <CardMedia
-                  component="img"
-                  image="/images/video-thumbnail.jpg"
-                  alt="Crafting process video"
-                  sx={{
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src="https://www.youtube.com/embed/Nj1jsTcoIrE?si=CohxlWRnehBAHLOf"
+                  title="YouTube video player"
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                  referrerPolicy="strict-origin-when-cross-origin"
+                  allowFullScreen
+                  style={{
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     width: '100%',
                     height: '100%',
-                    objectFit: 'cover',
+                    border: 'none',
                   }}
                 />
               </Box>
@@ -1023,65 +982,6 @@ export default function HomePage() {
               >
                 Setiap produk yang kami buat adalah hasil dari keahlian tangan yang telah diasah selama bertahun-tahun. Dalam video ini, Anda dapat melihat proses pembuatan yang detail dan penuh dedikasi.
               </Typography>
-              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: theme.palette.primary.light + '20',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: theme.palette.primary.main,
-                    }}
-                  >
-                    <Star sx={{ fontSize: 20 }} />
-                  </Box>
-                  <Typography variant="body1" color="text.secondary">
-                    Proses pembuatan step-by-step
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: theme.palette.secondary.light + '20',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: theme.palette.secondary.main,
-                    }}
-                  >
-                    <Favorite sx={{ fontSize: 20 }} />
-                  </Box>
-                  <Typography variant="body1" color="text.secondary">
-                    Teknik kerajinan tradisional
-                  </Typography>
-                </Box>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                  <Box
-                    sx={{
-                      width: 40,
-                      height: 40,
-                      borderRadius: '50%',
-                      bgcolor: theme.palette.craft.blush + '20',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      color: theme.palette.craft.blush,
-                    }}
-                  >
-                    <Security sx={{ fontSize: 20 }} />
-                  </Box>
-                  <Typography variant="body1" color="text.secondary">
-                    Quality control yang ketat
-                  </Typography>
-                </Box>
-              </Box>
             </Box>
           </Grid>
         </Grid>
@@ -1122,120 +1022,6 @@ export default function HomePage() {
           </Grid>
         </Container>
       </Box>
-
-      {/* About Handmade Section */}
-      <Container maxWidth="lg" sx={{ py: 12 }}>
-        <Box sx={{ textAlign: 'center', mb: 8 }}>
-        <Typography
-          variant="h3"
-          component="h2"
-          gutterBottom
-            fontWeight={700}
-            sx={{ 
-              background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 50%, ${theme.palette.craft.blush} 100%)`,
-              backgroundClip: 'text',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              mb: 3,
-              fontSize: { xs: '2.2rem', md: '3.5rem' },
-              fontFamily: '"Playfair Display", "Georgia", serif',
-              letterSpacing: '-0.02em',
-            }}
-        >
-            Crafted with Love
-        </Typography>
-          <Typography 
-            variant="h6" 
-            color="text.secondary" 
-            sx={{ 
-              maxWidth: '600px', 
-              mx: 'auto',
-              fontSize: { xs: '1rem', md: '1.2rem' },
-              fontWeight: 300,
-              lineHeight: 1.6,
-            }}
-          >
-            Setiap produk dibuat dengan cinta dan keahlian tangan yang teliti
-          </Typography>
-        </Box>
-
-        <Grid container spacing={6} alignItems="center">
-          <Grid item xs={12} md={6}>
-            <Box sx={{ textAlign: { xs: 'center', md: 'left' } }}>
-              <Typography
-                variant="h4"
-                fontWeight={600}
-                sx={{
-                  mb: 3,
-                  fontFamily: '"Playfair Display", "Georgia", serif',
-                  color: 'text.primary',
-                }}
-              >
-                Kualitas Premium
-              </Typography>
-              <Typography
-                variant="body1"
-                color="text.secondary"
-                sx={{
-                  mb: 4,
-                  lineHeight: 1.7,
-                  fontSize: '1.1rem',
-                }}
-              >
-                Kami menggunakan bahan berkualitas tinggi dan teknik kerajinan tradisional yang telah diwariskan turun-temurun. Setiap jahitan dibuat dengan presisi dan setiap detail diperhatikan dengan seksama.
-              </Typography>
-              <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: { xs: 'center', md: 'flex-start' } }}>
-                <Chip
-                  label="100% Handmade"
-                  sx={{
-                    bgcolor: theme.palette.primary.light,
-                    color: theme.palette.primary.dark,
-                    fontWeight: 600,
-                  }}
-                />
-                <Chip
-                  label="Premium Materials"
-                  sx={{
-                    bgcolor: theme.palette.secondary.light,
-                    color: theme.palette.secondary.dark,
-                    fontWeight: 600,
-                  }}
-                />
-                <Chip
-                  label="Unique Design"
-                  sx={{
-                    bgcolor: theme.palette.craft.blush + '40',
-                    color: theme.palette.craft.blush,
-                    fontWeight: 600,
-                  }}
-                />
-              </Box>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={6}>
-          <Box
-            sx={{
-                height: 400,
-                borderRadius: 4,
-                overflow: 'hidden',
-                background: `linear-gradient(135deg, ${theme.palette.primary.light}20, ${theme.palette.secondary.light}20)`,
-              }}
-            >
-              <CardMedia
-                component="img"
-                height="400"
-                image="/images/craft-process.jpg"
-                alt="Crafting process"
-                sx={{
-                  objectFit: 'cover',
-                  width: '100%',
-                }}
-              />
-            </Box>
-          </Grid>
-        </Grid>
-      </Container>
-
       {/* Process Section */}
       <Box sx={{ bgcolor: 'grey.50', py: 12 }}>
         <Container maxWidth="lg">

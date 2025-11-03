@@ -24,7 +24,59 @@ import {
 import { shippingApi } from '@/services/shippingApi';
 import { locationApi } from '@/features/admin/shipping/services/locationApi';
 import { useDebounce } from '@/hooks/useDebounce';
+import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { ShippingMethod, ShippingRatesResponse } from '../types/shipping';
+
+// Helper function to parse shipment duration range
+const parseDurationRange = (range: string): { min_day: number; max_day: number } => {
+  if (!range) return { min_day: 1, max_day: 3 };
+  
+  // Remove "days" suffix if present and extract numbers
+  const cleaned = range.trim().replace(/\s*days?\s*$/i, '');
+  const parts = cleaned.split(/\s*-\s*/);
+  const min = parseInt(parts[0], 10);
+  const max = parts.length > 1 ? parseInt(parts[1], 10) : min;
+  
+  return {
+    min_day: isNaN(min) ? 1 : min,
+    max_day: isNaN(max) ? min || 3 : max
+  };
+};
+
+// Helper function to transform Biteship response to ShippingMethod format
+const transformBiteshipMethod = (method: any): ShippingMethod => {
+  const durationRange = parseDurationRange(
+    method.shipment_duration_range || method.duration || '1 - 3'
+  );
+  
+  // Map service_type from Biteship to our format
+  let serviceType: 'express' | 'standard' | 'economy' | 'overnight' = 'standard';
+  if (method.service_type === 'overnight') {
+    serviceType = 'overnight';
+  } else if (method.service_type === 'express') {
+    serviceType = 'express';
+  } else if (method.service_type === 'economy') {
+    serviceType = 'economy';
+  }
+  
+  return {
+    courier_name: method.courier_name || method.company || '',
+    courier_code: method.courier_code || method.company || '',
+    courier_service_name: method.courier_service_name || '',
+    courier_service_code: method.courier_service_code || method.type || '',
+    service_type: serviceType,
+    description: method.description || '',
+    shipping_type: method.shipping_type || 'parcel',
+    ship_type: method.shipping_type || 'parcel',
+    service_name: method.courier_service_name || '',
+    price: method.price || method.shipping_fee || 0,
+    currency: method.currency || 'IDR',
+    type: method.type || method.courier_service_code || '',
+    min_day: durationRange.min_day,
+    max_day: durationRange.max_day,
+    provider: 'biteship'
+  };
+};
 
 // Remove duplicate interface - using imported type
 
@@ -42,6 +94,7 @@ export default function ShippingMethodSelector({
   onMethodSelect,
 }: ShippingMethodSelectorProps) {
   const theme = useTheme();
+  const { formatPrice } = useCurrencyConversion();
   const [shippingMethods, setShippingMethods] = useState<ShippingMethod[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -130,7 +183,12 @@ export default function ShippingMethodSelector({
       // Check if this is still the current request
       if (debouncedFetchKey === lastFetchKey || !lastFetchKey) {
         if (response.success && response.data) {
-          setShippingMethods((response.data.pricing || []) as ShippingMethod[]);
+          // Transform Biteship response to our format
+          const rawPricing = response.data.pricing || [];
+          const transformedMethods = rawPricing.map((method: any) => 
+            transformBiteshipMethod(method)
+          );
+          setShippingMethods(transformedMethods);
           setProvider(response.provider || '');
           setIsInternational(selectedAddress.country !== 'ID');
         } else {
@@ -155,14 +213,6 @@ export default function ShippingMethodSelector({
     };
   }, []);
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
-      minimumFractionDigits: 0,
-    }).format(price);
-  };
-
   const getDeliveryTime = (minDay: number, maxDay: number) => {
     if (minDay === maxDay) {
       return `${minDay} hari`;
@@ -173,6 +223,7 @@ export default function ShippingMethodSelector({
   const getServiceTypeColor = (serviceType: string) => {
     switch (serviceType) {
       case 'express':
+      case 'overnight':
         return 'error';
       case 'standard':
         return 'primary';
@@ -191,6 +242,8 @@ export default function ShippingMethodSelector({
         return 'Standard';
       case 'economy':
         return 'Economy';
+      case 'overnight':
+        return 'Overnight';
       default:
         return serviceType;
     }
@@ -371,7 +424,7 @@ export default function ShippingMethodSelector({
                             <Box sx={{ display: 'flex', alignItems: 'center' }}>
                               <MoneyIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'success.main' }} />
                               <Typography variant="h6" fontWeight={600} color="success.main">
-                                {formatPrice(method.price)}
+                                {formatPrice(method.price, method.currency || 'IDR')}
                               </Typography>
                             </Box>
                             
