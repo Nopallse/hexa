@@ -448,7 +448,7 @@ export default function ShippingMethodSelector({
         {/* No Methods Available */}
         {!loading && !error && shippingMethods.length === 0 && (
           <Alert severity="warning">
-            Tidak ada opsi pengiriman tersedia untuk alamat ini
+            Tidak ada opsi pengiriman tersedia untuk alamat inii
           </Alert>
         )}
       </CardContent>

@@ -1,1 +1,0 @@
-import{aa as a}from"./index-BW5wvuP8.js";const o={getProducts:async s=>(await a.get("/products",{params:s})).data,getProductById:async s=>(await a.get(`/products/${s}`)).data,searchProducts:async(s,t)=>(await a.get("/products",{params:{...t,search:s}})).data,getProductsByCategory:async(s,t)=>(await a.get("/products",{params:{...t,category:s}})).data};export{o as p};

@@ -1,0 +1,1 @@
+import{aa as t}from"./index-7B7oaQt6.js";const n={getCart:async()=>(await t.get("/cart")).data,addToCart:async a=>(await t.post("/cart",a)).data,updateCartItem:async(a,e)=>(await t.put(`/cart/${a}`,e)).data,removeFromCart:async a=>(await t.delete(`/cart/${a}`)).data,clearCart:async()=>(await t.delete("/cart")).data};export{n as c};
