@@ -40,7 +40,8 @@ app.use(cors({
   origin: [
     process.env.CORS_ORIGIN || 'https://hexacrochet.my.id',
     'https://probable-grouse-firstly.ngrok-free.app',
-    'http://localhost:5173' // Vite dev server
+    'http://localhost:5173', // Vite dev server
+    'http://localhost:4173'
   ],
   credentials: true
 }));
