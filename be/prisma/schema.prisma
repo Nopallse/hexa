@@ -8,15 +8,18 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
-  full_name     String
-  email         String   @unique
-  password      String? // For local authentication
-  phone         String?
-  role          String   @default("user") // user, admin
-  refresh_token String? // Store refresh token for session management
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+  id                      String   @id @default(uuid())
+  full_name               String
+  email                   String   @unique
+  password                String? // For local authentication
+  phone                   String?
+  role                    String   @default("user") // user, admin
+  refresh_token           String? // Store refresh token for session management
+  email_verified          Boolean  @default(false) // Email verification status
+  email_verification_token String? // Token for email verification
+  email_verification_expires DateTime? // Expiration time for verification token
+  created_at              DateTime @default(now())
+  updated_at              DateTime @updatedAt
 
   // Relations
   addresses    Address[]
@@ -187,6 +190,8 @@ model Order {
   currency_code  String   @default("IDR") // Currency used at order time (snapshot)
   exchange_rate  Decimal? @db.Decimal(10, 4) // Exchange rate at order time (if not IDR)
   shipping_cost  Decimal  @db.Decimal(15, 2)
+  courier_code   String? // Courier code selected by user (e.g., 'jne', 'jnt', 'sicepat')
+  courier_service_code String? // Courier service code selected by user (e.g., 'reg', 'yes', 'oke')
   payment_status String   @default("unpaid") // unpaid, paid
   created_at     DateTime @default(now())
 

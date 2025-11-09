@@ -148,7 +148,7 @@ export default function PaymentFilter({
             disabled={loading || !hasActiveFilters}
             sx={{ height: 40 }}
           >
-            Hapus Filter
+            Reset
           </Button>
         </Grid>
       </Grid>

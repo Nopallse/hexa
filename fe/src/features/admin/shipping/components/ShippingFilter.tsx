@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  Box,
   TextField,
   FormControl,
   InputLabel,
@@ -12,7 +11,6 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Clear as ClearIcon,
 } from '@mui/icons-material';
 
@@ -45,8 +43,6 @@ export default function ShippingFilter({
     ...initialFilters,
   });
 
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
-
   useEffect(() => {
     if (initialFilters) {
       setFilters(prev => ({ ...prev, ...initialFilters }));
@@ -72,14 +68,6 @@ export default function ShippingFilter({
     setFilters(clearedFilters);
     onFilterChange(clearedFilters);
   };
-
-  useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-    };
-  }, [searchTimeout]);
 
   const hasActiveFilters = filters.status || filters.courier || filters.startDate || filters.endDate;
 
@@ -168,7 +156,7 @@ export default function ShippingFilter({
             disabled={loading || !hasActiveFilters}
             sx={{ height: 40 }}
           >
-            Hapus Filter
+            Reset
           </Button>
         </Grid>
       </Grid>

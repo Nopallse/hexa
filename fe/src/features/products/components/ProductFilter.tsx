@@ -180,7 +180,7 @@ export default function ProductFilter({
               },
             }}
           >
-            Hapus Filter
+            Reset
           </Button>
         )}
       </Stack>

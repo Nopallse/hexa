@@ -59,4 +59,34 @@ router.post('/refresh', [
   return authController.refreshToken(req, res);
 });
 
+// Verify email
+router.post('/verify-email', [
+  body('token').notEmpty().trim()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: errors.array()
+    });
+  }
+  return authController.verifyEmail(req, res);
+});
+
+// Resend verification email
+router.post('/resend-verification', [
+  body('email').isEmail().normalizeEmail()
+], async (req, res) => {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) {
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: errors.array()
+    });
+  }
+  return authController.resendVerification(req, res);
+});
+
 module.exports = router;

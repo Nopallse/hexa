@@ -48,6 +48,7 @@ import {
 } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { Helmet } from 'react-helmet-async';
 import { toast } from 'react-hot-toast';
 import { productApi } from '../services/productApi';
 import { Product } from '../types';
@@ -196,10 +197,115 @@ export default function ProductDetailPage() {
   };
 
   // Handle share
-  const handleShare = () => {
-    if (product) {
-      // TODO: Implement share functionality
-      console.log('Share:', product);
+  const handleShare = async () => {
+    if (!product || !id) return;
+
+    const productUrl = `${window.location.origin}/products/${id}`;
+    
+    // Get product price
+    let productPrice = '';
+    if (product.product_variants && product.product_variants.length > 0) {
+      if (product.product_variants.length === 1) {
+        productPrice = formatPrice(Number(product.product_variants[0].price));
+      } else {
+        const prices = product.product_variants.map(v => Number(v.price));
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        if (minPrice === maxPrice) {
+          productPrice = formatPrice(minPrice);
+        } else {
+          productPrice = `${formatPrice(minPrice)} - ${formatPrice(maxPrice)}`;
+        }
+      }
+    } else {
+      productPrice = formatPrice(Number(product.price));
+    }
+
+    // Get variant info for share text
+    let variantInfo = '';
+    if (product.product_variants && product.product_variants.length > 1) {
+      variantInfo = `${product.product_variants.length} VARIAN`;
+    }
+
+    // Get category info
+    const categoryInfo = product.category ? product.category.name.toUpperCase() : '';
+
+    // Create attractive share text like Shopee
+    // Format: "Temukan [nama produk] [info variant] [kategori] seharga [harga]. Dapatkan sekarang juga di Hexa Crochet! [link]"
+    let shareText = `Temukan ${product.name.toUpperCase()}`;
+    
+    if (variantInfo) {
+      shareText += ` ${variantInfo}`;
+    }
+    
+    if (categoryInfo) {
+      shareText += ` ${categoryInfo}`;
+    }
+    
+    shareText += ` seharga ${productPrice}. Dapatkan sekarang juga di Hexa Crochet! ${productUrl}`;
+    
+    const shareTitle = `${product.name} - Hexa Crochet`;
+
+    // Check if Web Share API is available (mobile browsers)
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
+          url: productUrl,
+        });
+        toast.success('Berhasil membagikan produk!', {
+          duration: 2000,
+          position: 'bottom-right',
+        });
+      } catch (err: any) {
+        // User cancelled or error occurred
+        if (err.name !== 'AbortError') {
+          // Fallback to copy link if share fails
+          await copyToClipboard(shareText);
+        }
+      }
+    } else {
+      // Fallback: Copy share text to clipboard
+      await copyToClipboard(shareText);
+    }
+  };
+
+  // Copy to clipboard helper
+  const copyToClipboard = async (text: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success('Link produk berhasil disalin ke clipboard!', {
+        duration: 3000,
+        position: 'bottom-right',
+        icon: '📋',
+      });
+    } catch (err) {
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = text;
+      textArea.style.position = 'fixed';
+      textArea.style.left = '-999999px';
+      textArea.style.top = '-999999px';
+      document.body.appendChild(textArea);
+      textArea.focus();
+      textArea.select();
+      
+      try {
+        document.execCommand('copy');
+        toast.success('Link produk berhasil disalin ke clipboard!', {
+          duration: 3000,
+          position: 'bottom-right',
+          icon: '📋',
+        });
+      } catch (err) {
+        toast.error('Gagal menyalin link. Silakan salin manual.', {
+          duration: 3000,
+          position: 'bottom-right',
+        });
+      } finally {
+        document.body.removeChild(textArea);
+      }
     }
   };
 
@@ -337,8 +443,64 @@ export default function ProductDetailPage() {
     ? product.product_variants.reduce((sum, variant) => sum + variant.stock, 0)
     : product.stock;
 
+  // Get product image for meta tags (must be absolute URL for Open Graph)
+  const metaImage = product ? (
+    selectedImage 
+      ? getProductImageUrl(selectedImage)
+      : (product.product_images && product.product_images.length > 0
+          ? getProductImageUrl(product.product_images.find(img => img.is_primary)?.image_name || product.product_images[0].image_name)
+          : `${window.location.origin}/images/product-placeholder.png`)
+  ) : '';
+  
+  // Ensure meta image is absolute URL
+  const metaImageAbsolute = metaImage && !metaImage.startsWith('http') 
+    ? `${window.location.origin}${metaImage.startsWith('/') ? '' : '/'}${metaImage}`
+    : metaImage;
+
+  // Get product price for meta tags
+  const metaPrice = product ? (
+    product.product_variants && product.product_variants.length > 0
+      ? (product.product_variants.length === 1
+          ? formatPrice(Number(product.product_variants[0].price))
+          : formatPriceRange(product.product_variants))
+      : formatPrice(Number(product.price))
+  ) : '';
+
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
+      {/* Open Graph Meta Tags for Link Preview */}
+      {product && (
+        <Helmet>
+          <title>{product.name} - Hexa Crochet</title>
+          <meta name="description" content={product.description || `${product.name} - Produk berkualitas tinggi dari Hexa Crochet`} />
+          
+          {/* Open Graph / Facebook */}
+          <meta property="og:type" content="product" />
+          <meta property="og:url" content={`${window.location.origin}/products/${id}`} />
+          <meta property="og:title" content={`${product.name} - Hexa Crochet`} />
+          <meta property="og:description" content={product.description || `${product.name} - Produk berkualitas tinggi dari Hexa Crochet. Harga: ${metaPrice}`} />
+          <meta property="og:image" content={metaImageAbsolute} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <meta property="og:site_name" content="Hexa Crochet" />
+          
+          {/* Twitter */}
+          <meta name="twitter:card" content="summary_large_image" />
+          <meta name="twitter:url" content={`${window.location.origin}/products/${id}`} />
+          <meta name="twitter:title" content={`${product.name} - Hexa Crochet`} />
+          <meta name="twitter:description" content={product.description || `${product.name} - Produk berkualitas tinggi dari Hexa Crochet. Harga: ${metaPrice}`} />
+          <meta name="twitter:image" content={metaImageAbsolute} />
+          
+          {/* Product specific */}
+          <meta property="product:price:amount" content={product.product_variants && product.product_variants.length > 0
+            ? String(product.product_variants[0].price)
+            : String(product.price)} />
+          <meta property="product:price:currency" content="IDR" />
+          <meta property="product:availability" content="in stock" />
+          <meta property="product:condition" content="new" />
+        </Helmet>
+      )}
+
       <Container maxWidth="xl">
 
         {/* Back Button */}

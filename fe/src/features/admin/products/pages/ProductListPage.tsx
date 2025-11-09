@@ -7,6 +7,8 @@ import {
   Button,
   Alert,
   TablePagination,
+  useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 import { productApi } from '@/features/admin/products/services/productApi';
@@ -25,6 +27,8 @@ interface Category {
 export default function ProductListPage() {
   const navigate = useNavigate();
   const { showNotification } = useUiStore();
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   
   const [products, setProducts] = useState<Product[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -142,24 +146,30 @@ export default function ProductListPage() {
   return (
     <Container maxWidth={false}>
       {/* Header */}
-      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
-        <Box>
-          <Typography variant="h4" fontWeight="bold" gutterBottom>
-            Kelola Produk
-          </Typography>
-          <Typography variant="body1" color="textSecondary">
-            Kelola produk dan inventori toko Anda
-          </Typography>
-        </Box>
+      <Box sx={{ mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+          <Box>
+            <Typography variant="h4" fontWeight="bold" gutterBottom>
+              Kelola Produk
+            </Typography>
+            <Typography variant="body1" color="textSecondary">
+              Kelola produk dan inventori toko Anda
+            </Typography>
+          </Box>
 
-        <Button
-          variant="contained"
-          startIcon={<AddIcon />}
-          onClick={handleCreateNew}
-          size="large"
-        >
-          Tambah Produk
-        </Button>
+          <Button
+            variant="contained"
+            startIcon={!isMobile ? <AddIcon /> : undefined}
+            onClick={handleCreateNew}
+            size="large"
+            sx={{ 
+              minWidth: isMobile ? 'auto' : 160,
+              textTransform: 'none',
+            }}
+          >
+            {isMobile ? <AddIcon /> : 'Tambah Produk'}
+          </Button>
+        </Box>
       </Box>
 
       {/* Error Alert */}

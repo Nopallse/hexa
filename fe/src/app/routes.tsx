@@ -18,6 +18,7 @@ const AboutPage = lazy(() => import('@/features/home/pages/AboutPage'));
 const LoginPage = lazy(() => import('@/features/auth/pages/LoginPage'));
 const RegisterPage = lazy(() => import('@/features/auth/pages/RegisterPage'));
 const ForgotPasswordPage = lazy(() => import('@/features/auth/pages/ForgotPasswordPage'));
+const VerifyEmailPage = lazy(() => import('@/features/auth/pages/VerifyEmailPage'));
 
 const ProductListPage = lazy(() => import('@/features/products/pages/ProductListPage'));
 const ProductDetailPage = lazy(() => import('@/features/products/pages/ProductDetailPage'));
@@ -106,6 +107,14 @@ export const router = createBrowserRouter([
         element: (
           <SuspenseWrapper>
             <ForgotPasswordPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'verify-email',
+        element: (
+          <SuspenseWrapper>
+            <VerifyEmailPage />
           </SuspenseWrapper>
         ),
       },

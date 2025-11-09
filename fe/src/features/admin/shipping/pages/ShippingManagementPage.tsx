@@ -1,11 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Typography,
   Box,
-  Breadcrumbs,
-  Link,
   Alert,
   Button,
   Card,
@@ -21,11 +19,13 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   IconButton,
   Tooltip,
+  useTheme,
+  Skeleton,
 } from '@mui/material';
 import { 
-  Home as HomeIcon, 
   LocalShipping as ShippingIcon,
   LocationOn as LocationOnIcon,
   Edit as EditIcon,
@@ -93,6 +93,7 @@ const getStatusText = (status: string) => {
 
 export default function ShippingManagementPage() {
   const navigate = useNavigate();
+  const theme = useTheme();
   const { showNotification } = useUiStore();
   
   const [activeOrigin, setActiveOrigin] = useState<Location | null>(null);
@@ -111,14 +112,9 @@ export default function ShippingManagementPage() {
     page: 1,
     limit: 10,
   });
-  const [pagination, setPagination] = useState({
-    current_page: 1,
-    total_pages: 1,
-    total_items: 0,
-    items_per_page: 10,
-    has_next_page: false,
-    has_prev_page: false,
-  });
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
+  const [total, setTotal] = useState(0);
 
   const fetchActiveOrigin = async () => {
     try {
@@ -155,8 +151,8 @@ export default function ShippingManagementPage() {
     try {
       const params = filterParams || filters;
       const response = await shippingApi.getShippingData({
-        page: params.page || 1,
-        limit: params.limit || 10,
+        page: (page || 0) + 1,
+        limit: rowsPerPage,
         status: params.status || undefined,
         courier: params.courier || undefined,
         startDate: params.startDate || undefined,
@@ -166,7 +162,7 @@ export default function ShippingManagementPage() {
       if (response.success && response.data) {
         setShippingData(response.data);
         if (response.pagination) {
-          setPagination(response.pagination);
+          setTotal(response.pagination.total_items || 0);
         }
       }
     } catch (error: any) {
@@ -175,9 +171,20 @@ export default function ShippingManagementPage() {
     }
   };
 
+  const memoizedFilters = useMemo(() => filters, [filters]);
+
   const handleFilterChange = (newFilters: ShippingFilterParams) => {
     setFilters(newFilters);
-    fetchShippingData(newFilters);
+    setPage(0);
+  };
+
+  const handleChangePage = (event: unknown, newPage: number) => {
+    setPage(newPage);
+  };
+
+  const handleChangeRowsPerPage = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setPage(0);
   };
 
   const fetchApiConfigStatus = async () => {
@@ -200,13 +207,16 @@ export default function ShippingManagementPage() {
       await Promise.all([
         fetchActiveOrigin(),
         fetchShippingStats(),
-        fetchShippingData(filters),
         fetchApiConfigStatus(),
       ]);
     };
     
     loadData();
   }, []);
+
+  useEffect(() => {
+    fetchShippingData(memoizedFilters);
+  }, [page, rowsPerPage, memoizedFilters]);
 
   const handleUpdateLocation = async (data: any) => {
     if (!editingLocation) return;
@@ -255,104 +265,33 @@ export default function ShippingManagementPage() {
     ]);
   };
 
-  if (isLoading) {
+  if (isLoading && !activeOrigin) {
     return <Loading message="Memuat data lokasi origin..." />;
   }
 
   return (
-    <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 4 }}>
-        <Link
-          component="button"
-          variant="body2"
-          onClick={() => navigate('/admin')}
-          sx={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: 0.5,
-            color: 'text.secondary',
-            textDecoration: 'none',
-            '&:hover': {
-              color: 'primary.main',
-              textDecoration: 'underline'
-            }
-          }}
-        >
-          <HomeIcon fontSize="small" />
-          Dashboard
-        </Link>
-        <Typography variant="body2" color="textPrimary" sx={{ fontWeight: 500 }}>
-          Pengiriman
-        </Typography>
-      </Breadcrumbs>
-
+    <Container maxWidth={false}>
       {/* Header */}
       <Box sx={{ mb: 4 }}>
-        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-            <ShippingIcon sx={{ fontSize: '2rem', color: 'primary.main' }} />
-            <Typography variant="h4" fontWeight={700} color="text.primary" className="craft-heading">
-              Manajemen Pengiriman
-            </Typography>
-          </Box>
-          <Button
-            variant="outlined"
-            startIcon={<RefreshIcon />}
-            onClick={handleRefresh}
-            sx={{
-              borderRadius: 2,
-              px: 3,
-              py: 1,
-              fontWeight: 500,
-              textTransform: 'none',
-              borderColor: 'primary.main',
-              color: 'primary.main',
-              '&:hover': {
-                backgroundColor: 'rgba(150, 130, 219, 0.05)',
-                borderColor: 'primary.dark'
-              }
-            }}
-          >
-            Refresh Data
-          </Button>
-        </Box>
-        <Typography variant="body1" color="text.secondary" className="craft-body">
+        <Typography variant="h4" fontWeight="bold" gutterBottom>
+          Manajemen Pengiriman
+        </Typography>
+        <Typography variant="body1" color="textSecondary">
           Kelola lokasi origin, statistik pengiriman, dan tracking order
         </Typography>
       </Box>
 
       {/* Error Alert */}
       {error && (
-        <Alert 
-          severity="error" 
-          sx={{ 
-            mb: 3,
-            borderRadius: 2,
-            backgroundColor: 'error.light',
-            color: 'error.dark',
-            border: '1px solid',
-            borderColor: 'error.main'
-          }}
-        >
+        <Alert severity="error" sx={{ mb: 3 }} onClose={() => setError(null)}>
           {error}
         </Alert>
       )}
 
       {/* API Configuration Status Alert */}
       {apiConfigStatus && !apiConfigStatus.biteshipConfigured && (
-        <Alert 
-          severity="warning" 
-          sx={{ 
-            mb: 3,
-            borderRadius: 2,
-            backgroundColor: 'warning.light',
-            color: 'warning.dark',
-            border: '1px solid',
-            borderColor: 'warning.main'
-          }}
-        >
-          <Typography variant="body2" fontWeight={600} sx={{ mb: 1 }}>
+        <Alert severity="warning" sx={{ mb: 3 }} onClose={() => setApiConfigStatus(null)}>
+          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
             ⚠️ Biteship API Tidak Dikonfigurasi
           </Typography>
           <Typography variant="body2">
@@ -364,13 +303,8 @@ export default function ShippingManagementPage() {
       {/* Main Content */}
       {editingLocation ? (
         /* Edit Form */
-        <Card sx={{ 
-          borderRadius: 3,
-          boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-          border: '1px solid rgba(150, 130, 219, 0.08)',
-          mb: 4
-        }}>
-          <CardContent sx={{ p: 4 }}>
+        <Paper elevation={0} sx={{ mb: 3, borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+          <Box sx={{ p: 3 }}>
             <LocationForm
               mode="edit"
               location={editingLocation}
@@ -379,220 +313,120 @@ export default function ShippingManagementPage() {
               onSubmit={handleUpdateLocation}
               onCancel={handleCancelForm}
             />
-          </CardContent>
-        </Card>
+          </Box>
+        </Paper>
       ) : (
         /* Main Dashboard */
         <Box>
-          {/* Location Origin Card - Compact */}
+          {/* Location Origin & Statistics Cards */}
           <Grid container spacing={3} sx={{ mb: 4 }}>
             <Grid item xs={12} md={4}>
-              <Card sx={{ 
-                borderRadius: 3,
-                boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-                border: '1px solid rgba(150, 130, 219, 0.08)',
-                height: '100%'
-              }}>
-                <CardContent sx={{ p: 3 }}>
-                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
-                    <Box sx={{ 
-                      p: 1, 
-                      borderRadius: 1.5, 
-                      backgroundColor: 'primary.main',
-                      color: 'white',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}>
-                      <LocationOnIcon sx={{ fontSize: '1.2rem' }} />
-                    </Box>
-                    <Typography variant="h6" fontWeight={600} color="text.primary" className="craft-heading">
-                      Lokasi Origin
+              <Paper elevation={0} sx={{ p: 3, borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+                  <LocationOnIcon sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
+                  <Typography variant="h6" fontWeight={600} color="text.primary">
+                    Lokasi Origin
+                  </Typography>
+                </Box>
+                
+                {activeOrigin ? (
+                  <Box>
+                    <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ mb: 0.5 }}>
+                      {activeOrigin.name}
                     </Typography>
-                  </Box>
-                  
-                  {activeOrigin ? (
-                    <Box>
-                      <Typography variant="body1" fontWeight={600} color="text.primary" sx={{ mb: 0.5 }}>
-                        {activeOrigin.name}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                        {activeOrigin.address}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        📮 {activeOrigin.postal_code} | 📞 {activeOrigin.contact_phone}
-                      </Typography>
-                      
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Chip 
-                          label="Aktif" 
-                          size="small" 
-                          sx={{ 
-                            backgroundColor: 'success.main',
-                            color: 'white',
-                            fontWeight: 600
-                          }} 
-                        />
-                        <Button
-                          variant="outlined"
-                          size="small"
-                          startIcon={<EditIcon />}
-                          onClick={handleEditLocation}
-                          sx={{
-                            borderRadius: 2,
-                            px: 2,
-                            py: 0.5,
-                            fontWeight: 500,
-                            textTransform: 'none',
-                            borderColor: 'primary.main',
-                            color: 'primary.main',
-                            '&:hover': {
-                              backgroundColor: 'rgba(150, 130, 219, 0.05)',
-                              borderColor: 'primary.dark'
-                            }
-                          }}
-                        >
-                          Edit
-                        </Button>
-                      </Box>
-                    </Box>
-                  ) : (
-                    <Box sx={{ textAlign: 'center', py: 2 }}>
-                      <Typography variant="body2" color="text.secondary">
-                        Belum ada lokasi origin
-                      </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 1 }}>
+                      {activeOrigin.address}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
+                      {activeOrigin.postal_code} | {activeOrigin.contact_phone}
+                    </Typography>
+                    
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Chip 
+                        label="Aktif" 
+                        size="small" 
+                        color="success"
+                        sx={{ fontWeight: 600 }}
+                      />
                       <Button
                         variant="outlined"
                         size="small"
-                        startIcon={<RefreshIcon />}
-                        onClick={fetchActiveOrigin}
-                        sx={{ mt: 1 }}
+                        startIcon={<EditIcon />}
+                        onClick={handleEditLocation}
+                        sx={{ textTransform: 'none' }}
                       >
-                        Refresh
+                        Edit
                       </Button>
                     </Box>
-                  )}
-                </CardContent>
-              </Card>
+                  </Box>
+                ) : (
+                  <Box sx={{ textAlign: 'center', py: 2 }}>
+                    <Typography variant="body2" color="textSecondary">
+                      Belum ada lokasi origin
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      startIcon={<RefreshIcon />}
+                      onClick={fetchActiveOrigin}
+                      sx={{ mt: 1, textTransform: 'none' }}
+                    >
+                      Refresh
+                    </Button>
+                  </Box>
+                )}
+              </Paper>
             </Grid>
 
             {/* Statistics Cards */}
             <Grid item xs={12} md={8}>
               <Grid container spacing={2}>
                 <Grid item xs={6} md={3}>
-                  <Card sx={{ 
-                    borderRadius: 3,
-                    boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-                    border: '1px solid rgba(150, 130, 219, 0.08)',
-                    height: '100%'
-                  }}>
-                    <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                      <Box sx={{ 
-                        p: 1.5, 
-                        borderRadius: '50%', 
-                        backgroundColor: 'rgba(150, 130, 219, 0.1)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 1
-                      }}>
-                        <TrendingUpIcon sx={{ fontSize: '1.5rem', color: 'primary.main' }} />
-                      </Box>
-                      <Typography variant="h6" fontWeight={700} color="text.primary">
-                        {shippingStats?.totalOrders || 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Total Order
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center', borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+                    <TrendingUpIcon sx={{ fontSize: '2rem', color: 'primary.main', mb: 1 }} />
+                    <Typography variant="h6" fontWeight={700} color="text.primary">
+                      {shippingStats?.totalOrders || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Total Order
+                    </Typography>
+                  </Paper>
                 </Grid>
 
                 <Grid item xs={6} md={3}>
-                  <Card sx={{ 
-                    borderRadius: 3,
-                    boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-                    border: '1px solid rgba(150, 130, 219, 0.08)',
-                    height: '100%'
-                  }}>
-                    <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                      <Box sx={{ 
-                        p: 1.5, 
-                        borderRadius: '50%', 
-                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 1
-                      }}>
-                        <ScheduleIcon sx={{ fontSize: '1.5rem', color: 'warning.main' }} />
-                      </Box>
-                      <Typography variant="h6" fontWeight={700} color="text.primary">
-                        {shippingStats?.pendingShipment || 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Menunggu Kirim
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center', borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+                    <ScheduleIcon sx={{ fontSize: '2rem', color: 'warning.main', mb: 1 }} />
+                    <Typography variant="h6" fontWeight={700} color="text.primary">
+                      {shippingStats?.pendingShipment || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Menunggu Kirim
+                    </Typography>
+                  </Paper>
                 </Grid>
 
                 <Grid item xs={6} md={3}>
-                  <Card sx={{ 
-                    borderRadius: 3,
-                    boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-                    border: '1px solid rgba(150, 130, 219, 0.08)',
-                    height: '100%'
-                  }}>
-                    <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                      <Box sx={{ 
-                        p: 1.5, 
-                        borderRadius: '50%', 
-                        backgroundColor: 'rgba(52, 152, 219, 0.1)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 1
-                      }}>
-                        <ShippingOutlinedIcon sx={{ fontSize: '1.5rem', color: 'info.main' }} />
-                      </Box>
-                      <Typography variant="h6" fontWeight={700} color="text.primary">
-                        {shippingStats?.inTransit || 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Dalam Perjalanan
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center', borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+                    <ShippingOutlinedIcon sx={{ fontSize: '2rem', color: 'info.main', mb: 1 }} />
+                    <Typography variant="h6" fontWeight={700} color="text.primary">
+                      {shippingStats?.inTransit || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Dalam Perjalanan
+                    </Typography>
+                  </Paper>
                 </Grid>
 
                 <Grid item xs={6} md={3}>
-                  <Card sx={{ 
-                    borderRadius: 3,
-                    boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-                    border: '1px solid rgba(150, 130, 219, 0.08)',
-                    height: '100%'
-                  }}>
-                    <CardContent sx={{ p: 2, textAlign: 'center' }}>
-                      <Box sx={{ 
-                        p: 1.5, 
-                        borderRadius: '50%', 
-                        backgroundColor: 'rgba(39, 174, 96, 0.1)',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        mb: 1
-                      }}>
-                        <CheckCircleIcon sx={{ fontSize: '1.5rem', color: 'success.main' }} />
-                      </Box>
-                      <Typography variant="h6" fontWeight={700} color="text.primary">
-                        {shippingStats?.delivered || 0}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        Terkirim
-                      </Typography>
-                    </CardContent>
-                  </Card>
+                  <Paper elevation={0} sx={{ p: 2, textAlign: 'center', borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+                    <CheckCircleIcon sx={{ fontSize: '2rem', color: 'success.main', mb: 1 }} />
+                    <Typography variant="h6" fontWeight={700} color="text.primary">
+                      {shippingStats?.delivered || 0}
+                    </Typography>
+                    <Typography variant="body2" color="textSecondary">
+                      Terkirim
+                    </Typography>
+                  </Paper>
                 </Grid>
               </Grid>
             </Grid>
@@ -602,125 +436,145 @@ export default function ShippingManagementPage() {
           <ShippingFilter
             onFilterChange={handleFilterChange}
             loading={isLoading}
-            initialFilters={filters}
+            initialFilters={memoizedFilters}
           />
 
           {/* Shipping Table */}
-          <Card sx={{ 
-            borderRadius: 3,
-            boxShadow: '0 4px 16px rgba(150, 130, 219, 0.12)',
-            border: '1px solid rgba(150, 130, 219, 0.08)'
-          }}>
-            <CardContent sx={{ p: 0 }}>
-              <Box sx={{ p: 3, borderBottom: '1px solid rgba(150, 130, 219, 0.1)' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <Box>
-                    <Typography variant="h6" fontWeight={600} color="text.primary" className="craft-heading">
-                      Data Pengiriman
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                      Tracking dan status pengiriman order
-                    </Typography>
-                  </Box>
-                  <Typography variant="body2" color="text.secondary">
-                    Total: {pagination.total_items} pengiriman
-                  </Typography>
-                </Box>
-              </Box>
-              
-              <TableContainer>
-                <Table>
-                  <TableHead>
-                    <TableRow sx={{ backgroundColor: 'rgba(150, 130, 219, 0.05)' }}>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>ID Pengiriman</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Order ID</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Penerima</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Tujuan</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Kurir</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Status</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Tracking</TableCell>
-                      <TableCell sx={{ fontWeight: 600, color: 'text.primary' }}>Aksi</TableCell>
+          {isLoading && shippingData.length === 0 ? (
+            <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID Pengiriman</TableCell>
+                    <TableCell>Order ID</TableCell>
+                    <TableCell>Penerima</TableCell>
+                    <TableCell>Tujuan</TableCell>
+                    <TableCell>Kurir</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Tracking</TableCell>
+                    <TableCell align="right">Aksi</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {[...Array(5)].map((_, index) => (
+                    <TableRow key={index}>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell><Skeleton /></TableCell>
+                      <TableCell align="right"><Skeleton /></TableCell>
                     </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {shippingData.map((row) => (
-                      <TableRow key={row.id} hover>
-                        <TableCell sx={{ fontWeight: 500 }}>{row.id}</TableCell>
-                        <TableCell>{row.orderId}</TableCell>
-                        <TableCell>{row.recipient}</TableCell>
-                        <TableCell>{row.destination}</TableCell>
-                        <TableCell>{row.courier}</TableCell>
-                        <TableCell>
-                          <Chip
-                            icon={getStatusIcon(row.status)}
-                            label={getStatusText(row.status)}
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : shippingData.length === 0 ? (
+            <Paper elevation={0} sx={{ p: 4, textAlign: 'center', borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+              <Typography variant="body1" color="textSecondary">
+                Tidak ada data pengiriman ditemukan
+              </Typography>
+            </Paper>
+          ) : (
+            <TableContainer component={Paper} elevation={0} sx={{ borderRadius: 2, border: `1px solid ${theme.palette.grey[200]}` }}>
+              <Table>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>ID Pengiriman</TableCell>
+                    <TableCell>Order ID</TableCell>
+                    <TableCell>Penerima</TableCell>
+                    <TableCell>Tujuan</TableCell>
+                    <TableCell>Kurir</TableCell>
+                    <TableCell>Status</TableCell>
+                    <TableCell>Tracking</TableCell>
+                    <TableCell align="right">Aksi</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {shippingData.map((row) => (
+                    <TableRow key={row.id} hover>
+                      <TableCell>
+                        <Typography variant="body2" fontWeight={500}>
+                          {row.id}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {row.orderId}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {row.recipient}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2" color="textSecondary">
+                          {row.destination}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Typography variant="body2">
+                          {row.courier}
+                        </Typography>
+                      </TableCell>
+                      <TableCell>
+                        <Chip
+                          icon={getStatusIcon(row.status)}
+                          label={getStatusText(row.status)}
+                          size="small"
+                          color={getStatusColor(row.status) as any}
+                          variant="outlined"
+                          sx={{ fontSize: '0.75rem', height: 24, fontWeight: 500 }}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        {row.trackingNumber ? (
+                          <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                            {row.trackingNumber}
+                          </Typography>
+                        ) : (
+                          <Typography variant="body2" color="textSecondary">
+                            -
+                          </Typography>
+                        )}
+                      </TableCell>
+                      <TableCell align="right">
+                        <Tooltip title="Lihat Detail">
+                          <IconButton
                             size="small"
-                            color={getStatusColor(row.status) as any}
-                            sx={{ fontWeight: 500 }}
-                          />
-                        </TableCell>
-                        <TableCell>
-                          {row.trackingNumber ? (
-                            <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                              {row.trackingNumber}
-                            </Typography>
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">
-                              -
-                            </Typography>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Tooltip title="Lihat Detail">
-                            <IconButton 
-                              size="small" 
-                              color="primary"
-                              onClick={() => navigate(`/admin/shipping/${row.id}`)}
-                            >
-                              <ViewIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-              
-              {/* Pagination */}
-              {pagination.total_pages > 1 && (
-                <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      const newFilters = { ...filters, page: (pagination.current_page - 1) };
-                      setFilters(newFilters);
-                      fetchShippingData(newFilters);
-                    }}
-                    disabled={!pagination.has_prev_page || isLoading}
-                    size="small"
-                  >
-                    Sebelumnya
-                  </Button>
-                  <Typography variant="body2" color="text.secondary">
-                    Halaman {pagination.current_page} dari {pagination.total_pages}
-                  </Typography>
-                  <Button
-                    variant="outlined"
-                    onClick={() => {
-                      const newFilters = { ...filters, page: (pagination.current_page + 1) };
-                      setFilters(newFilters);
-                      fetchShippingData(newFilters);
-                    }}
-                    disabled={!pagination.has_next_page || isLoading}
-                    size="small"
-                  >
-                    Selanjutnya
-                  </Button>
-                </Box>
-              )}
-            </CardContent>
-          </Card>
+                            onClick={() => navigate(`/admin/shipping/${row.id}`)}
+                            sx={{ color: 'primary.main' }}
+                          >
+                            <ViewIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          )}
+
+          {/* Pagination */}
+          {total > 0 && (
+            <TablePagination
+              rowsPerPageOptions={[5, 10, 25, 50]}
+              component="div"
+              count={total}
+              rowsPerPage={rowsPerPage}
+              page={page}
+              onPageChange={handleChangePage}
+              onRowsPerPageChange={handleChangeRowsPerPage}
+              labelRowsPerPage="Baris per halaman:"
+              labelDisplayedRows={({ from, to, count }) => 
+                `${from}-${to} dari ${count !== -1 ? count : `lebih dari ${to}`}`
+              }
+            />
+          )}
         </Box>
       )}
     </Container>

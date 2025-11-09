@@ -30,6 +30,7 @@ export default function CartPage() {
   const { items, isLoading, error: storeError, syncWithServer } = useCartStore();
   const [error, setError] = useState<string | null>(null);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [selectedItems, setSelectedItems] = useState<Set<string>>(new Set());
 
   // Sync dengan server saat component mount
   useEffect(() => {
@@ -60,11 +61,67 @@ export default function CartPage() {
   const handleCartCleared = async () => {
     // Sync dengan server untuk mendapatkan data terbaru
     await syncWithServer();
+    // Reset selected items
+    setSelectedItems(new Set());
+  };
+
+  const handleItemSelect = (itemId: string, selected: boolean) => {
+    setSelectedItems(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(itemId);
+      } else {
+        newSet.delete(itemId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (select: boolean) => {
+    if (select) {
+      const allAvailableIds = availableItems.map(item => item.id);
+      setSelectedItems(new Set(allAvailableIds));
+    } else {
+      setSelectedItems(new Set());
+    }
   };
 
   // Filter items
   const availableItems = items.filter(item => item.product_variant.product.deleted_at === null);
   const deletedItems = items.filter(item => item.product_variant.product.deleted_at !== null);
+
+  // Set default: select all available items when items are loaded
+  useEffect(() => {
+    if (!initialLoading && availableItems.length > 0) {
+      const allAvailableIds = availableItems.map(item => item.id);
+      setSelectedItems(prev => {
+        // If no items are selected yet (first load), select all available items
+        if (prev.size === 0) {
+          return new Set(allAvailableIds);
+        }
+        // Otherwise, keep user's manual selections but:
+        // - Add new items that were added to cart
+        // - Remove items that are no longer available
+        const newSet = new Set(prev);
+        allAvailableIds.forEach(id => {
+          // Add new items automatically (default selected)
+          if (!newSet.has(id)) {
+            newSet.add(id);
+          }
+        });
+        // Remove items that are no longer available
+        Array.from(newSet).forEach(id => {
+          if (!allAvailableIds.includes(id)) {
+            newSet.delete(id);
+          }
+        });
+        return newSet;
+      });
+    } else if (availableItems.length === 0) {
+      // If no available items, clear selection
+      setSelectedItems(new Set());
+    }
+  }, [availableItems.map(item => item.id).join(','), initialLoading]);
 
   return (
     <Box sx={{ minHeight: '100vh', py: 4 }}>
@@ -175,15 +232,27 @@ export default function CartPage() {
                 {/* Available Items */}
                 {availableItems.length > 0 && (
                   <>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
-                      Item Tersedia ({availableItems.length})
-                    </Typography>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                      <Typography variant="h6" fontWeight={600} sx={{ color: 'text.primary' }}>
+                        Item Tersedia ({availableItems.length})
+                      </Typography>
+                      <Button
+                        size="small"
+                        onClick={() => handleSelectAll(selectedItems.size !== availableItems.length)}
+                        sx={{ textTransform: 'none' }}
+                      >
+                        {selectedItems.size === availableItems.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
+                      </Button>
+                    </Box>
                     {availableItems.map((item) => (
                       <CartItem
                         key={item.id}
                         item={item}
                         onUpdate={handleItemUpdate}
                         onRemove={handleItemRemove}
+                        selected={selectedItems.has(item.id)}
+                        onSelectChange={handleItemSelect}
+                        selectable={true}
                       />
                     ))}
                   </>
@@ -228,6 +297,7 @@ export default function CartPage() {
               <CartSummary
                 items={items}
                 onCartCleared={handleCartCleared}
+                selectedItems={selectedItems}
               />
             </Box>
           )}

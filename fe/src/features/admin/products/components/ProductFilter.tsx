@@ -101,24 +101,25 @@ export default function ProductFilter({
   const activeFiltersCount = getActiveFiltersCount();
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box sx={{ mb: 2 }}>
       {/* Basic Filters */}
-      <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
-        <Box sx={{ flex: '1 1 300px', minWidth: 200 }}>
+      <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap', alignItems: 'center' }}>
+        <Box sx={{ flex: '1 1 250px', minWidth: 180 }}>
           <TextField
             fullWidth
+            size="small"
             placeholder="Cari produk..."
             value={filters.search || ''}
             onChange={(e) => handleSearchChange(e.target.value)}
             InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
+              startAdornment: <SearchIcon sx={{ mr: 0.5, fontSize: 18, color: 'text.secondary' }} />,
             }}
             disabled={loading}
           />
         </Box>
 
-        <Box sx={{ flex: '1 1 200px', minWidth: 150 }}>
-          <FormControl fullWidth disabled={loading}>
+        <Box sx={{ flex: '1 1 160px', minWidth: 130 }}>
+          <FormControl fullWidth size="small" disabled={loading}>
             <InputLabel>Kategori</InputLabel>
             <Select
               value={filters.category || ''}
@@ -135,8 +136,8 @@ export default function ProductFilter({
           </FormControl>
         </Box>
 
-        <Box sx={{ flex: '1 1 150px', minWidth: 120 }}>
-          <FormControl fullWidth disabled={loading}>
+        <Box sx={{ flex: '1 1 130px', minWidth: 110 }}>
+          <FormControl fullWidth size="small" disabled={loading}>
             <InputLabel>Urutkan</InputLabel>
             <Select
               value={filters.sort || 'created_at'}
@@ -150,8 +151,8 @@ export default function ProductFilter({
           </FormControl>
         </Box>
 
-        <Box sx={{ flex: '1 1 150px', minWidth: 120 }}>
-          <FormControl fullWidth disabled={loading}>
+        <Box sx={{ flex: '1 1 130px', minWidth: 110 }}>
+          <FormControl fullWidth size="small" disabled={loading}>
             <InputLabel>Urutan</InputLabel>
             <Select
               value={filters.sortOrder || 'desc'}
@@ -167,7 +168,8 @@ export default function ProductFilter({
         <Box sx={{ display: 'flex', gap: 1, flexShrink: 0 }}>
           <Button
             variant="outlined"
-            startIcon={<FilterIcon />}
+            size="small"
+            startIcon={<FilterIcon fontSize="small" />}
             onClick={() => setShowAdvanced(!showAdvanced)}
             disabled={loading}
           >
@@ -177,14 +179,15 @@ export default function ProductFilter({
                 label={activeFiltersCount}
                 size="small"
                 color="primary"
-                sx={{ ml: 1, minWidth: 20, height: 20 }}
+                sx={{ ml: 0.5, minWidth: 18, height: 18, fontSize: '0.7rem' }}
               />
             )}
           </Button>
           {activeFiltersCount > 0 && (
             <Button
               variant="outlined"
-              startIcon={<ClearIcon />}
+              size="small"
+              startIcon={<ClearIcon fontSize="small" />}
               onClick={handleClearFilters}
               disabled={loading}
               color="error"
@@ -197,34 +200,36 @@ export default function ProductFilter({
 
       {/* Advanced Filters */}
       {showAdvanced && (
-        <Box sx={{ mt: 2, p: 2, bgcolor: 'grey.50', borderRadius: 1 }}>
-          <Typography variant="subtitle2" gutterBottom>
+        <Box sx={{ mt: 1.5, p: 1.5, bgcolor: 'grey.50', borderRadius: 1 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontSize: '0.875rem' }}>
             Filter Lanjutan
           </Typography>
-          <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-            <Box sx={{ flex: '1 1 200px', minWidth: 150 }}>
+          <Box sx={{ display: 'flex', gap: 1.5, flexWrap: 'wrap' }}>
+            <Box sx={{ flex: '1 1 180px', minWidth: 140 }}>
               <TextField
                 fullWidth
+                size="small"
                 label="Harga Minimum"
                 type="number"
                 value={filters.min_price || ''}
                 onChange={(e) => handleFilterChange('min_price', e.target.value ? Number(e.target.value) : undefined)}
                 disabled={loading}
                 InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>Rp</Typography>,
+                  startAdornment: <Typography sx={{ mr: 0.5, fontSize: '0.875rem' }}>Rp</Typography>,
                 }}
               />
             </Box>
-            <Box sx={{ flex: '1 1 200px', minWidth: 150 }}>
+            <Box sx={{ flex: '1 1 180px', minWidth: 140 }}>
               <TextField
                 fullWidth
+                size="small"
                 label="Harga Maksimum"
                 type="number"
                 value={filters.max_price || ''}
                 onChange={(e) => handleFilterChange('max_price', e.target.value ? Number(e.target.value) : undefined)}
                 disabled={loading}
                 InputProps={{
-                  startAdornment: <Typography sx={{ mr: 1 }}>Rp</Typography>,
+                  startAdornment: <Typography sx={{ mr: 0.5, fontSize: '0.875rem' }}>Rp</Typography>,
                 }}
               />
             </Box>

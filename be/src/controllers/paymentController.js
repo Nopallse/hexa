@@ -2,6 +2,7 @@ const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const PayPalService = require('../services/paypalService');
 const MidtransService = require('../services/midtransService');
+const emailService = require('../services/emailService');
 
 // Create payment
 const createPayment = async (req, res) => {
@@ -188,6 +189,48 @@ const verifyPayment = async (req, res) => {
 
     logger.info(`Payment ${payment_status}: ${id} by ${req.user.email}`);
 
+    // Send payment invoice email if payment is paid
+    if (payment_status === 'paid') {
+      try {
+        const fullOrder = await prisma.order.findUnique({
+          where: { id: payment.order_id },
+          include: {
+            address: true,
+            order_items: {
+              include: {
+                product_variant: {
+                  include: {
+                    product: {
+                      select: {
+                        name: true
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            user: {
+              select: {
+                email: true,
+                full_name: true
+              }
+            }
+          }
+        });
+
+        if (fullOrder && fullOrder.user && result) {
+          await emailService.sendPaymentInvoiceEmail(
+            fullOrder,
+            result,
+            fullOrder.user.email,
+            fullOrder.user.full_name
+          );
+        }
+      } catch (emailError) {
+        logger.error('Failed to send payment invoice email:', emailError);
+      }
+    }
+
     res.json({
       success: true,
       message: 'Payment status updated successfully',
@@ -365,6 +408,57 @@ const capturePayPalPayment = async (req, res) => {
     });
 
     logger.info(`PayPal payment captured: ${captureResult.captureId} for order ${payment.order_id}`);
+
+    // Send payment invoice email
+    try {
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: payment.order_id },
+        include: {
+          address: true,
+          order_items: {
+            include: {
+              product_variant: {
+                include: {
+                  product: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          user: {
+            select: {
+              email: true,
+              full_name: true
+            }
+          }
+        }
+      });
+
+      const updatedPayment = await prisma.payment.findFirst({
+        where: {
+          order_id: payment.order_id,
+          payment_method: 'paypal',
+          payment_status: 'paid'
+        },
+        orderBy: {
+          payment_date: 'desc'
+        }
+      });
+
+      if (fullOrder && fullOrder.user && updatedPayment) {
+        await emailService.sendPaymentInvoiceEmail(
+          fullOrder,
+          updatedPayment,
+          fullOrder.user.email,
+          fullOrder.user.full_name
+        );
+      }
+    } catch (emailError) {
+      logger.error('Failed to send payment invoice email:', emailError);
+    }
 
     res.json({
       success: true,
@@ -952,6 +1046,59 @@ const handleMidtransNotification = async (req, res) => {
     });
 
     logger.info(`Midtrans notification processed: ${transaction_status} for order ${order_id}`);
+
+    // Send payment invoice email if payment is successful
+    if (paymentStatus === 'paid') {
+      try {
+        const fullOrder = await prisma.order.findUnique({
+          where: { id: payment.order_id },
+          include: {
+            address: true,
+            order_items: {
+              include: {
+                product_variant: {
+                  include: {
+                    product: {
+                      select: {
+                        name: true
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            user: {
+              select: {
+                email: true,
+                full_name: true
+              }
+            }
+          }
+        });
+
+        const updatedPayment = await prisma.payment.findFirst({
+          where: {
+            order_id: payment.order_id,
+            payment_method: 'midtrans',
+            payment_status: 'paid'
+          },
+          orderBy: {
+            payment_date: 'desc'
+          }
+        });
+
+        if (fullOrder && fullOrder.user && updatedPayment) {
+          await emailService.sendPaymentInvoiceEmail(
+            fullOrder,
+            updatedPayment,
+            fullOrder.user.email,
+            fullOrder.user.full_name
+          );
+        }
+      } catch (emailError) {
+        logger.error('Failed to send payment invoice email:', emailError);
+      }
+    }
 
     res.json({
       success: true,

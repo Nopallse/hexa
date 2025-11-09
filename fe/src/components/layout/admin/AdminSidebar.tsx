@@ -8,6 +8,7 @@ import {
   Box,
   Collapse,
   useTheme,
+  Divider,
 } from '@mui/material';
 import {
   Dashboard as DashboardIcon,
@@ -19,10 +20,12 @@ import {
   LocalShipping as ShippingIcon,
   ExpandLess,
   ExpandMore,
+  Logout as LogoutIcon,
 } from '@mui/icons-material';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useUiStore } from '@/store/uiStore';
+import { useAuthStore } from '@/store/authStore';
 
 const SIDEBAR_WIDTH = 260;
 const SIDEBAR_COLLAPSED_WIDTH = 64;
@@ -75,7 +78,9 @@ const menuItems: MenuItem[] = [
 export default function AdminSidebar() {
   const theme = useTheme();
   const location = useLocation();
+  const navigate = useNavigate();
   const sidebarOpen = useUiStore((state) => state.sidebarOpen);
+  const { logout } = useAuthStore();
   const [expandedItems, setExpandedItems] = useState<string[]>([]);
 
   const handleExpand = (title: string) => {
@@ -90,6 +95,11 @@ export default function AdminSidebar() {
     if (!path) return false;
     return location.pathname === path || 
            (path !== '/admin' && location.pathname.startsWith(path));
+  };
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login');
   };
 
   const renderMenuItem = (item: MenuItem, level = 0) => {
@@ -195,9 +205,57 @@ export default function AdminSidebar() {
       </Box>
 
       {/* Menu Items */}
-      <List sx={{ flexGrow: 1, py: 2, px: 1 }}>
+      <List sx={{ flexGrow: 1, py: 2, px: 1, overflow: 'auto' }}>
         {menuItems.map(item => renderMenuItem(item))}
       </List>
+
+      {/* Logout Button */}
+      <Box sx={{ mt: 'auto' }}>
+        <Divider />
+        <ListItem disablePadding sx={{ display: 'block' }}>
+          <ListItemButton
+            onClick={handleLogout}
+            sx={{
+              minHeight: 44,
+              justifyContent: sidebarOpen ? 'initial' : 'center',
+              px: sidebarOpen ? 2 : 1.5,
+              mx: 1,
+              my: 1,
+              borderRadius: 1,
+              backgroundColor: 'transparent',
+              color: theme.palette.error.main,
+              transition: 'all 0.2s ease',
+              '&:hover': {
+                backgroundColor: theme.palette.error.light,
+                color: theme.palette.error.dark,
+                transform: 'translateX(2px)',
+              },
+            }}
+          >
+            <ListItemIcon
+              sx={{
+                minWidth: 0,
+                mr: sidebarOpen ? 2 : 'auto',
+                justifyContent: 'center',
+                color: 'inherit',
+                fontSize: '1.25rem',
+              }}
+            >
+              <LogoutIcon />
+            </ListItemIcon>
+            {sidebarOpen && (
+              <ListItemText 
+                primary="Keluar"
+                primaryTypographyProps={{
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                }}
+                sx={{ opacity: sidebarOpen ? 1 : 0 }}
+              />
+            )}
+          </ListItemButton>
+        </ListItem>
+      </Box>
     </Box>
   );
 }

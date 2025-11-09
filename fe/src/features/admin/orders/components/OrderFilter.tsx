@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
 import {
-  Box,
-  TextField,
   FormControl,
   InputLabel,
   Select,
@@ -12,7 +10,6 @@ import {
   useTheme,
 } from '@mui/material';
 import {
-  Search as SearchIcon,
   Clear as ClearIcon,
 } from '@mui/icons-material';
 import { AdminOrderQueryParams } from '../services/orderApi';
@@ -30,12 +27,9 @@ export default function OrderFilter({
 }: OrderFilterProps) {
   const theme = useTheme();
   const [filters, setFilters] = useState<AdminOrderQueryParams>({
-    search: '',
     payment_status: '',
     ...initialFilters,
   });
-
-  const [searchTimeout, setSearchTimeout] = useState<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (initialFilters) {
@@ -49,51 +43,18 @@ export default function OrderFilter({
       [field]: value,
     };
     setFilters(newFilters);
-    
-    // Apply filters immediately for non-search fields
-    if (field !== 'search') {
-      onFilterChange(newFilters);
-    }
-  };
-
-  const handleSearchChange = (value: string) => {
-    const newFilters = {
-      ...filters,
-      search: value,
-    };
-    setFilters(newFilters);
-    
-    // Clear previous timeout
-    if (searchTimeout) {
-      clearTimeout(searchTimeout);
-    }
-    
-    // Debounce search
-    const timeout = setTimeout(() => {
-      onFilterChange(newFilters);
-    }, 500);
-    
-    setSearchTimeout(timeout);
+    onFilterChange(newFilters);
   };
 
   const handleClearFilters = () => {
     const clearedFilters: AdminOrderQueryParams = {
-      search: '',
       payment_status: '',
     };
     setFilters(clearedFilters);
     onFilterChange(clearedFilters);
   };
 
-  useEffect(() => {
-    return () => {
-      if (searchTimeout) {
-        clearTimeout(searchTimeout);
-      }
-    };
-  }, [searchTimeout]);
-
-  const hasActiveFilters = filters.search || filters.payment_status;
+  const hasActiveFilters = filters.payment_status;
 
   return (
     <Paper
@@ -106,20 +67,6 @@ export default function OrderFilter({
       }}
     >
       <Grid container spacing={2} alignItems="center">
-        <Grid item xs={12} md={4}>
-          <TextField
-            fullWidth
-            size="small"
-            placeholder="Cari ID pesanan, nama, atau email..."
-            value={filters.search || ''}
-            onChange={(e) => handleSearchChange(e.target.value)}
-            InputProps={{
-              startAdornment: <SearchIcon sx={{ mr: 1, color: 'text.secondary' }} />,
-            }}
-            disabled={loading}
-          />
-        </Grid>
-        
         <Grid item xs={12} md={3}>
           <FormControl fullWidth size="small">
             <InputLabel>Status Pembayaran</InputLabel>
@@ -147,7 +94,7 @@ export default function OrderFilter({
             disabled={loading || !hasActiveFilters}
             sx={{ height: 40 }}
           >
-            Hapus Filter
+            Reset
           </Button>
         </Grid>
       </Grid>

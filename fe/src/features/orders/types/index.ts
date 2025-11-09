@@ -76,6 +76,9 @@ export interface Order {
 export interface CreateOrderRequest {
   address_id: string;
   shipping_cost: number;
+  cart_item_ids?: string[]; // Optional: jika tidak ada, akan menggunakan semua item di cart
+  courier_code?: string; // Courier code selected by user (e.g., 'jne', 'jnt', 'sicepat')
+  courier_service_code?: string; // Courier service code selected by user (e.g., 'reg', 'yes', 'oke')
 }
 
 export interface PaymentMethod {

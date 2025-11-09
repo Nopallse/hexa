@@ -1,6 +1,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const BiteshipService = require('../services/biteshipService');
+const emailService = require('../services/emailService');
 
 // Get shipping info for order
 const getShippingInfo = async (req, res) => {
@@ -192,6 +193,33 @@ const updateShipping = async (req, res) => {
     });
 
     logger.info(`Shipping updated: ${id} by ${req.user.email}`);
+
+    // Send shipping update email
+    try {
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: shipping.order_id },
+        include: {
+          address: true,
+          user: {
+            select: {
+              email: true,
+              full_name: true
+            }
+          }
+        }
+      });
+
+      if (fullOrder && fullOrder.user && result) {
+        await emailService.sendShippingUpdateEmail(
+          fullOrder,
+          result,
+          fullOrder.user.email,
+          fullOrder.user.full_name
+        );
+      }
+    } catch (emailError) {
+      logger.error('Failed to send shipping update email:', emailError);
+    }
 
     res.json({
       success: true,
@@ -716,6 +744,37 @@ const handleOrderStatusWebhook = async (webhookData, shipping) => {
   });
 
   logger.info(`Order status updated: ${status} for shipping ${shipping.id}`);
+
+  // Send shipping update email
+  try {
+    const fullOrder = await prisma.order.findUnique({
+      where: { id: shipping.order_id },
+      include: {
+        address: true,
+        user: {
+          select: {
+            email: true,
+            full_name: true
+          }
+        }
+      }
+    });
+
+    const updatedShipping = await prisma.shipping.findUnique({
+      where: { id: shipping.id }
+    });
+
+    if (fullOrder && fullOrder.user && updatedShipping) {
+      await emailService.sendShippingUpdateEmail(
+        fullOrder,
+        updatedShipping,
+        fullOrder.user.email,
+        fullOrder.user.full_name
+      );
+    }
+  } catch (emailError) {
+    logger.error('Failed to send shipping update email:', emailError);
+  }
 };
 
 // Handle order.price webhook

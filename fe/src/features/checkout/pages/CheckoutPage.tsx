@@ -17,14 +17,14 @@ import {
   Payment,
 } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useCartStore } from '@/store/cartStore';
 import { useOrderStore } from '@/features/orders/store/orderStore';
 import { orderApi } from '@/features/orders/services/orderApi';
 import { CartItem } from '@/features/cart/types';
 import { PaymentMethod } from '@/features/orders/types';
 import CheckoutSummary from '../components/CheckoutSummary';
-import AddressSelector from '../components/AddressSelector';
+import ShippingAddress from '../components/ShippingAddress';
 import ShippingMethodSelector from '../components/ShippingMethodSelector';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { ShippingMethod } from '../types/shipping';
@@ -32,6 +32,7 @@ import { ShippingMethod } from '../types/shipping';
 export default function CheckoutPage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const location = useLocation();
   const { formatPrice, loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
   const [loading, setLoading] = useState(true);
@@ -45,15 +46,30 @@ export default function CheckoutPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>('midtrans'); // Auto-select Midtrans
   const [selectedShippingMethod, setSelectedShippingMethod] = useState<ShippingMethod | null>(null);
   const [shippingCost, setShippingCost] = useState(15000); // Default shipping cost
+  const [selectedCartItemIds, setSelectedCartItemIds] = useState<string[]>([]);
 
   const { items: cartItems, clearCart, syncWithServer } = useCartStore();
   const { addOrder, setPaymentMethods, paymentMethods } = useOrderStore();
 
-  // Filter available cart items with memoization
-  const availableItems = React.useMemo(() => 
-    cartItems.filter(item => item.product_variant.product.deleted_at === null),
-    [cartItems]
-  );
+  // Get selected cart item IDs from navigation state
+  useEffect(() => {
+    const state = location.state as { selectedCartItemIds?: string[] } | null;
+    if (state?.selectedCartItemIds) {
+      setSelectedCartItemIds(state.selectedCartItemIds);
+    } else {
+      // If no selected items, redirect back to cart
+      navigate('/cart');
+    }
+  }, [location.state, navigate]);
+
+  // Filter available cart items with memoization - only selected items
+  const availableItems = React.useMemo(() => {
+    const allAvailable = cartItems.filter(item => item.product_variant.product.deleted_at === null);
+    if (selectedCartItemIds.length === 0) {
+      return allAvailable;
+    }
+    return allAvailable.filter(item => selectedCartItemIds.includes(item.id));
+  }, [cartItems, selectedCartItemIds]);
 
   const subtotal = React.useMemo(() => 
     availableItems.reduce((sum, item) => 
@@ -88,20 +104,28 @@ export default function CheckoutPage() {
       return;
     }
 
+    if (selectedCartItemIds.length === 0) {
+      setError('Tidak ada item yang dipilih untuk checkout');
+      return;
+    }
+
     try {
       setCreatingOrder(true);
       setError(null);
 
-      // Create order first
+      // Create order with selected cart item IDs
       const response = await orderApi.createOrder({
         address_id: selectedAddress,
-        shipping_cost: shippingCost
+        shipping_cost: shippingCost,
+        cart_item_ids: selectedCartItemIds,
+        courier_code: selectedShippingMethod?.courier_code,
+        courier_service_code: selectedShippingMethod?.courier_service_code
       });
 
       if (response.success) {
         addOrder(response.data);
         setOrderCreated(true);
-        clearCart();
+        // Don't clear entire cart, only selected items will be removed by backend
         
         // Always redirect to orders page
         navigate(`/orders/${(response.data as any).order_id}`, { 
@@ -134,7 +158,8 @@ export default function CheckoutPage() {
 
   useEffect(() => {
     // Only redirect to cart if we're not in the middle of creating an order and order hasn't been created
-    if (cartItems.length === 0 && !creatingOrder && !orderCreated && !loading) {
+    // and if no selected items
+    if (selectedCartItemIds.length === 0 && !creatingOrder && !orderCreated && !loading) {
       navigate('/cart');
       return;
     }
@@ -147,7 +172,7 @@ export default function CheckoutPage() {
     if (loading) {
       setLoading(false);
     }
-  }, [cartItems.length, navigate, creatingOrder, orderCreated, fetchPaymentMethods, paymentMethods.length, loading]);
+  }, [selectedCartItemIds.length, navigate, creatingOrder, orderCreated, fetchPaymentMethods, paymentMethods.length, loading]);
 
   // Sync selectedAddressData when addresses or selectedAddress changes
   useEffect(() => {
@@ -245,7 +270,7 @@ export default function CheckoutPage() {
           }}>
             <Stack spacing={4}>
               {/* Address Selection */}
-              <AddressSelector
+              <ShippingAddress
                 selectedAddress={selectedAddress}
                 onAddressSelect={(addressId) => {
                   setSelectedAddress(addressId);

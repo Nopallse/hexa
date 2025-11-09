@@ -1,1 +1,0 @@
-import{ae as r}from"./index-sTH-7xwR.js";const n={getAllOrders:async e=>(await r.get("/admin/orders",{params:e})).data,getOrderById:async e=>(await r.get(`/admin/orders/${e}`)).data,updateOrderStatus:async(e,s)=>(await r.put(`/orders/${e}/status`,{status:s})).data};export{n as a};

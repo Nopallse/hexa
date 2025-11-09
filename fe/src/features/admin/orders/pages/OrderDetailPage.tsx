@@ -17,23 +17,29 @@ import {
   Divider,
   Grid,
   Stack,
-  FormControl,
-  InputLabel,
-  Select,
-  MenuItem,
   CircularProgress,
   IconButton,
   Tooltip,
+  Paper,
+  Stepper,
+  Step,
+  StepLabel,
+  StepContent,
 } from '@mui/material';
 import {
   Home,
   ShoppingBag,
   Receipt,
   ArrowBack,
-  Save as SaveIcon,
   Refresh as RefreshIcon,
   LocalShipping as ShippingIcon,
   OpenInNew as OpenInNewIcon,
+  Person as PersonIcon,
+  LocationOn as LocationIcon,
+  Payment as PaymentIcon,
+  Inventory as InventoryIcon,
+  CheckCircle,
+  RadioButtonUnchecked,
 } from '@mui/icons-material';
 import { adminOrderApi, OrderWithUser } from '../services/orderApi';
 import { orderApi } from '@/features/orders/services/orderApi';
@@ -52,10 +58,10 @@ export default function OrderDetailPage() {
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<OrderWithUser | null>(null);
-  const [status, setStatus] = useState<string>('');
   const [trackingLoading, setTrackingLoading] = useState(false);
   const [trackingData, setTrackingData] = useState<any>(null);
   const [trackingError, setTrackingError] = useState<string | null>(null);
+  const [showTrackingDetails, setShowTrackingDetails] = useState(false);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -188,7 +194,6 @@ export default function OrderDetailPage() {
       if (response.success) {
         const orderData = response.data as OrderWithUser;
         setOrder(orderData);
-        setStatus(orderData.status);
       } else {
         throw new Error('Failed to fetch order');
       }
@@ -203,28 +208,36 @@ export default function OrderDetailPage() {
     fetchOrder();
   }, [id]);
 
-  // Sync status with order.status when order changes
-  useEffect(() => {
-    if (order) {
-      setStatus(order.status);
-    }
-  }, [order]);
+  // Get valid next statuses based on current status and payment status
+  const getValidNextStatuses = (currentStatus: string, paymentStatus: string) => {
+    const validTransitions: { [key: string]: string[] } = {
+      'belum_bayar': paymentStatus === 'paid' ? ['dikemas', 'dibatalkan'] : ['dibatalkan'], // Hanya bisa dikemas jika sudah dibayar
+      'dikemas': ['dikirim', 'dibatalkan'],
+      'dikirim': [], // Status diterima akan diupdate melalui webhook, admin tidak bisa ubah manual
+      'diterima': [], // Final state
+      'dibatalkan': [] // Final state
+    };
+    return validTransitions[currentStatus] || [];
+  };
 
-  // Auto-load tracking when order is loaded and has tracking_number
-  useEffect(() => {
-    if (order?.shipping?.tracking_number && !trackingData && !trackingLoading) {
-      handleTrackShipment();
+  // Handle show tracking details
+  const handleShowTrackingDetails = async () => {
+    if (!order?.shipping?.tracking_number) return;
+    
+    if (!trackingData && !trackingLoading) {
+      await handleTrackShipment();
     }
-  }, [order?.shipping?.tracking_number, trackingData, trackingLoading, handleTrackShipment]);
+    setShowTrackingDetails(true);
+  };
 
-  const handleStatusUpdate = async () => {
-    if (!order || !status || status === order.status) {
+  const handleStatusUpdate = async (newStatus: string) => {
+    if (!order || newStatus === order.status) {
       return;
     }
 
     try {
       setUpdating(true);
-      const response = await adminOrderApi.updateOrderStatus(order.id, status);
+      const response = await adminOrderApi.updateOrderStatus(order.id, newStatus);
       
       if (response.success) {
         showNotification({
@@ -267,9 +280,10 @@ export default function OrderDetailPage() {
   }
 
   return (
+    <Box sx={{ bgcolor: 'grey.50', minHeight: '100vh', pb: 4 }}>
     <Container maxWidth="xl" sx={{ py: 4 }}>
       {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 3 }}>
+        <Breadcrumbs sx={{ mb: 2 }}>
         <Link
           component="button"
           variant="body2"
@@ -300,7 +314,7 @@ export default function OrderDetailPage() {
           <Receipt sx={{ mr: 0.5, fontSize: '1rem' }} />
           Pesanan
         </Link>
-        <Typography variant="body2" color="text.primary">
+          <Typography variant="body2" color="text.primary" fontWeight={500}>
           #{order.id.slice(-8).toUpperCase()}
         </Typography>
       </Breadcrumbs>
@@ -316,235 +330,176 @@ export default function OrderDetailPage() {
           color: 'text.secondary',
           '&:hover': { 
             color: 'primary.main',
-            backgroundColor: 'primary.light',
+              backgroundColor: 'action.hover',
           },
         }}
       >
         Kembali ke Daftar Pesanan
       </Button>
 
-      {/* Order Header */}
-      <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-        <CardContent sx={{ p: 3 }}>
-          <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="flex-start" spacing={2}>
-            <Box>
-              <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
-                Order #{order.id.slice(-8).toUpperCase()}
-              </Typography>
-              <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
-                Dibuat pada {formatDate(order.created_at)}
-              </Typography>
-              <Stack direction="row" spacing={1} sx={{ mb: 2 }}>
-                <Chip
-                  label={getStatusLabel(order.status)}
-                  color={getStatusColor(order.status) as any}
-                  variant="outlined"
-                  sx={{ borderRadius: 2 }}
-                />
-                <Chip
-                  label={getPaymentStatusLabel(order.payment_status)}
-                  color={getPaymentStatusColor(order.payment_status) as any}
-                  variant="outlined"
-                  sx={{ borderRadius: 2 }}
-                />
-              </Stack>
-              {order.user && (
-                <Box sx={{ mt: 2 }}>
-                  <Typography variant="subtitle2" color="text.secondary" sx={{ mb: 0.5 }}>
-                    Pelanggan
+        {/* Order Header - Redesigned */}
+        <Paper 
+          elevation={0}
+          sx={{ 
+            mb: 3, 
+            borderRadius: 3, 
+            overflow: 'hidden',
+            background: `linear-gradient(135deg, ${theme.palette.primary.main}15 0%, ${theme.palette.primary.light}08 100%)`,
+            border: `1px solid ${theme.palette.divider}`,
+          }}
+        >
+          <Box sx={{ p: 4, pb: 3 }}>
+            <Stack direction={{ xs: 'column', md: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', md: 'center' }} spacing={3}>
+              <Box sx={{ flex: 1 }}>
+                <Stack direction="row" alignItems="center" spacing={2} sx={{ mb: 1.5 }}>
+                  <Typography variant="h4" fontWeight={700} sx={{ color: 'text.primary' }}>
+                    Order #{order.id.slice(-8).toUpperCase()}
                   </Typography>
-                  <Typography variant="body1" fontWeight={500}>
-                    {order.user.full_name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary">
-                    {order.user.email}
-                  </Typography>
-                  {order.user.phone && (
-                    <Typography variant="body2" color="text.secondary">
-                      {order.user.phone}
-                    </Typography>
-                  )}
-                </Box>
-              )}
-            </Box>
-
-            <Box sx={{ minWidth: 200 }}>
-              <FormControl fullWidth size="small" sx={{ mb: 2 }}>
-                <InputLabel>Status Pesanan</InputLabel>
-                <Select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  label="Status Pesanan"
-                  disabled={updating}
-                >
-                  {/* Only show valid transitions based on current status */}
-                  {order.status === 'belum_bayar' && [
-                    <MenuItem key="belum_bayar" value="belum_bayar" disabled>Belum Bayar (Current)</MenuItem>,
-                    <MenuItem key="dikemas" value="dikemas">Dikemas</MenuItem>,
-                    <MenuItem key="dibatalkan" value="dibatalkan">Dibatalkan</MenuItem>
-                  ]}
-                  {order.status === 'dikemas' && [
-                    <MenuItem key="dikemas" value="dikemas" disabled>Dikemas (Current)</MenuItem>,
-                    <MenuItem key="dikirim" value="dikirim">Dikirim (Create Waybill)</MenuItem>,
-                    <MenuItem key="dibatalkan" value="dibatalkan">Dibatalkan</MenuItem>
-                  ]}
-                  {order.status === 'dikirim' && [
-                    <MenuItem key="dikirim" value="dikirim" disabled>Dikirim (Current)</MenuItem>,
-                    <MenuItem key="diterima" value="diterima">Diterima</MenuItem>
-                  ]}
-                  {order.status === 'diterima' && (
-                    <MenuItem value="diterima" disabled>Diterima (Final)</MenuItem>
-                  )}
-                  {order.status === 'dibatalkan' && (
-                    <MenuItem value="dibatalkan" disabled>Dibatalkan (Final)</MenuItem>
-                  )}
-                </Select>
-              </FormControl>
-              <Button
-                fullWidth
-                variant="contained"
-                startIcon={updating ? <CircularProgress size={16} /> : <SaveIcon />}
-                onClick={handleStatusUpdate}
-                disabled={updating || status === order.status}
-                sx={{ borderRadius: 2 }}
-              >
-                {updating ? 'Menyimpan...' : order.status === 'dikemas' && status === 'dikirim' ? 'Kirim (Create Waybill)' : 'Simpan Status'}
-              </Button>
-              {order.status === 'dikemas' && status === 'dikirim' && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
-                  Akan membuat waybill di Biteship
+                  <Chip
+                    label={getStatusLabel(order.status)}
+                    color={getStatusColor(order.status) as any}
+                    size="small"
+                    sx={{
+                      height: 28,
+                      fontWeight: 600,
+                      fontSize: '0.75rem',
+                      textTransform: 'uppercase',
+                      letterSpacing: 0.5,
+                    }}
+                  />
+                </Stack>
+                <Typography variant="body2" color="text.secondary">
+                  Dibuat pada {formatDate(order.created_at)}
                 </Typography>
-              )}
-            </Box>
-          </Stack>
-        </CardContent>
-      </Card>
+              </Box>
 
-      <Grid container spacing={4}>
-        {/* Order Items */}
-        <Grid item xs={12} lg={8}>
-          <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-            <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
-                Item Pesanan ({order.order_items.length})
-              </Typography>
-              <Stack spacing={2}>
-                {order.order_items.map((item) => {
-                  const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
+              {/* Status Actions */}
+              <Box sx={{ minWidth: { xs: '100%', md: 280 } }}>
+                {(() => {
+                  const validNextStatuses = getValidNextStatuses(order.status, order.payment_status);
                   
+                  if (validNextStatuses.length === 0) {
+                    return null; // Tidak tampilkan apa-apa jika sudah final
+                  }
+
+                  const canChangeToDikemas = order.status === 'belum_bayar' && order.payment_status !== 'paid';
+
                   return (
-                    <Box
-                      key={item.id}
-                      sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 3,
-                        p: 3,
-                        borderRadius: 2,
-                        backgroundColor: 'grey.50',
-                        border: 'none',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          backgroundColor: 'grey.100',
-                        },
-                      }}
-                    >
-                      <Box sx={{ flexShrink: 0 }}>
-                        <Avatar
-                          src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
-                          alt={item.product_variant.product.name}
-                          sx={{
-                            width: 80,
-                            height: 80,
-                            borderRadius: 2,
-                            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                          }}
-                          variant="rounded"
-                        />
-                      </Box>
-
-                      <Box sx={{ flex: 1, minWidth: 0 }}>
-                        <Typography 
-                          variant="h6" 
-                          fontWeight={600} 
-                          sx={{ 
-                            mb: 1, 
-                            color: 'text.primary',
-                            overflow: 'hidden',
-                            textOverflow: 'ellipsis',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            lineHeight: 1.3,
-                            fontSize: '1rem',
-                          }}
-                          title={item.product_variant.product.name}
-                        >
-                          {item.product_variant.product.name}
-                        </Typography>
+                    <Stack spacing={1.5}>
+                      {canChangeToDikemas && (
+                        <Alert severity="warning" sx={{ borderRadius: 2, fontSize: '0.875rem' }}>
+                          Pesanan belum dibayar
+                        </Alert>
+                      )}
+                      
+                      {validNextStatuses.map((nextStatus) => {
+                        const isDikirim = nextStatus === 'dikirim';
+                        const isDibatalkan = nextStatus === 'dibatalkan';
                         
-                        {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
-                          <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
-                            {item.product_variant.variant_options.map((option, index) => (
-                              <Chip
-                                key={index}
-                                label={`${option.option_value}`}
-                                size="small"
-                                variant="outlined"
-                                sx={{ 
-                                  fontSize: '0.7rem',
-                                  height: 20,
-                                  borderColor: 'primary.main',
-                                  color: 'primary.main',
-                                  '& .MuiChip-label': {
-                                    px: 1,
-                                  }
-                                }}
-                              />
-                            ))}
-                          </Stack>
-                        )}
-
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                          Qty: {item.quantity} × {formatPrice(Number(item.price))}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ textAlign: 'right', minWidth: 100 }}>
-                        <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                          Total
-                        </Typography>
-                        <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: '1rem' }}>
-                          {formatPrice(Number(item.price) * Number(item.quantity))}
-                        </Typography>
-                      </Box>
-                    </Box>
+                        return (
+                          <Button
+                            key={nextStatus}
+                            variant={isDibatalkan ? "outlined" : "contained"}
+                            color={isDibatalkan ? "error" : "primary"}
+                            fullWidth
+                            startIcon={updating ? <CircularProgress size={16} /> : null}
+                            onClick={() => handleStatusUpdate(nextStatus)}
+                            disabled={updating}
+                            sx={{ 
+                              borderRadius: 2,
+                              fontWeight: 600,
+                              py: 1.5,
+                              textTransform: 'none',
+                              borderWidth: isDibatalkan ? 2 : 1,
+                            }}
+                          >
+                            {updating ? 'Memproses...' : (
+                              <>
+                                {isDikirim ? 'Kirim Pesanan' : getStatusLabel(nextStatus)}
+                                {isDikirim && (
+                                  <Typography variant="caption" sx={{ ml: 1, opacity: 0.9 }}>
+                                    (Buat Waybill)
+                                  </Typography>
+                                )}
+                              </>
+                            )}
+                          </Button>
+                        );
+                      })}
+                    </Stack>
                   );
-                })}
-              </Stack>
+                })()}
+              </Box>
+          </Stack>
+          </Box>
+        </Paper>
+
+        <Grid container spacing={3}>
+          {/* Left Column - Main Content */}
+        <Grid item xs={12} lg={8}>
+            <Stack spacing={3}>
+              {/* Customer Information */}
+              <Card elevation={0} sx={{ borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
+            <CardContent sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                    <PersonIcon color="primary" />
+                    <Typography variant="h6" fontWeight={700}>
+                      Informasi Pelanggan
+              </Typography>
+                          </Stack>
+                  {order.user && (
+                    <Grid container spacing={2}>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
+                          Nama
+                        </Typography>
+                        <Typography variant="body1" fontWeight={600}>
+                          {order.user.full_name}
+                        </Typography>
+                      </Grid>
+                      <Grid item xs={12} sm={6}>
+                        <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
+                          Email
+                        </Typography>
+                        <Typography variant="body1">
+                          {order.user.email}
+                        </Typography>
+                      </Grid>
+                      {order.user.phone && (
+                        <Grid item xs={12} sm={6}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
+                            Telepon
+                          </Typography>
+                          <Typography variant="body1">
+                            {order.user.phone}
+                          </Typography>
+                        </Grid>
+                      )}
+                    </Grid>
+                  )}
             </CardContent>
           </Card>
 
           {/* Shipping Information */}
           {order.shipping && (
-            <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                <Card elevation={0} sx={{ borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
               <CardContent sx={{ p: 3 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 3 }}>
-                  <Typography variant="h6" fontWeight={600} sx={{ color: 'text.primary', display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ShippingIcon />
+                    <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 3 }}>
+                      <Stack direction="row" alignItems="center" spacing={1.5}>
+                        <ShippingIcon color="primary" />
+                        <Typography variant="h6" fontWeight={700}>
                     Informasi Pengiriman
                   </Typography>
+                      </Stack>
                   {order.shipping.tracking_number && (
                     <Stack direction="row" spacing={1}>
-                      {order.shipping.courier && order.shipping.tracking_number && getTrackingUrl(order.shipping.courier, order.shipping.tracking_number) && (
+                          {order.shipping.courier && getTrackingUrl(order.shipping.courier, order.shipping.tracking_number) && (
                         <Tooltip title="Buka di website kurir">
                           <IconButton
                             size="small"
                             onClick={() => {
                               const url = getTrackingUrl(order.shipping!.courier, order.shipping!.tracking_number!);
-                              if (url) {
-                                window.open(url, '_blank');
-                              }
+                                  if (url) window.open(url, '_blank');
                             }}
                             sx={{ color: 'primary.main' }}
                           >
@@ -559,320 +514,268 @@ export default function OrderDetailPage() {
                           disabled={trackingLoading}
                           sx={{ color: 'primary.main' }}
                         >
-                          {trackingLoading ? (
-                            <CircularProgress size={20} />
-                          ) : (
-                            <RefreshIcon fontSize="small" />
-                          )}
+                              {trackingLoading ? <CircularProgress size={20} /> : <RefreshIcon fontSize="small" />}
                         </IconButton>
                       </Tooltip>
                     </Stack>
                   )}
                 </Stack>
-
-                {trackingError && (
-                  <Alert severity="warning" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setTrackingError(null)}>
-                    {trackingError}
-                  </Alert>
-                )}
-
                 <Grid container spacing={2}>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ 
-                      p: 2,
-                      backgroundColor: 'grey.50',
-                      borderRadius: 2,
-                    }}>
-                      <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
                         Kurir
                       </Typography>
                       <Typography variant="body1" fontWeight={600}>
                         {order.shipping.courier}
                       </Typography>
-                    </Box>
+                        </Paper>
                   </Grid>
                   <Grid item xs={12} sm={6}>
-                    <Box sx={{ 
-                      p: 2,
-                      backgroundColor: 'grey.50',
-                      borderRadius: 2,
-                    }}>
-                      <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                        <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                          <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
                         Status Pengiriman
                       </Typography>
                       <Typography variant="body1" fontWeight={600}>
                         {order.shipping.shipping_status}
                       </Typography>
-                    </Box>
+                        </Paper>
                   </Grid>
                   {order.shipping.tracking_number && (
                     <Grid item xs={12} sm={6}>
-                      <Box sx={{ 
-                        p: 2,
-                        backgroundColor: 'primary.light',
-                        borderRadius: 2,
-                      }}>
-                        <Typography variant="subtitle2" color="primary.dark" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                          <Paper elevation={0} sx={{ p: 2, bgcolor: 'primary.light', borderRadius: 2 }}>
+                            <Typography variant="caption" color="primary.dark" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block', fontWeight: 600 }}>
                           Nomor Resi
                         </Typography>
-                        <Typography variant="body1" fontWeight={600} color="primary.main">
+                            <Typography variant="body1" fontWeight={700} color="primary.main">
                           {order.shipping.tracking_number}
                         </Typography>
-                      </Box>
+                          </Paper>
                     </Grid>
                   )}
                   {order.shipping.estimated_delivery && (
                     <Grid item xs={12} sm={6}>
-                      <Box sx={{ 
-                        p: 2,
-                        backgroundColor: 'grey.50',
-                        borderRadius: 2,
-                      }}>
-                        <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
+                          <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
                           Estimasi Sampai
                         </Typography>
                         <Typography variant="body1" fontWeight={600}>
                           {formatDate(order.shipping.estimated_delivery)}
                         </Typography>
-                      </Box>
+                          </Paper>
                     </Grid>
                   )}
-                </Grid>
+                      {order.shipping.tracking_number && (
+                        <Grid item xs={12}>
+                          <Button
+                            variant="outlined"
+                            onClick={() => setShowTrackingDetails(!showTrackingDetails)}
+                            sx={{ 
+                              textTransform: 'none',
+                              borderRadius: 2,
+                              mt: 1,
+                            }}
+                            fullWidth
+                          >
+                            {showTrackingDetails ? 'Sembunyikan' : 'Lihat'} Detail Tracking
+                          </Button>
+                          </Grid>
+                        )}
+                          </Grid>
 
-                {/* Tracking Details */}
-                {trackingData && (
-                  <Box sx={{ mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'divider' }}>
-                    <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 3 }}>
-                      Detail Tracking
-                    </Typography>
+                    {/* Tracking Details with Stepper */}
+                    {showTrackingDetails && (
+                      <Box sx={{ mt: 4, pt: 3, borderTop: `1px solid ${theme.palette.divider}` }}>
+                        {trackingError && (
+                          <Alert severity="warning" sx={{ mb: 3, borderRadius: 2 }} onClose={() => setTrackingError(null)}>
+                            {trackingError}
+                          </Alert>
+                        )}
 
-                    {/* Tracking Info */}
-                    {trackingData.data && (
-                      <Grid container spacing={2} sx={{ mb: 3 }}>
-                        {trackingData.data.waybill_id && (
-                          <Grid item xs={12} sm={6}>
-                            <Box sx={{ 
-                              p: 2,
-                              backgroundColor: 'grey.50',
-                              borderRadius: 2,
-                            }}>
-                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                                Waybill ID
-                              </Typography>
-                              <Typography variant="body1" fontWeight={600}>
-                                {trackingData.data.waybill_id}
-                              </Typography>
+                        {trackingLoading && !trackingData && (
+                          <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+                            <CircularProgress />
                             </Box>
-                          </Grid>
                         )}
-                        {trackingData.data.status && (
-                          <Grid item xs={12} sm={6}>
-                            <Box sx={{ 
-                              p: 2,
-                              backgroundColor: 'grey.50',
-                              borderRadius: 2,
-                            }}>
-                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                                Status Tracking
+
+                        {trackingData?.data?.history && Array.isArray(trackingData.data.history) && trackingData.data.history.length > 0 ? (
+                          <Box>
+                            <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 3 }}>
+                              Riwayat Tracking
                               </Typography>
-                              <Typography variant="body1" fontWeight={600}>
-                                {trackingData.data.status}
-                              </Typography>
-                            </Box>
-                          </Grid>
-                        )}
-                        {trackingData.data.courier?.company && (
-                          <Grid item xs={12} sm={6}>
-                            <Box sx={{ 
-                              p: 2,
-                              backgroundColor: 'grey.50',
-                              borderRadius: 2,
-                            }}>
-                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                                Kurir
-                              </Typography>
-                              <Typography variant="body1" fontWeight={600}>
-                                {trackingData.data.courier.company.toUpperCase()}
-                              </Typography>
-                              {trackingData.data.courier.service_type && (
-                                <Typography variant="caption" color="text.secondary">
-                                  {trackingData.data.courier.service_type}
-                                </Typography>
-                              )}
-                            </Box>
-                          </Grid>
-                        )}
-                        {trackingData.data.link && (
-                          <Grid item xs={12} sm={6}>
-                            <Box sx={{ 
-                              p: 2,
-                              backgroundColor: 'primary.light',
-                              borderRadius: 2,
-                            }}>
-                              <Typography variant="subtitle2" color="primary.dark" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                                Link Tracking
-                              </Typography>
-                              <Button
-                                size="small"
-                                variant="text"
-                                onClick={() => window.open(trackingData.data.link, '_blank')}
+                            <Stepper orientation="vertical" sx={{ '& .MuiStepLabel-root': { alignItems: 'flex-start' } }}>
+                              {trackingData.data.history.map((item: any, index: number) => (
+                                <Step key={index} active={index === 0} completed={index > 0}>
+                                  <StepLabel
+                                    StepIconComponent={() => (
+                                      <Box
                                 sx={{ 
-                                  p: 0,
-                                  textTransform: 'none',
-                                  color: 'primary.main',
-                                  '&:hover': { textDecoration: 'underline' }
-                                }}
-                              >
-                                Buka di Biteship
-                              </Button>
+                                          width: 24,
+                                          height: 24,
+                                          borderRadius: '50%',
+                                          bgcolor: index === 0 ? 'primary.main' : 'grey.300',
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'center',
+                                          color: 'white',
+                                        }}
+                                      >
+                                        {index === 0 ? <CheckCircle sx={{ fontSize: 20 }} /> : <RadioButtonUnchecked sx={{ fontSize: 20 }} />}
                             </Box>
-                          </Grid>
-                        )}
-                      </Grid>
-                    )}
-
-                    {/* Origin & Destination */}
-                    {trackingData.data && (trackingData.data.origin || trackingData.data.destination) && (
-                      <Grid container spacing={2} sx={{ mb: 3 }}>
-                        {trackingData.data.origin && (
-                          <Grid item xs={12} sm={6}>
-                            <Box sx={{ 
-                              p: 2,
-                              backgroundColor: 'grey.50',
-                              borderRadius: 2,
-                            }}>
-                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 1 }}>
-                                Asal Pengiriman
-                              </Typography>
+                                    )}
+                                  >
                               <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                                {trackingData.data.origin.contact_name}
+                                      {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Update'}
                               </Typography>
+                                    {item.note && (
+                                      <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                        {item.note}
+                              </Typography>
+                                    )}
+                                    {item.updated_at && (
                               <Typography variant="caption" color="text.secondary">
-                                {trackingData.data.origin.address}
+                                        {formatDate(item.updated_at)}
                               </Typography>
+                                    )}
+                                  </StepLabel>
+                                </Step>
+                              ))}
+                            </Stepper>
                             </Box>
-                          </Grid>
+                        ) : trackingData && (
+                          <Alert severity="info" sx={{ borderRadius: 2 }}>
+                            Informasi tracking belum tersedia
+                          </Alert>
                         )}
-                        {trackingData.data.destination && (
-                          <Grid item xs={12} sm={6}>
-                            <Box sx={{ 
-                              p: 2,
-                              backgroundColor: 'grey.50',
-                              borderRadius: 2,
-                            }}>
-                              <Typography variant="subtitle2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 1 }}>
-                                Tujuan Pengiriman
-                              </Typography>
-                              <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                                {trackingData.data.destination.contact_name}
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                {trackingData.data.destination.address}
-                              </Typography>
-                            </Box>
-                          </Grid>
-                        )}
-                      </Grid>
-                    )}
 
-                    {/* Courier Info */}
-                    {trackingData.data?.courier && (trackingData.data.courier.driver_name || trackingData.data.courier.driver_phone) && (
-                      <Box sx={{ 
-                        p: 2,
-                        backgroundColor: 'info.light',
-                        borderRadius: 2,
-                        mb: 3,
-                      }}>
-                        <Typography variant="subtitle2" color="info.dark" sx={{ fontSize: '0.75rem', mb: 1 }}>
-                          Informasi Kurir
-                        </Typography>
-                        {trackingData.data.courier.driver_name && (
-                          <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                            Nama Driver: {trackingData.data.courier.driver_name}
-                          </Typography>
-                        )}
-                        {trackingData.data.courier.driver_phone && (
-                          <Typography variant="body2" color="text.secondary">
-                            No. Telepon: {trackingData.data.courier.driver_phone}
-                          </Typography>
+                        {!trackingData && !trackingLoading && (
+                          <Alert severity="info" sx={{ borderRadius: 2 }}>
+                            Klik tombol refresh untuk memuat detail tracking
+                          </Alert>
                         )}
                       </Box>
                     )}
+                  </CardContent>
+                </Card>
+              )}
 
-                    {/* History Tracking */}
-                    {trackingData.data?.history && Array.isArray(trackingData.data.history) && trackingData.data.history.length > 0 ? (
-                      <Box>
-                        <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2 }}>
-                          Riwayat Tracking
+              {/* Order Items */}
+              <Card elevation={0} sx={{ borderRadius: 3, border: `1px solid ${theme.palette.divider}` }}>
+                <CardContent sx={{ p: 3 }}>
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                    <InventoryIcon color="primary" />
+                    <Typography variant="h6" fontWeight={700}>
+                      Item Pesanan ({order.order_items.length})
                         </Typography>
+                  </Stack>
                         <Stack spacing={2}>
-                          {trackingData.data.history.map((item: any, index: number) => (
-                            <Box
-                              key={index}
+                    {order.order_items.map((item) => {
+                      const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
+                      
+                      return (
+                        <Paper
+                          key={item.id}
+                          elevation={0}
                               sx={{
-                                p: 2,
-                                backgroundColor: 'grey.50',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: 2,
+                            p: 2.5,
                                 borderRadius: 2,
-                                borderLeft: '3px solid',
-                                borderColor: index === 0 ? 'primary.main' : 'grey.300',
+                            bgcolor: 'grey.50',
+                            border: `1px solid ${theme.palette.divider}`,
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              bgcolor: 'grey.100',
+                              transform: 'translateY(-2px)',
+                              boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                            },
+                          }}
+                        >
+                          <Avatar
+                            src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
+                            alt={item.product_variant.product.name}
+                            sx={{
+                              width: 90,
+                              height: 90,
+                              borderRadius: 2,
+                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                            }}
+                            variant="rounded"
+                          />
+
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography 
+                              variant="subtitle1" 
+                              fontWeight={600} 
+                              sx={{ 
+                                mb: 1, 
+                                color: 'text.primary',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 2,
+                                WebkitBoxOrient: 'vertical',
+                                lineHeight: 1.3,
                               }}
+                              title={item.product_variant.product.name}
                             >
-                              <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-                                <Box sx={{ flex: 1 }}>
-                                  <Typography variant="body2" fontWeight={600} sx={{ mb: 0.5 }}>
-                                    {item.status ? item.status.charAt(0).toUpperCase() + item.status.slice(1) : 'Update'}
+                              {item.product_variant.product.name}
                                   </Typography>
-                                  {item.note && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                      {item.note}
-                                    </Typography>
-                                  )}
-                                  {item.service_type && (
+                            
+                            {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
+                              <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
+                                {item.product_variant.variant_options.map((option, index) => (
                                     <Chip
-                                      label={item.service_type}
+                                    key={index}
+                                    label={option.option_value}
                                       size="small"
                                       variant="outlined"
                                       sx={{ 
                                         fontSize: '0.7rem',
-                                        height: 20,
-                                        mr: 1,
+                                      height: 22,
+                                      borderColor: 'primary.main',
+                                      color: 'primary.main',
                                       }}
                                     />
-                                  )}
-                                </Box>
-                                {item.updated_at && (
-                                  <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
-                                    {formatDate(item.updated_at)}
-                                  </Typography>
-                                )}
+                                ))}
                               </Stack>
+                                  )}
+
+                            <Typography variant="body2" color="text.secondary">
+                              Qty: {item.quantity} × {formatPrice(Number(item.price))}
+                            </Typography>
+                                </Box>
+
+                          <Box sx={{ textAlign: 'right', minWidth: 120 }}>
+                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5, display: 'block' }}>
+                              Total
+                                  </Typography>
+                            <Typography variant="h6" color="primary.main" fontWeight={700}>
+                              {formatPrice(Number(item.price) * Number(item.quantity))}
+                            </Typography>
                             </Box>
-                          ))}
+                        </Paper>
+                      );
+                    })}
                         </Stack>
-                      </Box>
-                    ) : (
-                      <Alert severity="info" sx={{ borderRadius: 2 }}>
-                        Informasi tracking belum tersedia
-                      </Alert>
-                    )}
-                  </Box>
-                )}
               </CardContent>
             </Card>
-          )}
+            </Stack>
         </Grid>
 
-        {/* Order Summary */}
+          {/* Right Column - Summary */}
         <Grid item xs={12} lg={4}>
-          <Card sx={{ 
+            <Stack spacing={3}>
+              {/* Order Summary */}
+              <Card elevation={0} sx={{ 
             position: 'sticky', 
             top: 24,
-            borderRadius: 2,
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-            border: 'none',
+                borderRadius: 3,
+                border: `1px solid ${theme.palette.divider}`,
           }}>
             <CardContent sx={{ p: 3 }}>
-              <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
+                  <Typography variant="h6" fontWeight={700} sx={{ mb: 3, color: 'text.primary' }}>
                 Ringkasan Pesanan
               </Typography>
               
@@ -882,7 +785,7 @@ export default function OrderDetailPage() {
                   justifyContent: 'space-between',
                   py: 2,
                   px: 2,
-                  backgroundColor: 'grey.50',
+                      bgcolor: 'grey.50',
                   borderRadius: 2,
                 }}>
                   <Typography variant="body1" fontWeight={500}>
@@ -898,7 +801,7 @@ export default function OrderDetailPage() {
                   justifyContent: 'space-between',
                   py: 2,
                   px: 2,
-                  backgroundColor: 'grey.50',
+                      bgcolor: 'grey.50',
                   borderRadius: 2,
                 }}>
                   <Typography variant="body1" fontWeight={500}>
@@ -912,13 +815,13 @@ export default function OrderDetailPage() {
                 <Box sx={{ 
                   display: 'flex', 
                   justifyContent: 'space-between',
-                  py: 2,
-                  px: 2,
-                  backgroundColor: 'primary.main',
+                      py: 2.5,
+                      px: 2.5,
+                      bgcolor: 'primary.main',
                   borderRadius: 2,
                   color: 'white',
                 }}>
-                  <Typography variant="h6" fontWeight={600}>
+                      <Typography variant="h6" fontWeight={700}>
                     Total
                   </Typography>
                   <Typography variant="h6" fontWeight={700}>
@@ -930,27 +833,26 @@ export default function OrderDetailPage() {
               <Divider sx={{ my: 3 }} />
 
               {/* Delivery Address */}
-              <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
+                  <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 2 }}>
+                    <LocationIcon color="primary" />
+                    <Typography variant="subtitle1" fontWeight={700}>
                 Alamat Pengiriman
               </Typography>
-              <Box
-                sx={{
-                  p: 2,
-                  borderRadius: 2,
-                  backgroundColor: 'grey.50',
-                }}
-              >
-                <Typography variant="body1" fontWeight={600}>
+                  </Stack>
+                  <Paper elevation={0} sx={{ p: 2, bgcolor: 'grey.50', borderRadius: 2 }}>
+                    <Typography variant="body1" fontWeight={600} sx={{ mb: 0.5 }}>
                   {order.address.address_line}
           </Typography>
                 <Typography variant="body2" color="text.secondary">
                   {order.address.city}, {order.address.province} {order.address.postal_code}
           </Typography>
-        </Box>
+                  </Paper>
             </CardContent>
           </Card>
+            </Stack>
         </Grid>
       </Grid>
     </Container>
+    </Box>
   );
 }

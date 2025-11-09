@@ -79,7 +79,7 @@ const theme = createTheme({
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#A682DB',      // Purple-pink pastel
+      main: '#  ',      // Purple-pink pastel
       light: '#C2A6E8',     // Versi lebih cerah
       dark: '#7458A3',      // Versi lebih pekat
       contrastText: '#FFFFFF',
@@ -131,50 +131,50 @@ const theme = createTheme({
     fontFamily: "'Inter', 'Roboto', 'Arial', sans-serif",
     // Craft Aesthetic Typography
     h1: {
-      fontSize: '2.2rem',
+      fontSize: '2rem',
       fontWeight: 700,
       lineHeight: 1.2,
       letterSpacing: '-0.02em',
       fontFamily: '"Playfair Display", "Georgia", serif',
     },
     h2: {
-      fontSize: '1.8rem',
+      fontSize: '1.6rem',
       fontWeight: 600,
       lineHeight: 1.3,
       letterSpacing: '-0.01em',
       fontFamily: '"Playfair Display", "Georgia", serif',
     },
     h3: {
-      fontSize: '1.5rem',
+      fontSize: '1.3rem',
       fontWeight: 600,
       lineHeight: 1.3,
       letterSpacing: '-0.01em',
       fontFamily: '"Playfair Display", "Georgia", serif',
     },
     h4: {
-      fontSize: '1.3rem',
+      fontSize: '1.15rem',
       fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: '-0.005em',
     },
     h5: {
-      fontSize: '1.1rem',
+      fontSize: '1rem',
       fontWeight: 600,
       lineHeight: 1.4,
       letterSpacing: '-0.005em',
     },
     h6: {
-      fontSize: '1rem',
+      fontSize: '0.95rem',
       fontWeight: 600,
       lineHeight: 1.4,
     },
     body1: {
-      fontSize: '1rem',
+      fontSize: '0.95rem',
       lineHeight: 1.6,
       fontWeight: 400,
     },
     body2: {
-      fontSize: '0.9rem',
+      fontSize: '0.875rem',
       lineHeight: 1.6,
       fontWeight: 400,
     },
@@ -219,7 +219,7 @@ const theme = createTheme({
         root: {
           borderRadius: 8,
           padding: '8px 20px',
-          fontSize: '0.9rem',
+          fontSize: '0.875rem',
           fontWeight: 600,
           textTransform: 'none',
           letterSpacing: '0.3px',
@@ -286,7 +286,7 @@ const theme = createTheme({
           borderRadius: 6,
           fontWeight: 500,
           letterSpacing: '0.2px',
-          fontSize: '0.8rem',
+          fontSize: '0.75rem',
         },
       },
     },
@@ -312,7 +312,7 @@ const theme = createTheme({
           '&.craft-caption': {
             fontFamily: "'Inter', 'Roboto', 'Arial', sans-serif",
             fontWeight: 500,
-            fontSize: '0.85rem',
+            fontSize: '0.8rem',
             letterSpacing: '0.5px',
           },
         },

@@ -18,16 +18,19 @@ import { useNavigate } from 'react-router-dom';
 import { CartItem } from '../types';
 import { useCartStore } from '@/store/cartStore';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 interface CartSummaryProps {
   items: CartItem[];
   onCartCleared: () => void;
+  selectedItems?: Set<string>;
 }
 
-export default function CartSummary({ items, onCartCleared }: CartSummaryProps) {
+export default function CartSummary({ items, onCartCleared, selectedItems = new Set() }: CartSummaryProps) {
   const theme = useTheme();
   const navigate = useNavigate();
   const [clearing, setClearing] = useState(false);
+  const [showClearDialog, setShowClearDialog] = useState(false);
   const { formatPrice } = useCurrencyConversion();
   
   const { clearCart } = useCartStore();
@@ -37,13 +40,14 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
     return formatPrice(numPrice);
   };
 
-  const handleClearCart = async () => {
-    if (!window.confirm('Apakah Anda yakin ingin mengosongkan keranjang?')) {
-      return;
-    }
+  const handleClearCart = () => {
+    setShowClearDialog(true);
+  };
 
+  const handleClearCartConfirm = async () => {
     try {
       setClearing(true);
+      setShowClearDialog(false);
       await clearCart();
       onCartCleared();
     } catch (err: any) {
@@ -56,12 +60,19 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
 
   const handleCheckout = () => {
     try {
-      // Ensure we have available items before navigating
-      if (totalItems === 0) {
-        console.warn('Cannot checkout: No available items in cart');
+      // Ensure we have selected items before navigating
+      if (selectedItems.size === 0) {
+        alert('Pilih minimal satu item untuk checkout');
         return;
       }
-      navigate('/checkout');
+      
+      // Convert Set to Array for navigation state
+      const selectedItemsArray = Array.from(selectedItems);
+      navigate('/checkout', { 
+        state: { 
+          selectedCartItemIds: selectedItemsArray 
+        } 
+      });
     } catch (error) {
       console.error('Error navigating to checkout:', error);
     }
@@ -71,8 +82,11 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
   const availableItems = items.filter(item => item.product_variant.product.deleted_at === null);
   const deletedItems = items.filter(item => item.product_variant.product.deleted_at !== null);
 
-  const totalItems = availableItems.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = availableItems.reduce((sum, item) => sum + (parseFloat(item.product_variant.price) * item.quantity), 0);
+  // Filter selected items only
+  const selectedAvailableItems = availableItems.filter(item => selectedItems.has(item.id));
+
+  const totalItems = selectedAvailableItems.reduce((sum, item) => sum + item.quantity, 0);
+  const totalPrice = selectedAvailableItems.reduce((sum, item) => sum + (parseFloat(item.product_variant.price) * item.quantity), 0);
 
   return (
     <Card sx={{ 
@@ -152,7 +166,7 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
               size="large"
               startIcon={<PaymentIcon />}
               onClick={handleCheckout}
-              disabled={totalItems === 0}
+              disabled={selectedItems.size === 0}
               fullWidth
               sx={{
                 py: 1.5,
@@ -169,7 +183,7 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
                 },
               }}
             >
-              {totalItems === 0 ? 'Keranjang Kosong' : 'Lanjut ke Checkout'}
+              {selectedItems.size === 0 ? 'Pilih Item untuk Checkout' : `Checkout (${selectedItems.size} item)`}
             </Button>
 
             {items.length > 0 && (
@@ -199,6 +213,20 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
           </Stack>
         </Stack>
       </CardContent>
+
+      {/* Confirm Clear Cart Dialog */}
+      <ConfirmDialog
+        open={showClearDialog}
+        onClose={() => setShowClearDialog(false)}
+        onConfirm={handleClearCartConfirm}
+        title="Kosongkan Keranjang"
+        message="Apakah Anda yakin ingin mengosongkan seluruh keranjang? Semua item di keranjang akan dihapus."
+        confirmText="Kosongkan"
+        cancelText="Batal"
+        variant="warning"
+        confirmColor="error"
+        loading={clearing}
+      />
     </Card>
   );
 }

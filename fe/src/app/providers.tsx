@@ -1,6 +1,7 @@
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { Toaster } from 'react-hot-toast';
+import { HelmetProvider } from 'react-helmet-async';
 import theme from './theme';
 
 interface ProvidersProps {
@@ -9,31 +10,33 @@ interface ProvidersProps {
 
 export default function Providers({ children }: ProvidersProps) {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      {children}
-      <Toaster
-        position="top-right"
-        toastOptions={{
-          duration: 5000,
-          style: {
-            background: '#333',
-            color: '#fff',
-          },
-          success: {
-            iconTheme: {
-              primary: '#4caf50',
-              secondary: '#fff',
+    <HelmetProvider>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        {children}
+        <Toaster
+          position="top-right"
+          toastOptions={{
+            duration: 5000,
+            style: {
+              background: '#333',
+              color: '#fff',
             },
-          },
-          error: {
-            iconTheme: {
-              primary: '#f44336',
-              secondary: '#fff',
+            success: {
+              iconTheme: {
+                primary: '#4caf50',
+                secondary: '#fff',
+              },
             },
-          },
-        }}
-      />
-    </ThemeProvider>
+            error: {
+              iconTheme: {
+                primary: '#f44336',
+                secondary: '#fff',
+              },
+            },
+          }}
+        />
+      </ThemeProvider>
+    </HelmetProvider>
   );
 }

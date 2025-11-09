@@ -2,6 +2,7 @@ const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
 const BiteshipService = require('../services/biteshipService');
 const BiteshipLocationService = require('../services/biteshipLocationService');
+const emailService = require('../services/emailService');
 
 // Get user's orders
 const getUserOrders = async (req, res) => {
@@ -153,7 +154,7 @@ const getOrderById = async (req, res) => {
 // Create new order (checkout)
 const createOrder = async (req, res) => {
   try {
-    const { address_id, shipping_cost } = req.body;
+    const { address_id, shipping_cost, cart_item_ids, courier_code, courier_service_code } = req.body;
 
     // Check if address exists and belongs to user
     const address = await prisma.address.findFirst({
@@ -170,9 +171,16 @@ const createOrder = async (req, res) => {
       });
     }
 
-    // Get cart items
+    // Get cart items - filter by cart_item_ids if provided
+    const whereClause = { 
+      user_id: req.user.id,
+      ...(cart_item_ids && Array.isArray(cart_item_ids) && cart_item_ids.length > 0
+        ? { id: { in: cart_item_ids } }
+        : {})
+    };
+
     const cartItems = await prisma.cartItem.findMany({
-      where: { user_id: req.user.id },
+      where: whereClause,
       include: {
         product_variant: {
           include: {
@@ -190,7 +198,9 @@ const createOrder = async (req, res) => {
     if (cartItems.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Cart is empty'
+        error: cart_item_ids && cart_item_ids.length > 0 
+          ? 'Tidak ada item yang dipilih untuk checkout'
+          : 'Cart is empty'
       });
     }
 
@@ -234,6 +244,8 @@ const createOrder = async (req, res) => {
           address_id,
           total_amount: totalAmount,
           shipping_cost: parseFloat(shipping_cost),
+          courier_code: courier_code || null,
+          courier_service_code: courier_service_code || null,
           status: 'belum_bayar',
           payment_status: 'unpaid'
         }
@@ -259,9 +271,13 @@ const createOrder = async (req, res) => {
         });
       }
 
-      // Clear cart
+      // Remove only selected cart items (or all if cart_item_ids not provided)
+      const cartItemIdsToDelete = cartItems.map(item => item.id);
       await tx.cartItem.deleteMany({
-        where: { user_id: req.user.id }
+        where: { 
+          id: { in: cartItemIdsToDelete },
+          user_id: req.user.id
+        }
       });
 
       // Create transaction log
@@ -278,6 +294,47 @@ const createOrder = async (req, res) => {
     });
 
     logger.info(`New order created: ${result.id} by ${req.user.email}`);
+
+    // Send order confirmation email
+    try {
+      // Get full order data with relations for email
+      const fullOrder = await prisma.order.findUnique({
+        where: { id: result.id },
+        include: {
+          address: true,
+          order_items: {
+            include: {
+              product_variant: {
+                include: {
+                  product: {
+                    select: {
+                      name: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          user: {
+            select: {
+              email: true,
+              full_name: true
+            }
+          }
+        }
+      });
+
+      if (fullOrder && fullOrder.user) {
+        await emailService.sendOrderConfirmationEmail(
+          fullOrder,
+          fullOrder.user.email,
+          fullOrder.user.full_name
+        );
+      }
+    } catch (emailError) {
+      logger.error('Failed to send order confirmation email:', emailError);
+      // Don't fail the request if email fails
+    }
 
     res.status(201).json({
       success: true,
@@ -722,8 +779,9 @@ const updateOrderStatus = async (req, res) => {
         destination_note: `Delivery for Order #${order.id.slice(-8).toUpperCase()}`,
         
         // Courier info (REQUIRED)
-        courier_company: 'jne', // Default courier, should be configurable
-        courier_type: 'reg', // Regular service
+        // Use courier from order if available, otherwise use defaults
+        courier_company: order.courier_code || 'jne', // Use courier selected by user, fallback to default
+        courier_type: order.courier_service_code || 'reg', // Use service selected by user, fallback to default
         
         // Delivery info (REQUIRED)
         delivery_type: 'now', // Immediate delivery
@@ -825,6 +883,35 @@ const updateOrderStatus = async (req, res) => {
 
       logger.info(`Order status updated: ${id} to ${status} and Biteship order created by ${req.user.email}`);
 
+      // Send order status update email
+      try {
+        const fullOrder = await prisma.order.findUnique({
+          where: { id },
+          include: {
+            address: true,
+            shipping: true,
+            user: {
+              select: {
+                email: true,
+                full_name: true
+              }
+            }
+          }
+        });
+
+        if (fullOrder && fullOrder.user) {
+          await emailService.sendOrderStatusUpdateEmail(
+            fullOrder,
+            order.status,
+            status,
+            fullOrder.user.email,
+            fullOrder.user.full_name
+          );
+        }
+      } catch (emailError) {
+        logger.error('Failed to send order status update email:', emailError);
+      }
+
       return res.json({
         success: true,
         message: 'Order status updated and shipping order created successfully',
@@ -835,6 +922,7 @@ const updateOrderStatus = async (req, res) => {
     }
 
     // For other status transitions, just update the status
+    const oldStatus = order.status;
     const updatedOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.order.update({
       where: { id },
@@ -855,6 +943,35 @@ const updateOrderStatus = async (req, res) => {
     });
 
     logger.info(`Order status updated: ${id} to ${status} by ${req.user.email}`);
+
+    // Send order status update email
+    try {
+      const fullOrder = await prisma.order.findUnique({
+        where: { id },
+        include: {
+          address: true,
+          shipping: true,
+          user: {
+            select: {
+              email: true,
+              full_name: true
+            }
+          }
+        }
+      });
+
+      if (fullOrder && fullOrder.user) {
+        await emailService.sendOrderStatusUpdateEmail(
+          fullOrder,
+          oldStatus,
+          status,
+          fullOrder.user.email,
+          fullOrder.user.full_name
+        );
+      }
+    } catch (emailError) {
+      logger.error('Failed to send order status update email:', emailError);
+    }
 
     res.json({
       success: true,

@@ -11,6 +11,7 @@ import {
   Alert,
   useTheme,
   Avatar,
+  Checkbox,
 } from '@mui/material';
 import {
   Delete as DeleteIcon,
@@ -24,17 +25,22 @@ import { useCartStore } from '@/store/cartStore';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { toast } from 'react-hot-toast';
 import { getProductImageUrl } from '@/utils/image';
+import ConfirmDialog from '@/components/common/ConfirmDialog';
 
 interface CartItemProps {
   item: CartItemType;
   onUpdate: () => void;
   onRemove: () => void;
+  selected?: boolean;
+  onSelectChange?: (itemId: string, selected: boolean) => void;
+  selectable?: boolean;
 }
 
-export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
+export default function CartItem({ item, onUpdate, onRemove, selected = false, onSelectChange, selectable = false }: CartItemProps) {
   const theme = useTheme();
   const [quantity, setQuantity] = useState(item.quantity);
   const [error, setError] = useState<string | null>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { formatPrice } = useCurrencyConversion();
 
   const { updateQuantity, removeItem } = useCartStore();
@@ -84,9 +90,14 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
     }
   };
 
-  const handleRemove = async () => {
+  const handleRemoveClick = () => {
+    setShowDeleteDialog(true);
+  };
+
+  const handleRemoveConfirm = async () => {
     try {
       setError(null);
+      setShowDeleteDialog(false);
 
       // Gunakan removeItem dari store global
       await removeItem(item.id);
@@ -163,6 +174,23 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
 
         {/* Modern Layout */}
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          {/* Checkbox for selection */}
+          {selectable && (
+            <Box sx={{ flexShrink: 0 }}>
+              <Checkbox
+                checked={selected}
+                onChange={(e) => onSelectChange?.(item.id, e.target.checked)}
+                disabled={isProductDeleted}
+                sx={{
+                  color: 'primary.main',
+                  '&.Mui-checked': {
+                    color: 'primary.main',
+                  },
+                }}
+              />
+            </Box>
+          )}
+
           {/* Product Image */}
           <Box sx={{ flexShrink: 0 }}>
             <Avatar
@@ -256,7 +284,7 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
               gap: 0.5,
             }}>
               <IconButton
-                onClick={quantity === 1 ? handleRemove : () => handleQuantityChange(quantity - 1)}
+                onClick={quantity === 1 ? handleRemoveClick : () => handleQuantityChange(quantity - 1)}
                 disabled={isProductDeleted}
                 size="small"
                 sx={{
@@ -314,6 +342,19 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
           </Box>
         </Box>
       </CardContent>
+
+      {/* Confirm Delete Dialog */}
+      <ConfirmDialog
+        open={showDeleteDialog}
+        onClose={() => setShowDeleteDialog(false)}
+        onConfirm={handleRemoveConfirm}
+        title="Hapus dari Keranjang"
+        message={`Apakah Anda yakin ingin menghapus "${item.product_variant.product.name}" dari keranjang?`}
+        confirmText="Hapus"
+        cancelText="Batal"
+        variant="warning"
+        confirmColor="error"
+      />
     </Card>
   );
 }

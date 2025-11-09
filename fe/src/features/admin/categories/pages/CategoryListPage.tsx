@@ -6,7 +6,6 @@ import {
   Box,
   Button,
   Alert,
-  Breadcrumbs,
   Link,
 } from '@mui/material';
 import { Add as AddIcon, Home as HomeIcon } from '@mui/icons-material';
@@ -93,22 +92,7 @@ export default function CategoryListPage() {
 
   return (
     <Container maxWidth={false}>
-      {/* Breadcrumbs */}
-      <Breadcrumbs sx={{ mb: 3 }}>
-        <Link
-          component="button"
-          variant="body2"
-          onClick={() => navigate('/admin')}
-          sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}
-        >
-          <HomeIcon fontSize="small" />
-          Dashboard
-        </Link>
-        <Typography variant="body2" color="textPrimary">
-          Kategori
-        </Typography>
-      </Breadcrumbs>
-
+ 
       {/* Header */}
       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 4 }}>
         <Box>
