@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import {
   Table,
   TableBody,
@@ -11,15 +10,10 @@ import {
   Chip,
   Box,
   Typography,
-  Menu,
-  MenuItem,
-  Select,
-  FormControl,
   Skeleton,
   Tooltip,
 } from '@mui/material';
 import {
-  MoreVert as MoreVertIcon,
   Visibility as ViewIcon,
 } from '@mui/icons-material';
 import { OrderWithUser } from '../services/orderApi';
@@ -30,7 +24,6 @@ interface OrderTableProps {
   orders: OrderWithUser[];
   isLoading: boolean;
   onView: (order: Order) => void;
-  onStatusUpdate: (orderId: string, newStatus: string) => void;
 }
 
 const getStatusColor = (status: string) => {
@@ -67,67 +60,14 @@ const getStatusLabel = (status: string) => {
   }
 };
 
-const getPaymentStatusColor = (status: string) => {
-  switch (status) {
-    case 'unpaid':
-      return 'error';
-    case 'paid':
-      return 'success';
-    case 'failed':
-      return 'error';
-    case 'refunded':
-      return 'warning';
-    default:
-      return 'default';
-  }
-};
-
-const getPaymentStatusLabel = (status: string) => {
-  switch (status) {
-    case 'unpaid':
-      return 'Belum Dibayar';
-    case 'paid':
-      return 'Sudah Dibayar';
-    case 'failed':
-      return 'Gagal Bayar';
-    case 'refunded':
-      return 'Dikembalikan';
-    default:
-      return status;
-  }
-};
 
 export default function OrderTable({
   orders,
   isLoading,
   onView,
-  onStatusUpdate,
 }: OrderTableProps) {
   const { formatPrice } = useCurrencyConversion();
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [selectedOrder, setSelectedOrder] = useState<OrderWithUser | null>(null);
 
-  const handleMenuOpen = (event: React.MouseEvent<HTMLElement>, order: OrderWithUser) => {
-    setAnchorEl(event.currentTarget);
-    setSelectedOrder(order);
-  };
-
-  const handleMenuClose = () => {
-    setAnchorEl(null);
-    setSelectedOrder(null);
-  };
-
-  const handleView = () => {
-    if (selectedOrder) {
-      onView(selectedOrder);
-    }
-    handleMenuClose();
-  };
-
-  const handleStatusChange = (orderId: string, newStatus: string) => {
-    onStatusUpdate(orderId, newStatus);
-    handleMenuClose();
-  };
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('id-ID', {
@@ -148,7 +88,6 @@ export default function OrderTable({
               <TableCell>ID Pesanan</TableCell>
               <TableCell>Pelanggan</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Pembayaran</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Tanggal</TableCell>
               <TableCell align="right">Aksi</TableCell>
@@ -157,7 +96,6 @@ export default function OrderTable({
           <TableBody>
             {[...Array(5)].map((_, index) => (
               <TableRow key={index}>
-                <TableCell><Skeleton /></TableCell>
                 <TableCell><Skeleton /></TableCell>
                 <TableCell><Skeleton /></TableCell>
                 <TableCell><Skeleton /></TableCell>
@@ -191,7 +129,6 @@ export default function OrderTable({
               <TableCell>ID Pesanan</TableCell>
               <TableCell>Pelanggan</TableCell>
               <TableCell>Status</TableCell>
-              <TableCell>Pembayaran</TableCell>
               <TableCell>Total</TableCell>
               <TableCell>Tanggal</TableCell>
               <TableCell align="right">Aksi</TableCell>
@@ -216,49 +153,12 @@ export default function OrderTable({
                   </Box>
                 </TableCell>
                 <TableCell>
-                  <FormControl size="small" sx={{ minWidth: 120 }}>
-                    <Select
-                      value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      sx={{
-                        height: 28,
-                        fontSize: '0.75rem',
-                        '& .MuiSelect-select': {
-                          py: 0.5,
-                        },
-                      }}
-                    >
-                      {/* Only show valid transitions based on current status */}
-                      {order.status === 'belum_bayar' && [
-                        <MenuItem key="belum_bayar" value="belum_bayar" disabled>Belum Bayar (Current)</MenuItem>,
-                        <MenuItem key="dikemas" value="dikemas">Dikemas</MenuItem>,
-                        <MenuItem key="dibatalkan" value="dibatalkan">Dibatalkan</MenuItem>
-                      ]}
-                      {order.status === 'dikemas' && [
-                        <MenuItem key="dikemas" value="dikemas" disabled>Dikemas (Current)</MenuItem>,
-                        <MenuItem key="dikirim" value="dikirim">Dikirim</MenuItem>,
-                        <MenuItem key="dibatalkan" value="dibatalkan">Dibatalkan</MenuItem>
-                      ]}
-                      {order.status === 'dikirim' && [
-                        <MenuItem key="dikirim" value="dikirim" disabled>Dikirim (Current)</MenuItem>,
-                        <MenuItem key="diterima" value="diterima">Diterima</MenuItem>
-                      ]}
-                      {order.status === 'diterima' && (
-                        <MenuItem value="diterima" disabled>Diterima (Final)</MenuItem>
-                      )}
-                      {order.status === 'dibatalkan' && (
-                        <MenuItem value="dibatalkan" disabled>Dibatalkan (Final)</MenuItem>
-                      )}
-                    </Select>
-                  </FormControl>
-                </TableCell>
-                <TableCell>
                   <Chip
-                    label={getPaymentStatusLabel(order.payment_status)}
+                    label={getStatusLabel(order.status)}
                     size="small"
-                    color={getPaymentStatusColor(order.payment_status) as any}
+                    color={getStatusColor(order.status) as any}
                     variant="outlined"
-                    sx={{ fontSize: '0.7rem', height: 24 }}
+                    sx={{ fontSize: '0.75rem', height: 24, fontWeight: 500 }}
                   />
                 </TableCell>
                 <TableCell>
@@ -287,17 +187,6 @@ export default function OrderTable({
           </TableBody>
         </Table>
       </TableContainer>
-
-      <Menu
-        anchorEl={anchorEl}
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-      >
-        <MenuItem onClick={handleView}>
-          <ViewIcon sx={{ mr: 1, fontSize: 20 }} />
-          Lihat Detail
-        </MenuItem>
-      </Menu>
     </>
   );
 }

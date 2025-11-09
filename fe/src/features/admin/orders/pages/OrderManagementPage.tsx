@@ -96,26 +96,6 @@ export default function OrderManagementPage() {
     navigate(`/admin/orders/${order.id}`);
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string) => {
-    try {
-      const response = await adminOrderApi.updateOrderStatus(orderId, newStatus);
-      
-      if (response.success) {
-        showNotification({
-          type: 'success',
-          message: 'Status pesanan berhasil diperbarui',
-        });
-        fetchOrders(memoizedFilters);
-      } else {
-        throw new Error(response.error || 'Failed to update order status');
-      }
-    } catch (error: any) {
-      showNotification({
-        type: 'error',
-        message: error.response?.data?.error || error.message || 'Gagal memperbarui status pesanan',
-      });
-    }
-  };
 
   const handleChangePage = (event: unknown, newPage: number) => {
     setPage(newPage);
@@ -199,7 +179,6 @@ export default function OrderManagementPage() {
         orders={orders}
         isLoading={isLoading}
         onView={handleView}
-        onStatusUpdate={handleStatusUpdate}
       />
 
       {/* Pagination */}

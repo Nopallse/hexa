@@ -64,7 +64,7 @@ export interface Order {
   total_amount: number;
   shipping_cost: number;
   status: 'belum_bayar' | 'dikemas' | 'dikirim' | 'diterima' | 'dibatalkan';
-  payment_status: 'unpaid' | 'paid' | 'failed' | 'refunded';
+  payment_status: 'unpaid' | 'pending' | 'paid' | 'failed' | 'refunded';
   created_at: string;
   updated_at: string;
   address: Address;

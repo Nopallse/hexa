@@ -84,7 +84,10 @@ class MidtransService {
         totalAmount,
         customerDetails,
         itemDetails,
-        paymentMethod = 'bank_transfer'
+        paymentMethod = 'bank_transfer',
+        finishRedirectUrl,
+        unfinishRedirectUrl,
+        errorRedirectUrl
       } = orderData;
 
       const parameter = {
@@ -95,6 +98,17 @@ class MidtransService {
         customer_details: customerDetails,
         item_details: itemDetails
       };
+
+      // Add redirect URLs if provided
+      if (finishRedirectUrl) {
+        parameter.finish_redirect_url = finishRedirectUrl;
+      }
+      if (unfinishRedirectUrl) {
+        parameter.unfinish_redirect_url = unfinishRedirectUrl;
+      }
+      if (errorRedirectUrl) {
+        parameter.error_redirect_url = errorRedirectUrl;
+      }
 
       console.log('Sending parameter to Midtrans Snap:', JSON.stringify(parameter, null, 2));
       

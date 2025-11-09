@@ -106,6 +106,8 @@ export default function OrderDetailPage() {
     switch (status) {
       case 'unpaid':
         return 'error';
+      case 'pending':
+        return 'warning';
       case 'paid':
         return 'success';
       case 'failed':
@@ -121,6 +123,8 @@ export default function OrderDetailPage() {
     switch (status) {
       case 'unpaid':
         return 'Belum Dibayar';
+      case 'pending':
+        return 'Menunggu Pembayaran';
       case 'paid':
         return 'Sudah Dibayar';
       case 'failed':
@@ -941,7 +945,7 @@ export default function OrderDetailPage() {
                   </Typography>
                 </Box>
 
-                {order.payment_status === 'unpaid' && order.status !== 'dibatalkan' && (
+                {(order.payment_status === 'unpaid' || order.payment_status === 'pending') && order.status !== 'dibatalkan' && (
                   <>
                     <Divider sx={{ my: 3 }} />
                     <MidtransPaymentButton

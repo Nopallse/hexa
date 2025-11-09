@@ -29,6 +29,7 @@ export default function MidtransPaymentButton({
       
       console.log('Snap script status:', { isLoaded, isLoading, snapError });
       console.log('Window.snap available:', !!window.snap);
+      console.log('Order payment status:', order.payment_status);
       
       if (!isLoaded) {
         onError('Snap script belum dimuat. Silakan coba lagi.');
@@ -40,10 +41,18 @@ export default function MidtransPaymentButton({
         return;
       }
       
-      // Create payment token
-      const response = await orderApi.createMidtransPayment(order.id, paymentMethod);
+      // If payment status is pending, use continue payment endpoint
+      // Otherwise, create new payment
+      let response;
+      if (order.payment_status === 'pending') {
+        console.log('Payment status is pending, continuing existing payment...');
+        response = await orderApi.continueMidtransPayment(order.id, paymentMethod);
+      } else {
+        console.log('Creating new payment...');
+        response = await orderApi.createMidtransPayment(order.id, paymentMethod);
+      }
       
-      console.log('Create payment response:', response);
+      console.log('Payment response:', response);
       
       if (response.success) {
         console.log('Payment token:', (response as any).data.token);
@@ -145,6 +154,7 @@ export default function MidtransPaymentButton({
       >
         {loading ? 'Memproses Pembayaran...' : 
          isLoading ? 'Memuat Snap Script...' : 
+         order.payment_status === 'pending' ? 'Lanjutkan Pembayaran' : 
          'Bayar dengan Midtrans'}
       </Button>
     </Box>

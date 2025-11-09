@@ -739,12 +739,16 @@ const createMidtransPayment = async (req, res) => {
     const uniqueOrderId = `${order.id}-${Date.now()}`;
     
     // Create Midtrans Snap payment
+    const orderDetailUrl = `${process.env.CORS_ORIGIN}/orders/${order.id}`;
     const midtransPayment = await MidtransService.createSnapPayment({
       orderId: uniqueOrderId,
       totalAmount: calculatedTotal, // Use calculated total instead of order total
       customerDetails,
       itemDetails,
-      paymentMethod: payment_method
+      paymentMethod: payment_method,
+      finishRedirectUrl: orderDetailUrl,
+      unfinishRedirectUrl: orderDetailUrl,
+      errorRedirectUrl: orderDetailUrl
     });
 
     if (!midtransPayment.success) {
