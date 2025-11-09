@@ -48,10 +48,10 @@ import {
 } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { toast } from 'react-hot-toast';
 import { productApi } from '../services/productApi';
 import { Product } from '../types';
-import { cartApi } from '@/features/cart/services/cartApi';
-import { useCartStore } from '@/features/cart/store/cartStore';
+import { useCartStore } from '@/store/cartStore';
 import { useAuthStore } from '@/store/authStore';
 import { getProductImageUrl } from '@/utils/image';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
@@ -82,7 +82,7 @@ export default function ProductDetailPage() {
   const [addingToCart, setAddingToCart] = useState(false);
 
   // Store hooks
-  const { addItem, setLoading: setCartLoading, setError: setCartError, error: cartError } = useCartStore();
+  const { addItem, isLoading: cartLoading, error: cartError } = useCartStore();
   const { user } = useAuthStore();
 
   // Fetch product
@@ -121,33 +121,67 @@ export default function ProductDetailPage() {
       return;
     }
 
-    if (hasVariants && !selectedVariant) {
-      setCartError('Pilih varian terlebih dahulu');
+    // Hitung hasVariants di dalam fungsi
+    const hasVariants = product.product_variants && product.product_variants.length > 0;
+
+    // ✅ Jika hanya 1 variant, gunakan variant tersebut
+    // Jika multiple variants, pastikan variant sudah dipilih
+    if (hasVariants && product.product_variants && product.product_variants.length > 1 && !selectedVariant) {
+      toast.error('Pilih varian terlebih dahulu', {
+        duration: 3000,
+        position: 'bottom-right',
+      });
       return;
     }
 
     try {
       setAddingToCart(true);
-      setCartError(null);
 
-      const variantId = hasVariants ? selectedVariant.id : product.id;
+      // ✅ Handle kasus 1 variant atau multiple variants
+      let variantId: string;
+      if (hasVariants && product.product_variants) {
+        if (product.product_variants.length === 1) {
+          // Hanya 1 variant, gunakan variant tersebut
+          variantId = product.product_variants[0].id;
+        } else {
+          // Multiple variants, gunakan selected variant
+          if (!selectedVariant) {
+            setAddingToCart(false);
+            toast.error('Pilih varian terlebih dahulu', {
+              duration: 3000,
+              position: 'bottom-right',
+            });
+            return;
+          }
+          variantId = selectedVariant.id;
+        }
+      } else {
+        // Fallback: gunakan product_id (untuk backward compatibility)
+        variantId = product.id;
+      }
       
-      const response = await cartApi.addToCart({
+      // Gunakan addItem dari store global yang akan otomatis update totalItems
+      await addItem({
         product_variant_id: variantId!,
         quantity: quantity
       });
 
-      if (response.success) {
-        addItem(response.data);
-        // Show success message (you can implement a toast notification here)
-        console.log('Item added to cart successfully');
-        
-        // Reset quantity
-        setQuantity(1);
-      }
+      // Tampilkan notifikasi sukses
+      toast.success('Item berhasil ditambahkan ke keranjang!', {
+        duration: 3000,
+        position: 'bottom-right',
+        icon: '🛒',
+      });
+      
+      // Reset quantity
+      setQuantity(1);
     } catch (err: any) {
       console.error('Error adding to cart:', err);
-      setCartError(err.response?.data?.error || 'Gagal menambahkan ke keranjang');
+      // Tampilkan notifikasi error
+      toast.error(err.response?.data?.error || 'Gagal menambahkan item ke keranjang', {
+        duration: 4000,
+        position: 'bottom-right',
+      });
     } finally {
       setAddingToCart(false);
     }
@@ -176,6 +210,26 @@ export default function ProductDetailPage() {
       setSelectedImage(primaryImage ? primaryImage.image_name : null);
       setSelectedVariant(null);
       setSelectedOptions({});
+      
+      // ✅ Auto-select variant jika hanya ada 1 variant
+      if (product.product_variants && product.product_variants.length === 1) {
+        const singleVariant = product.product_variants[0];
+        setSelectedVariant(singleVariant);
+        
+        // Set selected options dari variant tersebut
+        const options: Record<string, string> = {};
+        singleVariant.variant_options?.forEach(opt => {
+          options[opt.option_name] = opt.option_value;
+        });
+        setSelectedOptions(options);
+        
+        // Update image jika variant punya image
+        if (singleVariant.image) {
+          setSelectedImage(singleVariant.image);
+        } else if (singleVariant.display_image) {
+          setSelectedImage(singleVariant.display_image);
+        }
+      }
     }
   }, [product]);
 
@@ -275,6 +329,7 @@ export default function ProductDetailPage() {
   }
 
   const hasVariants = product.product_variants && product.product_variants.length > 0;
+  const hasMultipleVariants = hasVariants && product.product_variants && product.product_variants.length > 1;
   const primaryImage = getPrimaryImage(product);
   const displayImage = selectedImage || (primaryImage ? primaryImage.image_name : null);
   const variantGroups = getVariantGroups();
@@ -507,8 +562,8 @@ export default function ProductDetailPage() {
                   </Typography>
                 </Box>
 
-                {/* Variant Selection - E-commerce Style */}
-                {hasVariants && Object.keys(variantGroups).length > 0 && (
+                {/* Variant Selection - E-commerce Style - Hanya tampil jika > 1 variant */}
+                {hasMultipleVariants && Object.keys(variantGroups).length > 0 && (
                   <React.Fragment>
                     <Divider sx={{ mb: 3 }} />
                     
@@ -640,6 +695,41 @@ export default function ProductDetailPage() {
                   </React.Fragment>
                 )}
 
+                {/* ✅ Tampilkan info variant untuk produk dengan 1 variant */}
+                {hasVariants && product.product_variants && product.product_variants.length === 1 && selectedVariant && (
+                  <Box sx={{ mb: 3 }}>
+                    <Card variant="outlined" sx={{ bgcolor: 'primary.50', borderColor: 'primary.main' }}>
+                      <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
+                          <Box>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                              Varian Tersedia
+                            </Typography>
+                            <Typography variant="h6" fontWeight="bold">
+                              {selectedVariant.variant_name}
+                            </Typography>
+                            <Typography variant="caption" color="text.secondary">
+                              SKU: {selectedVariant.sku}
+                            </Typography>
+                          </Box>
+                          
+                          <Box sx={{ textAlign: 'right' }}>
+                            <Typography variant="h4" color="primary.main" fontWeight="bold">
+                              {formatPrice(Number(selectedVariant.price))}
+                            </Typography>
+                            <Chip
+                              label={`Stok: ${selectedVariant.stock} unit`}
+                              size="small"
+                              color={selectedVariant.stock > 0 ? 'success' : 'error'}
+                              sx={{ mt: 0.5 }}
+                            />
+                          </Box>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Box>
+                )}
+
                 {/* Quantity Selector */}
                 <Box sx={{ mb: 4 }}>
                   <FormLabel component="legend" sx={{ mb: 1, fontWeight: 600 }}>
@@ -651,8 +741,11 @@ export default function ProductDetailPage() {
                     onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
                     inputProps={{ 
                       min: 1, 
-                      max: hasVariants && selectedVariant ? 
-                        selectedVariant.stock || 1 :
+                      max: hasVariants && product.product_variants ? 
+                        (product.product_variants.length === 1 ? 
+                          product.product_variants[0].stock || 1 :
+                          (selectedVariant ? selectedVariant.stock || 1 : 1)
+                        ) :
                         totalStock 
                     }}
                     sx={{ width: 120 }}
@@ -660,12 +753,6 @@ export default function ProductDetailPage() {
                   />
                 </Box>
 
-                {/* Cart Error Alert */}
-                {cartError && (
-                  <Alert severity="error" sx={{ mb: 2 }} onClose={() => setCartError(null)}>
-                    {cartError}
-                  </Alert>
-                )}
 
                 {/* Action Buttons */}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 4 }}>
@@ -674,7 +761,13 @@ export default function ProductDetailPage() {
                     size="large"
                     startIcon={<ShoppingCart />}
                     onClick={handleAddToCart}
-                    disabled={(totalStock || 0) === 0 || addingToCart || (hasVariants && !selectedVariant) || (hasVariants && selectedVariant && selectedVariant.stock === 0)}
+                    disabled={
+                      (totalStock || 0) === 0 || 
+                      addingToCart || 
+                      (hasMultipleVariants && !selectedVariant) || 
+                      (hasVariants && selectedVariant && selectedVariant.stock === 0) ||
+                      (hasVariants && product.product_variants && product.product_variants.length === 1 && product.product_variants[0].stock === 0)
+                    }
                     sx={{
                       px: 4,
                       py: 1.5,
@@ -687,8 +780,9 @@ export default function ProductDetailPage() {
                   >
                     {addingToCart ? 'Menambahkan...' : 
                      (totalStock || 0) === 0 ? 'Stok Habis' : 
-                     (hasVariants && !selectedVariant) ? 'Pilih Varian' :
+                     (hasMultipleVariants && !selectedVariant) ? 'Pilih Varian' :
                      (hasVariants && selectedVariant && selectedVariant.stock === 0) ? 'Stok Habis' :
+                     (hasVariants && product.product_variants && product.product_variants.length === 1 && product.product_variants[0].stock === 0) ? 'Stok Habis' :
                      'Tambah ke Keranjang'}
                   </Button>
                   

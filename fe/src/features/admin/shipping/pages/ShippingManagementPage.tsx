@@ -40,16 +40,19 @@ import { locationApi } from '../services/locationApi';
 import { shippingApi, ShippingStats, ShippingData } from '../services/shippingApi';
 import { Location } from '../types';
 import LocationForm from '../components/LocationForm';
+import ShippingFilter, { ShippingFilterParams } from '../components/ShippingFilter';
 import Loading from '@/components/ui/Loading';
 import { useUiStore } from '@/store/uiStore';
 
 const getStatusColor = (status: string) => {
-  switch (status) {
+  switch (status?.toLowerCase()) {
     case 'delivered':
       return 'success';
     case 'in_transit':
+    case 'confirmed':
       return 'info';
     case 'pending':
+    case 'shipped':
       return 'warning';
     default:
       return 'default';
@@ -57,12 +60,14 @@ const getStatusColor = (status: string) => {
 };
 
 const getStatusIcon = (status: string) => {
-  switch (status) {
+  switch (status?.toLowerCase()) {
     case 'delivered':
       return <CheckCircleIcon />;
     case 'in_transit':
+    case 'confirmed':
       return <ShippingOutlinedIcon />;
     case 'pending':
+    case 'shipped':
       return <ScheduleIcon />;
     default:
       return <ScheduleIcon />;
@@ -70,15 +75,19 @@ const getStatusIcon = (status: string) => {
 };
 
 const getStatusText = (status: string) => {
-  switch (status) {
+  switch (status?.toLowerCase()) {
     case 'delivered':
       return 'Terkirim';
     case 'in_transit':
       return 'Dalam Perjalanan';
+    case 'confirmed':
+      return 'Dikonfirmasi';
     case 'pending':
       return 'Menunggu Pengiriman';
+    case 'shipped':
+      return 'Terkirim';
     default:
-      return 'Unknown';
+      return status || 'Unknown';
   }
 };
 
@@ -94,6 +103,22 @@ export default function ShippingManagementPage() {
   const [error, setError] = useState<string | null>(null);
   const [editingLocation, setEditingLocation] = useState<Location | null>(null);
   const [apiConfigStatus, setApiConfigStatus] = useState<{ biteshipConfigured: boolean; message: string } | null>(null);
+  const [filters, setFilters] = useState<ShippingFilterParams>({
+    status: '',
+    courier: '',
+    startDate: '',
+    endDate: '',
+    page: 1,
+    limit: 10,
+  });
+  const [pagination, setPagination] = useState({
+    current_page: 1,
+    total_pages: 1,
+    total_items: 0,
+    items_per_page: 10,
+    has_next_page: false,
+    has_prev_page: false,
+  });
 
   const fetchActiveOrigin = async () => {
     try {
@@ -126,16 +151,33 @@ export default function ShippingManagementPage() {
     }
   };
 
-  const fetchShippingData = async () => {
+  const fetchShippingData = async (filterParams?: ShippingFilterParams) => {
     try {
-      const response = await shippingApi.getShippingData({ limit: 10 });
+      const params = filterParams || filters;
+      const response = await shippingApi.getShippingData({
+        page: params.page || 1,
+        limit: params.limit || 10,
+        status: params.status || undefined,
+        courier: params.courier || undefined,
+        startDate: params.startDate || undefined,
+        endDate: params.endDate || undefined,
+      });
       
       if (response.success && response.data) {
         setShippingData(response.data);
+        if (response.pagination) {
+          setPagination(response.pagination);
+        }
       }
     } catch (error: any) {
       console.error('Failed to fetch shipping data:', error);
+      setError(error.message || 'Gagal memuat data pengiriman');
     }
+  };
+
+  const handleFilterChange = (newFilters: ShippingFilterParams) => {
+    setFilters(newFilters);
+    fetchShippingData(newFilters);
   };
 
   const fetchApiConfigStatus = async () => {
@@ -158,7 +200,7 @@ export default function ShippingManagementPage() {
       await Promise.all([
         fetchActiveOrigin(),
         fetchShippingStats(),
-        fetchShippingData(),
+        fetchShippingData(filters),
         fetchApiConfigStatus(),
       ]);
     };
@@ -556,6 +598,13 @@ export default function ShippingManagementPage() {
             </Grid>
           </Grid>
 
+          {/* Shipping Filter */}
+          <ShippingFilter
+            onFilterChange={handleFilterChange}
+            loading={isLoading}
+            initialFilters={filters}
+          />
+
           {/* Shipping Table */}
           <Card sx={{ 
             borderRadius: 3,
@@ -564,12 +613,19 @@ export default function ShippingManagementPage() {
           }}>
             <CardContent sx={{ p: 0 }}>
               <Box sx={{ p: 3, borderBottom: '1px solid rgba(150, 130, 219, 0.1)' }}>
-                <Typography variant="h6" fontWeight={600} color="text.primary" className="craft-heading">
-                  Data Pengiriman
-                </Typography>
-                <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                  Tracking dan status pengiriman order
-                </Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <Box>
+                    <Typography variant="h6" fontWeight={600} color="text.primary" className="craft-heading">
+                      Data Pengiriman
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                      Tracking dan status pengiriman order
+                    </Typography>
+                  </Box>
+                  <Typography variant="body2" color="text.secondary">
+                    Total: {pagination.total_items} pengiriman
+                  </Typography>
+                </Box>
               </Box>
               
               <TableContainer>
@@ -616,7 +672,11 @@ export default function ShippingManagementPage() {
                         </TableCell>
                         <TableCell>
                           <Tooltip title="Lihat Detail">
-                            <IconButton size="small" color="primary">
+                            <IconButton 
+                              size="small" 
+                              color="primary"
+                              onClick={() => navigate(`/admin/shipping/${row.id}`)}
+                            >
                               <ViewIcon fontSize="small" />
                             </IconButton>
                           </Tooltip>
@@ -626,6 +686,39 @@ export default function ShippingManagementPage() {
                   </TableBody>
                 </Table>
               </TableContainer>
+              
+              {/* Pagination */}
+              {pagination.total_pages > 1 && (
+                <Box sx={{ p: 2, display: 'flex', justifyContent: 'center', gap: 2, alignItems: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const newFilters = { ...filters, page: (pagination.current_page - 1) };
+                      setFilters(newFilters);
+                      fetchShippingData(newFilters);
+                    }}
+                    disabled={!pagination.has_prev_page || isLoading}
+                    size="small"
+                  >
+                    Sebelumnya
+                  </Button>
+                  <Typography variant="body2" color="text.secondary">
+                    Halaman {pagination.current_page} dari {pagination.total_pages}
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    onClick={() => {
+                      const newFilters = { ...filters, page: (pagination.current_page + 1) };
+                      setFilters(newFilters);
+                      fetchShippingData(newFilters);
+                    }}
+                    disabled={!pagination.has_next_page || isLoading}
+                    size="small"
+                  >
+                    Selanjutnya
+                  </Button>
+                </Box>
+              )}
             </CardContent>
           </Card>
         </Box>

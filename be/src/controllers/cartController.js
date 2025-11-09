@@ -1,5 +1,6 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
+const { getVariantDisplayImage } = require('../services/productVariantService');
 
 // Get user's cart
 const getCart = async (req, res) => {
@@ -13,7 +14,15 @@ const getCart = async (req, res) => {
               select: {
                 id: true,
                 name: true,
-                deleted_at: true  // ✅ Perbaikan: true bukan null
+                deleted_at: true,
+                product_images: {
+                  select: {
+                    id: true,
+                    image_name: true,
+                    is_primary: true
+                  },
+                  orderBy: { is_primary: 'desc' }
+                }
               }
             },
             variant_options: {
@@ -28,9 +37,18 @@ const getCart = async (req, res) => {
       orderBy: { created_at: 'desc' }
     });
 
+    // Enrich variants with display_image
+    const enrichedCartItems = cartItems.map(item => ({
+      ...item,
+      product_variant: {
+        ...item.product_variant,
+        display_image: getVariantDisplayImage(item.product_variant, item.product_variant.product)
+      }
+    }));
+
     res.json({
       success: true,
-      data: cartItems
+      data: enrichedCartItems
     });
   } catch (error) {
     logger.error('Get cart error:', error);
@@ -44,21 +62,97 @@ const getCart = async (req, res) => {
 // Add item to cart
 const addToCart = async (req, res) => {
   try {
-    const { product_variant_id, quantity } = req.body;
+    const { product_variant_id, product_id, quantity } = req.body;
 
-    // Check if product variant exists and has stock
-    const productVariant = await prisma.productVariant.findUnique({
-      where: { id: product_variant_id },
-      include: {
-        product: {
-          select: {
-            id: true,
-            name: true,
-            deleted_at: true  // ✅ Perbaikan: true bukan null
+    // ✅ Handle produk tanpa variant: jika product_id diberikan tapi product_variant_id tidak
+    let productVariant;
+    
+    if (product_id && !product_variant_id) {
+      // Cari produk dan variant default-nya
+      const product = await prisma.product.findUnique({
+        where: { id: product_id, deleted_at: null },
+        include: {
+          product_variants: {
+            orderBy: { created_at: 'asc' }, // Ambil variant pertama (default)
+            take: 1
           }
         }
+      });
+
+      if (!product) {
+        return res.status(404).json({
+          success: false,
+          error: 'Product not found'
+        });
       }
-    });
+
+      if (product.product_variants.length === 0) {
+        // ✅ Buat default variant on-the-fly untuk backward compatibility
+        const skuBase = product.name.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10) || 'PROD';
+        const defaultSku = `${skuBase}-${product.id.substring(0, 8).toUpperCase()}-DEFAULT`;
+        
+        let finalSku = defaultSku;
+        let skuCounter = 1;
+        while (await prisma.productVariant.findUnique({ where: { sku: finalSku } })) {
+          finalSku = `${defaultSku}-${skuCounter}`;
+          skuCounter++;
+        }
+
+        productVariant = await prisma.productVariant.create({
+          data: {
+            product_id: product.id,
+            sku: finalSku,
+            variant_name: 'Default',
+            price: product.price,
+            currency_code: product.currency_code || 'IDR',
+            stock: product.stock
+          },
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                deleted_at: true
+              }
+            }
+          }
+        });
+
+        logger.info(`Auto-created default variant for product ${product.name} (SKU: ${finalSku})`);
+      } else {
+        productVariant = await prisma.productVariant.findUnique({
+          where: { id: product.product_variants[0].id },
+          include: {
+            product: {
+              select: {
+                id: true,
+                name: true,
+                deleted_at: true
+              }
+            }
+          }
+        });
+      }
+    } else if (product_variant_id) {
+      // Normal flow: menggunakan product_variant_id
+      productVariant = await prisma.productVariant.findUnique({
+        where: { id: product_variant_id },
+        include: {
+          product: {
+            select: {
+              id: true,
+              name: true,
+              deleted_at: true  // ✅ Perbaikan: true bukan null
+            }
+          }
+        }
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        error: 'Either product_variant_id or product_id is required'
+      });
+    }
 
     if (!productVariant) {
       return res.status(404).json({
@@ -87,7 +181,7 @@ const addToCart = async (req, res) => {
       where: {
         user_id_product_variant_id: {
           user_id: req.user.id,
-          product_variant_id
+          product_variant_id: productVariant.id
         }
       }
     });
@@ -123,7 +217,7 @@ const addToCart = async (req, res) => {
       cartItem = await prisma.cartItem.create({
         data: {
           user_id: req.user.id,
-          product_variant_id,
+          product_variant_id: productVariant.id,
           quantity
         },
         include: {

@@ -55,7 +55,9 @@ const AdminDeletedCategoriesPage = lazy(() => import('@/features/admin/categorie
 const AdminOrderManagementPage = lazy(() => import('@/features/admin/orders/pages/OrderManagementPage'));
 const AdminOrderDetailPage = lazy(() => import('@/features/admin/orders/pages/OrderDetailPage'));
 const AdminShippingManagementPage = lazy(() => import('@/features/admin/shipping/pages/ShippingManagementPage'));
+const AdminShippingDetailPage = lazy(() => import('@/features/admin/shipping/pages/ShippingDetailPage'));
 const AdminPaymentListPage = lazy(() => import('@/features/admin/payments/pages/PaymentListPage'));
+const AdminPaymentDetailPage = lazy(() => import('@/features/admin/payments/pages/PaymentDetailPage'));
 const AdminUserListPage = lazy(() => import('@/features/admin/users/pages/UserListPage'));
 const AdminUserDetailPage = lazy(() => import('@/features/admin/users/pages/UserDetailPage'));
 
@@ -390,10 +392,26 @@ export const router = createBrowserRouter([
         ),
       },
       {
+        path: 'shipping/:id',
+        element: (
+          <SuspenseWrapper>
+            <AdminShippingDetailPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
         path: 'payments',
         element: (
           <SuspenseWrapper>
             <AdminPaymentListPage />
+          </SuspenseWrapper>
+        ),
+      },
+      {
+        path: 'payments/:id',
+        element: (
+          <SuspenseWrapper>
+            <AdminPaymentDetailPage />
           </SuspenseWrapper>
         ),
       },

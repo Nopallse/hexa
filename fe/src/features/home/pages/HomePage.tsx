@@ -43,6 +43,9 @@ import { useState, useEffect } from 'react';
 import { categoryApi } from '@/features/categories/services/categoryApi';
 import { Category } from '@/types/global';
 import { getCategoryImageUrl } from '@/utils/image';
+import { productApi } from '@/features/products/services/productApi';
+import { Product } from '@/features/products/types';
+import ProductCard from '@/features/products/components/ProductCard';
 
 export default function HomePage() {
   const theme = useTheme();
@@ -51,6 +54,12 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [featuredProducts, setFeaturedProducts] = useState<Product[]>([]);
+  const [featuredLoading, setFeaturedLoading] = useState(true);
+  const [featuredError, setFeaturedError] = useState<string | null>(null);
+  const [latestProducts, setLatestProducts] = useState<Product[]>([]);
+  const [latestLoading, setLatestLoading] = useState(true);
+  const [latestError, setLatestError] = useState<string | null>(null);
 
   // Banner images data
   const bannerImages = [
@@ -93,6 +102,67 @@ export default function HomePage() {
 
     fetchCategories();
   }, []);
+
+  // Fetch featured products
+  useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        setFeaturedLoading(true);
+        setFeaturedError(null);
+        const response = await productApi.getProducts({ 
+          limit: 8,
+          sort: 'created_at',
+          sortOrder: 'desc'
+        });
+        
+        if (response.success) {
+          setFeaturedProducts(response.data);
+        } else {
+          setFeaturedError('Gagal memuat produk');
+        }
+      } catch (err) {
+        console.error('Error fetching featured products:', err);
+        setFeaturedError('Gagal memuat produk');
+      } finally {
+        setFeaturedLoading(false);
+      }
+    };
+
+    fetchFeaturedProducts();
+  }, []);
+
+  // Fetch latest products
+  useEffect(() => {
+    const fetchLatestProducts = async () => {
+      try {
+        setLatestLoading(true);
+        setLatestError(null);
+        const response = await productApi.getProducts({ 
+          limit: 6,
+          sort: 'created_at',
+          sortOrder: 'desc'
+        });
+        
+        if (response.success) {
+          setLatestProducts(response.data);
+        } else {
+          setLatestError('Gagal memuat produk');
+        }
+      } catch (err) {
+        console.error('Error fetching latest products:', err);
+        setLatestError('Gagal memuat produk');
+      } finally {
+        setLatestLoading(false);
+      }
+    };
+
+    fetchLatestProducts();
+  }, []);
+
+  // Handle product view
+  const handleProductView = (product: Product) => {
+    navigate(`/products/${product.id}`);
+  };
 
   // Auto-slide effect
   useEffect(() => {
@@ -333,7 +403,7 @@ export default function HomePage() {
         ) : (
           <Grid container spacing={4}>
             {categories.map((category, index) => (
-              <Grid item xs={6} sm={6} md={4} key={category.id}>
+              <Grid item xs={6} sm={6} md={3} key={category.id}>
                 <Box
                   sx={{
                     position: 'relative',
@@ -538,89 +608,58 @@ export default function HomePage() {
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
-            {[
-              {
-                id: '1',
-                name: 'Crochet Pillow',
-                price: 'Rp 150.000',
-                image: '/images/featured-1.jpg',
-              },
-              {
-                id: '2',
-                name: 'Crochet Bag',
-                price: 'Rp 200.000',
-                image: '/images/featured-2.jpg',
-              },
-              {
-                id: '3',
-                name: 'Crochet Scarf',
-                price: 'Rp 180.000',
-                image: '/images/featured-3.jpg',
-              },
-              {
-                id: '4',
-                name: 'Crochet Hat',
-                price: 'Rp 120.000',
-                image: '/images/featured-4.jpg',
-              },
-            ].map((product, index) => (
-              <Grid item xs={12} sm={6} md={3} key={product.id}>
-              <Card
-                sx={{
-                    height: '100%',
-                    transition: 'all 0.3s ease',
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                    background: 'white',
-                    border: `1px solid ${theme.palette.grey[200]}`,
-                    '&:hover': {
-                      transform: 'translateY(-4px)',
-                      boxShadow: `0 12px 24px ${theme.palette.primary.main}15`,
-                    },
-                  }}
-                >
-                  <CardActionArea sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    {/* Product Image */}
-                    <Box sx={{ height: 250 }}>
-                      <CardMedia
-                        component="img"
-                        height="250"
-                        image={product.image}
-                        alt={product.name}
-                      sx={{ 
-                          objectFit: 'cover',
-                          width: '100%',
-                          }} 
-                        />
-          </Box>
-
-                    <CardContent sx={{ p: 3, textAlign: 'center' }}>
-                      <Typography
-                        variant="h6"
-                        fontWeight={600}
-                      sx={{
-                          mb: 2,
-                        fontFamily: '"Playfair Display", "Georgia", serif',
-                        color: 'text.primary',
-                      }}
-                    >
-                        {product.name}
-                </Typography>
-
-                    <Typography 
-                        variant="h6"
-                        fontWeight={700}
-                        color="primary.main"
-                      >
-                        {product.price}
-                </Typography>
-              </CardContent>
-                  </CardActionArea>
-            </Card>
-              </Grid>
-            ))}
-          </Grid>
+          {featuredLoading ? (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(4, 1fr)' },
+                gap: 3,
+              }}
+            >
+              {[...Array(8)].map((_, index) => (
+                <ProductCard key={index} product={{} as Product} onView={() => {}} loading />
+              ))}
+            </Box>
+          ) : featuredError ? (
+            <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
+              {featuredError}
+            </Alert>
+          ) : featuredProducts.length === 0 ? (
+            <Box
+              sx={{
+                textAlign: 'center',
+                py: 8,
+                px: 4,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #faf8ff 0%, #f0f4ff 100%)',
+                border: `1px solid ${theme.palette.primary.light}20`,
+              }}
+            >
+              <ShoppingBag sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" fontWeight={600} sx={{ mb: 1 }}>
+                Belum ada produk tersedia
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Produk akan muncul di sini setelah ditambahkan
+              </Typography>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)', lg: 'repeat(5, 1fr)' },
+                gap: 3,
+              }}
+            >
+              {featuredProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onView={handleProductView}
+                />
+              ))}
+            </Box>
+          )}
 
           <Box sx={{ textAlign: 'center', mt: 6 }}>
           <Button
@@ -679,179 +718,58 @@ export default function HomePage() {
                 </Typography>
           </Box>
 
-          <Grid container spacing={4}>
-            {[
-              {
-                id: '1',
-                name: 'Crochet Blanket',
-                price: 'Rp 350.000',
-                image: '/images/latest-1.jpg',
-                isNew: true,
-                category: 'Home Decor',
-              },
-              {
-                id: '2',
-                name: 'Macrame Wall Hanging',
-                price: 'Rp 280.000',
-                image: '/images/latest-2.jpg',
-                isNew: true,
-                category: 'Wall Art',
-              },
-              {
-                id: '3',
-                name: 'Crochet Sweater',
-                price: 'Rp 450.000',
-                image: '/images/latest-3.jpg',
-                isNew: true,
-                category: 'Fashion',
-              },
-              {
-                id: '4',
-                name: 'Handwoven Basket',
-                price: 'Rp 180.000',
-                image: '/images/latest-4.jpg',
-                isNew: true,
-                category: 'Storage',
-              },
-              {
-                id: '5',
-                name: 'Crochet Plant Hanger',
-                price: 'Rp 120.000',
-                image: '/images/latest-5.jpg',
-                isNew: true,
-                category: 'Garden',
-              },
-              {
-                id: '6',
-                name: 'Macrame Table Runner',
-                price: 'Rp 200.000',
-                image: '/images/latest-6.jpg',
-                isNew: true,
-                category: 'Table Decor',
-              },
-            ].map((product, index) => (
-              <Grid item xs={12} sm={6} md={4} key={product.id}>
-                <Card
-                  sx={{
-                    height: '100%',
-                    transition: 'all 0.3s ease',
-                    borderRadius: 4,
-                    overflow: 'hidden',
-                    background: 'white',
-                    border: `1px solid ${theme.palette.grey[200]}`,
-                    position: 'relative',
-                    '&:hover': {
-                      transform: 'translateY(-8px)',
-                      boxShadow: `0 20px 40px ${theme.palette.primary.main}20`,
-                    },
-                  }}
-                >
-                  <CardActionArea sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                    {/* Product Image */}
-                    <Box sx={{ position: 'relative', height: 250 }}>
-                      <CardMedia
-                        component="img"
-                        height="250"
-                        image={product.image}
-                        alt={product.name}
-                        sx={{
-                          objectFit: 'cover',
-                          width: '100%',
-                        }}
-                      />
-                      {/* New Badge */}
-                      {product.isNew && (
-                      <Chip
-                          label="NEW"
-                          size="small"
-                        sx={{
-                            position: 'absolute',
-                            top: 12,
-                            left: 12,
-                            bgcolor: 'success.main',
-                            color: 'white',
-                            fontWeight: 700,
-                            fontSize: '0.7rem',
-                            height: 24,
-                          }}
-                        />
-                      )}
-                      {/* Category Badge */}
-                      <Chip
-                        label={product.category}
-                        size="small"
-                        sx={{
-                          position: 'absolute',
-                          top: 12,
-                          right: 12,
-                          bgcolor: 'rgba(255, 255, 255, 0.9)',
-                          color: 'text.primary',
-                          fontWeight: 600,
-                          fontSize: '0.7rem',
-                          height: 24,
-                        }}
-                      />
-                    </Box>
-
-                    <CardContent sx={{ p: 3, flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <Typography
-                        variant="h6"
-                        fontWeight={600}
-                        sx={{
-                          mb: 1,
-                          fontFamily: '"Playfair Display", "Georgia", serif',
-                          color: 'text.primary',
-                        }}
-                      >
-                        {product.name}
-                      </Typography>
-
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{
-                          mb: 2,
-                          fontSize: '0.9rem',
-                        }}
-                      >
-                        {product.category}
-                      </Typography>
-
-                      <Box sx={{ mt: 'auto' }}>
-                        <Typography
-                          variant="h6"
-                          fontWeight={700}
-                          color="primary.main"
-                          sx={{ mb: 2 }}
-                        >
-                          {product.price}
-                        </Typography>
-                        
-                        <Button
-                          variant="outlined"
-                          fullWidth
-                          sx={{
-                          borderRadius: 3,
-                            py: 1,
-                            fontWeight: 600,
-                            borderColor: theme.palette.primary.main,
-                            color: theme.palette.primary.main,
-                          '&:hover': {
-                              bgcolor: theme.palette.primary.main,
-                              color: 'white',
-                              transform: 'translateY(-1px)',
-                          },
-                        }}
-                        >
-                          View Details
-                        </Button>
-                      </Box>
-              </CardContent>
-                  </CardActionArea>
-            </Card>
-              </Grid>
-            ))}
-          </Grid>
+          {latestLoading ? (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(3, 1fr)' },
+                gap: 3,
+              }}
+            >
+              {[...Array(6)].map((_, index) => (
+                <ProductCard key={index} product={{} as Product} onView={() => {}} loading />
+              ))}
+            </Box>
+          ) : latestError ? (
+            <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
+              {latestError}
+            </Alert>
+          ) : latestProducts.length === 0 ? (
+            <Box
+              sx={{
+                textAlign: 'center',
+                py: 8,
+                px: 4,
+                borderRadius: 3,
+                background: 'linear-gradient(135deg, #faf8ff 0%, #f0f4ff 100%)',
+                border: `1px solid ${theme.palette.primary.light}20`,
+              }}
+            >
+              <ShoppingBag sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+              <Typography variant="h6" color="text.secondary" fontWeight={600} sx={{ mb: 1 }}>
+                Belum ada produk tersedia
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Produk akan muncul di sini setelah ditambahkan
+              </Typography>
+            </Box>
+          ) : (
+            <Box
+              sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: 'repeat(2, 1fr)', md: 'repeat(5, 1fr)' },
+                gap: 3,
+              }}
+            >
+              {latestProducts.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  onView={handleProductView}
+                />
+              ))}
+            </Box>
+          )}
 
         <Box sx={{ textAlign: 'center', mt: 6 }}>
           <Button

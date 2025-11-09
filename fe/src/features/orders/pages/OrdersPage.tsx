@@ -11,6 +11,7 @@ import {
   Alert,
   CircularProgress,
   Button,
+  Grid,
 } from '@mui/material';
 import {
   ShoppingBag as OrdersIcon,
@@ -21,6 +22,7 @@ import { useOrderStore } from '@/features/orders/store/orderStore';
 import { orderApi } from '@/features/orders/services/orderApi';
 import { Order, OrderQueryParams } from '@/features/orders/types';
 import OrderCard from '@/features/orders/components/OrderCard';
+import AccountSidebar from '@/components/common/AccountSidebar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -73,11 +75,11 @@ export default function OrdersPage() {
 
   const statusTabs = [
     { label: 'Semua', value: '' },
-    { label: 'Pending', value: 'pending' },
-    { label: 'Processing', value: 'processing' },
-    { label: 'Shipped', value: 'shipped' },
-    { label: 'Delivered', value: 'delivered' },
-    { label: 'Cancelled', value: 'cancelled' },
+    { label: 'Belum Bayar', value: 'belum_bayar' },
+    { label: 'Dikemas', value: 'dikemas' },
+    { label: 'Dikirim', value: 'dikirim' },
+    { label: 'Diterima', value: 'diterima' },
+    { label: 'Dibatalkan', value: 'dibatalkan' },
   ];
 
   const fetchOrders = async (params: OrderQueryParams = {}) => {
@@ -97,11 +99,11 @@ export default function OrdersPage() {
         setOrders(response.data);
         setPagination(prev => ({
           ...prev,
-          total: response.total || 0,
-          pages: response.pages || 0,
+          total: response.pagination?.total || 0,
+          pages: response.pagination?.pages || 0,
         }));
       } else {
-        setError(response.error || 'Gagal memuat pesanan');
+        setError('Gagal memuat pesanan');
       }
     } catch (err: any) {
       setError(err.message || 'Gagal memuat pesanan');
@@ -120,8 +122,8 @@ export default function OrdersPage() {
     fetchOrders({ status });
   };
 
-  const handleOrderClick = (orderId: string) => {
-    navigate(`/orders/${orderId}`);
+  const handleOrderClick = (order: Order) => {
+    navigate(`/orders/${order.id}`);
   };
 
   const handleCancelOrder = async (orderId: string) => {
@@ -144,26 +146,34 @@ export default function OrdersPage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Page Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ 
-            fontWeight: 600, 
-            color: 'text.primary',
-            mb: 1
-          }}
-        >
-          Pesanan Saya
-        </Typography>
-        <Typography 
-          variant="body1" 
-          color="text.secondary"
-        >
-          Kelola dan lacak pesanan Anda
-        </Typography>
-      </Box>
+      <Grid container spacing={4}>
+        {/* Sidebar */}
+        <Grid item xs={12} md={3}>
+          <AccountSidebar />
+        </Grid>
+
+        {/* Main Content */}
+        <Grid item xs={12} md={9}>
+          {/* Page Header */}
+          <Box sx={{ mb: 4 }}>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              sx={{ 
+                fontWeight: 600, 
+                color: 'text.primary',
+                mb: 1
+              }}
+            >
+              Pesanan Saya
+            </Typography>
+            <Typography 
+              variant="body1" 
+              color="text.secondary"
+            >
+              Kelola dan lacak pesanan Anda
+            </Typography>
+          </Box>
 
       {/* Status Tabs */}
       <Paper 
@@ -279,12 +289,13 @@ export default function OrdersPage() {
             <OrderCard
               key={order.id}
               order={order}
-              onOrderClick={handleOrderClick}
-              onCancelOrder={handleCancelOrder}
+              onView={handleOrderClick}
             />
           ))}
         </Box>
       )}
+        </Grid>
+      </Grid>
     </Container>
   );
 }

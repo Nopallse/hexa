@@ -43,6 +43,7 @@ import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { addressApi, Address } from '@/features/addresses/services/addressApi';
 import AreaAutocomplete from '@/components/common/AreaAutocomplete';
+import AccountSidebar from '@/components/common/AccountSidebar';
 
 interface TabPanelProps {
   children?: React.ReactNode;
@@ -375,26 +376,34 @@ export default function ProfilePage() {
 
   return (
     <Container maxWidth="xl" sx={{ py: 4 }}>
-      {/* Page Header */}
-      <Box sx={{ mb: 4 }}>
-        <Typography 
-          variant="h4" 
-          component="h1" 
-          sx={{ 
-            fontWeight: 600, 
-            color: 'text.primary',
-            mb: 1
-          }}
-        >
-          Akun Saya
-        </Typography>
-        <Typography 
-          variant="body1" 
-          color="text.secondary"
-        >
-          Kelola informasi pribadi dan alamat Anda
-        </Typography>
-      </Box>
+      <Grid container spacing={4}>
+        {/* Sidebar */}
+        <Grid item xs={12} md={3}>
+          <AccountSidebar />
+        </Grid>
+
+        {/* Main Content */}
+        <Grid item xs={12} md={9}>
+          {/* Page Header */}
+          <Box sx={{ mb: 4 }}>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              sx={{ 
+                fontWeight: 600, 
+                color: 'text.primary',
+                mb: 1
+              }}
+            >
+              Akun Saya
+            </Typography>
+            <Typography 
+              variant="body1" 
+              color="text.secondary"
+            >
+              Kelola informasi pribadi dan alamat Anda
+            </Typography>
+          </Box>
 
       {/* Tab Navigation */}
       <Paper 
@@ -931,6 +940,8 @@ export default function ProfilePage() {
           )}
         </Box>
       </TabPanel>
+        </Grid>
+      </Grid>
 
       {/* Address Form Dialog */}
       <Dialog

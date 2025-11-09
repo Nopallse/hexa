@@ -146,12 +146,55 @@ const createProduct = async (req, res) => {
       }
     });
 
-    logger.info(`New product created: ${product.name} by ${req.user.email}`);
+    // ✅ Otomatis buat default variant untuk produk tanpa variant
+    // Generate SKU dari product name (sanitized)
+    const skuBase = product.name.toUpperCase().replace(/[^A-Z0-9]/g, '').substring(0, 10) || 'PROD';
+    const defaultSku = `${skuBase}-${product.id.substring(0, 8).toUpperCase()}-DEFAULT`;
+    
+    // Pastikan SKU unik
+    let finalSku = defaultSku;
+    let skuCounter = 1;
+    while (await prisma.productVariant.findUnique({ where: { sku: finalSku } })) {
+      finalSku = `${defaultSku}-${skuCounter}`;
+      skuCounter++;
+    }
+
+    const defaultVariant = await prisma.productVariant.create({
+      data: {
+        product_id: product.id,
+        sku: finalSku,
+        variant_name: 'Default',
+        price: parseFloat(price),
+        currency_code: product.currency_code || 'IDR',
+        stock: parseInt(stock)
+      }
+    });
+
+    logger.info(`New product created with default variant: ${product.name} (SKU: ${finalSku}) by ${req.user.email}`);
+
+    // Fetch product dengan variant yang baru dibuat
+    const productWithVariant = await prisma.product.findUnique({
+      where: { id: product.id },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true
+          }
+        },
+        product_variants: {
+          where: { id: defaultVariant.id },
+          include: {
+            variant_options: true
+          }
+        }
+      }
+    });
 
     res.status(201).json({
       success: true,
-      message: 'Product created successfully',
-      data: product
+      message: 'Product created successfully with default variant',
+      data: productWithVariant
     });
   } catch (error) {
     logger.error('Create product error:', error);

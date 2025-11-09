@@ -18,11 +18,12 @@ import {
   Remove as RemoveIcon,
   ShoppingCart as ShoppingCartIcon,
 } from '@mui/icons-material';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { CartItem as CartItemType } from '../types';
-import { cartApi } from '../services/cartApi';
-import { useCartStore } from '../store/cartStore';
+import { useCartStore } from '@/store/cartStore';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
+import { toast } from 'react-hot-toast';
+import { getProductImageUrl } from '@/utils/image';
 
 interface CartItemProps {
   item: CartItemType;
@@ -33,11 +34,15 @@ interface CartItemProps {
 export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
   const theme = useTheme();
   const [quantity, setQuantity] = useState(item.quantity);
-  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { formatPrice } = useCurrencyConversion();
 
-  const { updateItem, removeItem } = useCartStore();
+  const { updateQuantity, removeItem } = useCartStore();
+
+  // Update quantity state saat item berubah
+  useEffect(() => {
+    setQuantity(item.quantity);
+  }, [item.quantity]);
 
   // Check if product is deleted
   const isProductDeleted = item.product_variant.product.deleted_at !== null;
@@ -53,46 +58,62 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
     }
 
     try {
-      setLoading(true);
       setError(null);
 
-      const response = await cartApi.updateCartItem(item.id, {
-        quantity: newQuantity
+      // Gunakan updateQuantity dari store global
+      await updateQuantity(item.id, newQuantity);
+      
+      // Update quantity state
+      setQuantity(newQuantity);
+      
+      // Sync dengan server untuk mendapatkan data terbaru
+      await onUpdate();
+      
+      toast.success('Jumlah item berhasil diupdate', {
+        duration: 2000,
+        position: 'bottom-right',
       });
-
-      if (response.success) {
-        setQuantity(newQuantity);
-        updateItem(item.id, newQuantity);
-        onUpdate();
-      }
     } catch (err: any) {
       console.error('Error updating cart item:', err);
-      setError(err.response?.data?.error || 'Gagal mengupdate quantity');
-    } finally {
-      setLoading(false);
+      const errorMessage = err.response?.data?.error || 'Gagal mengupdate quantity';
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        duration: 3000,
+        position: 'bottom-right',
+      });
     }
   };
 
   const handleRemove = async () => {
     try {
-      setLoading(true);
       setError(null);
 
-      const response = await cartApi.removeFromCart(item.id);
-
-      if (response.success) {
-        removeItem(item.id);
-        onRemove();
-      }
+      // Gunakan removeItem dari store global
+      await removeItem(item.id);
+      
+      // Sync dengan server untuk mendapatkan data terbaru
+      await onRemove();
+      
+      toast.success('Item berhasil dihapus dari keranjang', {
+        duration: 2000,
+        position: 'bottom-right',
+      });
     } catch (err: any) {
       console.error('Error removing cart item:', err);
-      setError(err.response?.data?.error || 'Gagal menghapus item');
-    } finally {
-      setLoading(false);
+      const errorMessage = err.response?.data?.error || 'Gagal menghapus item';
+      setError(errorMessage);
+      toast.error(errorMessage, {
+        duration: 3000,
+        position: 'bottom-right',
+      });
     }
   };
 
-  const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
+  // Get display image from variant (prioritize display_image, fallback to product images)
+  const displayImage = item.product_variant.display_image 
+    || item.product_variant.image 
+    || item.product_variant.product.product_images?.find(img => img.is_primary)?.image_name
+    || item.product_variant.product.product_images?.[0]?.image_name;
 
   return (
     <Card
@@ -145,7 +166,7 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
           {/* Product Image */}
           <Box sx={{ flexShrink: 0 }}>
             <Avatar
-              src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
+              src={getProductImageUrl(displayImage)}
               alt={item.product_variant.product.name}
               sx={{
                 width: 80,
@@ -236,7 +257,7 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
             }}>
               <IconButton
                 onClick={quantity === 1 ? handleRemove : () => handleQuantityChange(quantity - 1)}
-                disabled={loading || isProductDeleted}
+                disabled={isProductDeleted}
                 size="small"
                 sx={{
                   width: 28,
@@ -268,7 +289,7 @@ export default function CartItem({ item, onUpdate, onRemove }: CartItemProps) {
 
               <IconButton
                 onClick={() => handleQuantityChange(quantity + 1)}
-                disabled={loading || quantity >= item.product_variant.stock || isProductDeleted}
+                disabled={quantity >= item.product_variant.stock || isProductDeleted}
                 size="small"
                 sx={{
                   width: 28,

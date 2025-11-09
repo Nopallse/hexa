@@ -1,5 +1,7 @@
 const prisma = require('../utils/prisma');
 const logger = require('../utils/logger');
+const BiteshipService = require('../services/biteshipService');
+const BiteshipLocationService = require('../services/biteshipLocationService');
 
 // Get user's orders
 const getUserOrders = async (req, res) => {
@@ -232,7 +234,7 @@ const createOrder = async (req, res) => {
           address_id,
           total_amount: totalAmount,
           shipping_cost: parseFloat(shipping_cost),
-          status: 'pending',
+          status: 'belum_bayar',
           payment_status: 'unpaid'
         }
       });
@@ -307,7 +309,7 @@ const cancelOrder = async (req, res) => {
       where: {
         id,
         user_id: req.user.id,
-        status: 'pending'
+        status: 'belum_bayar'
       }
     });
 
@@ -343,7 +345,7 @@ const cancelOrder = async (req, res) => {
       // Update order status
       await tx.order.update({
         where: { id },
-        data: { status: 'cancelled' }
+        data: { status: 'dibatalkan' }
       });
 
       // Create transaction log
@@ -461,14 +463,53 @@ const getOrderPaymentStatus = async (req, res) => {
   }
 };
 
-// Update order status (admin only)
+// Validate status transition
+const isValidStatusTransition = (currentStatus, newStatus) => {
+  const validTransitions = {
+    'belum_bayar': ['dikemas', 'dibatalkan'],
+    'dikemas': ['dikirim', 'dibatalkan'],
+    'dikirim': ['diterima'],
+    'diterima': [], // Final state
+    'dibatalkan': [] // Final state
+  };
+
+  return validTransitions[currentStatus]?.includes(newStatus) || false;
+};
+
+// Update order status (admin only) with workflow validation
 const updateOrderStatus = async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
 
+    // Validate status value
+    const validStatuses = ['belum_bayar', 'dikemas', 'dikirim', 'diterima', 'dibatalkan'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid status. Valid statuses are: ${validStatuses.join(', ')}`
+      });
+    }
+
     const order = await prisma.order.findUnique({
-      where: { id }
+      where: { id },
+      include: {
+        address: true,
+        order_items: {
+          include: {
+            product_variant: {
+              include: {
+                product: {
+                  select: {
+                    name: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        shipping: true
+      }
     });
 
     if (!order) {
@@ -478,19 +519,339 @@ const updateOrderStatus = async (req, res) => {
       });
     }
 
-    const updatedOrder = await prisma.order.update({
+    // Check if status transition is valid
+    if (order.status !== status && !isValidStatusTransition(order.status, status)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid status transition. Cannot change from ${order.status} to ${status}`
+      });
+    }
+
+    // If status is already the same, return success
+    if (order.status === status) {
+      return res.json({
+        success: true,
+        message: 'Order status is already set to this value',
+        data: order
+      });
+    }
+
+    // Handle dikemas -> dikirim: Create waybill in Biteship
+    if (order.status === 'dikemas' && status === 'dikirim') {
+      // Check if shipping already exists
+      if (order.shipping) {
+        return res.status(400).json({
+          success: false,
+          error: 'Shipping info already exists for this order'
+        });
+      }
+
+      // Get origin location (active origin)
+      const originLocationResult = await BiteshipLocationService.getActiveOriginLocation();
+      if (!originLocationResult.success || !originLocationResult.data) {
+        return res.status(400).json({
+          success: false,
+          error: 'Origin location not configured. Please set up origin location in Biteship first.'
+        });
+      }
+      logger.info(`Origin location: ${JSON.stringify(originLocationResult.data)}`);
+
+      const originLocation = originLocationResult.data;
+
+      // Get origin area_id from Biteship Maps API (using postal code from location)
+      // Biteship requires area_id from Maps API, not location_id from Locations API
+      let originAreaId = null;
+      if (originLocation.postal_code) {
+        try {
+          const originAreaSearch = await BiteshipService.getAreas({
+            countries: 'ID',
+            input: originLocation.postal_code,
+            type: 'single',
+            limit: 1
+          });
+          
+          if (originAreaSearch.success) {
+            const areas = originAreaSearch.data?.areas || originAreaSearch.data || [];
+            if (Array.isArray(areas) && areas.length > 0 && areas[0].id) {
+              originAreaId = areas[0].id;
+              logger.info(`Found origin area_id for postal code ${originLocation.postal_code}: ${originAreaId}`);
+            }
+          }
+        } catch (error) {
+          logger.warn(`Failed to get origin area_id for postal code ${originLocation.postal_code}:`, error.message);
+        }
+      }
+
+      // If area_id not found, we still need postal_code for Biteship
+      if (!originAreaId && !originLocation.postal_code) {
+        return res.status(400).json({
+          success: false,
+          error: 'Origin location must have postal_code configured'
+        });
+      }
+
+      // Prepare items for Biteship order
+      // Items structure: { name, description, category, value, quantity, height, length, weight, width }
+      const items = order.order_items.map(item => ({
+        name: item.product_variant.product.name.substring(0, 100), // Limit to 100 chars
+        description: (item.product_variant.variant_name || '').substring(0, 200), // Limit to 200 chars
+        category: 'fashion', // Default category, should be configurable from product
+        value: parseFloat(item.price) * item.quantity, // Total value for this item
+        quantity: item.quantity,
+        weight: 1000, // Default weight 1kg per item in grams, should be configurable from product
+        height: 10, // Default height in cm, should be configurable from product
+        length: 20, // Default length in cm, should be configurable from product
+        width: 15 // Default width in cm, should be configurable from product
+      }));
+
+      // Calculate total weight (default 1kg per item)
+      const totalWeight = items.reduce((sum, item) => sum + (item.weight * item.quantity), 0);
+
+      // Get destination area from Biteship (search by postal code or address)
+      // Search for area_id using postal code or city name
+      let destinationAreaId = null;
+      try {
+        logger.info(`Searching for area_id by postal code: ${order.address.postal_code}`);
+        // Try searching by postal code first
+        const postalCodeSearch = await BiteshipService.getAreas({
+          countries: 'ID',
+          input: order.address.postal_code,
+          type: 'single',
+          limit: 1
+        });
+
+        logger.info(`Postal code search result: ${JSON.stringify(postalCodeSearch)}`);
+        if (postalCodeSearch.success) {
+          // Biteship getAreas returns { areas: [...] } structure
+          const areas = postalCodeSearch.data?.areas || postalCodeSearch.data || [];
+          if (Array.isArray(areas) && areas.length > 0) {
+            // Find area with matching postal code
+            const matchingArea = areas.find(area => 
+              area.postal_code === parseInt(order.address.postal_code) ||
+              String(area.postal_code) === String(order.address.postal_code)
+            );
+            
+            if (matchingArea && matchingArea.id) {
+              destinationAreaId = matchingArea.id;
+              logger.info(`Found area_id for postal code ${order.address.postal_code}: ${destinationAreaId}`);
+            } else if (areas[0] && areas[0].id) {
+              // Use first result if no exact match
+              destinationAreaId = areas[0].id;
+              logger.info(`Using first area_id for postal code ${order.address.postal_code}: ${destinationAreaId}`);
+            }
+          }
+        }
+
+        // If not found by postal code, try searching by city
+        if (!destinationAreaId && order.address.city) {
+          const citySearch = await BiteshipService.getAreas({
+            countries: 'ID',
+            input: `${order.address.city}, ${order.address.province}`,
+            type: 'single',
+            limit: 5
+          });
+          
+          if (citySearch.success) {
+            const areas = citySearch.data?.areas || citySearch.data || [];
+            // Find area that matches postal code
+            const matchingArea = areas.find(area => 
+              area.postal_code === parseInt(order.address.postal_code) ||
+              area.postal_code === order.address.postal_code
+            );
+            
+            if (matchingArea && matchingArea.id) {
+              destinationAreaId = matchingArea.id;
+              logger.info(`Found area_id for city ${order.address.city}: ${destinationAreaId}`);
+            } else if (areas.length > 0 && areas[0].id) {
+              // Use first result if no exact match
+              destinationAreaId = areas[0].id;
+              logger.info(`Using first area_id for city ${order.address.city}: ${destinationAreaId}`);
+            }
+          }
+        }
+      } catch (error) {
+        logger.warn(`Failed to get area_id for destination:`, error.message);
+      }
+
+      // Validate required fields
+      if (!originLocation.contact_name || !originLocation.contact_phone) {
+        return res.status(400).json({
+          success: false,
+          error: 'Origin location must have contact_name and contact_phone configured in Biteship'
+        });
+      }
+
+      if (!order.address.recipient_name || !order.address.phone_number) {
+        return res.status(400).json({
+          success: false,
+          error: 'Order address must have recipient_name and phone_number'
+        });
+      }
+
+      // Prepare order payload according to Biteship API documentation
+      // Endpoint: POST /v1/orders
+      // Note: If area_id is provided, postal_code is optional
+      const orderPayload = {
+        // Shipper info (optional)
+        shipper_contact_name: originLocation.contact_name,
+        shipper_contact_phone: originLocation.contact_phone,
+        shipper_contact_email: originLocation.contact_email || undefined,
+        
+        // Origin info (REQUIRED)
+        origin_contact_name: originLocation.contact_name,
+        origin_contact_phone: originLocation.contact_phone,
+        origin_contact_email: originLocation.contact_email || undefined,
+        origin_address: originLocation.address,
+        // Use area_id from Maps API if found, otherwise use postal_code
+        ...(originAreaId 
+          ? { origin_area_id: originAreaId }
+          : { origin_postal_code: parseInt(originLocation.postal_code) }),
+        origin_note: `Pickup location for Order #${order.id.slice(-8).toUpperCase()}`,
+        
+        // Destination info (REQUIRED)
+        destination_contact_name: order.address.recipient_name,
+        destination_contact_phone: order.address.phone_number,
+        destination_contact_email: req.user.email || undefined,
+        destination_address: order.address.address_line,
+        // Use area_id if found, otherwise use postal_code as number (Biteship expects number)
+        // NOTE: Biteship requires EITHER area_id OR postal_code OR coordinates, NOT all of them
+        // Biteship area_id format: IDNP... or can be any string from areas API
+        ...(destinationAreaId && typeof destinationAreaId === 'string' && destinationAreaId.length > 0
+          ? { destination_area_id: destinationAreaId }
+          : { destination_postal_code: parseInt(order.address.postal_code) }),
+        destination_note: `Delivery for Order #${order.id.slice(-8).toUpperCase()}`,
+        
+        // Courier info (REQUIRED)
+        courier_company: 'jne', // Default courier, should be configurable
+        courier_type: 'reg', // Regular service
+        
+        // Delivery info (REQUIRED)
+        delivery_type: 'now', // Immediate delivery
+        
+        // Order info
+        order_note: `Order #${order.id.slice(-8).toUpperCase()}`,
+        reference_id: order.id, // Use order ID as reference
+        metadata: {
+          order_id: order.id
+        },
+        
+        // Items (REQUIRED)
+        items: items
+      };
+
+      // Remove undefined fields to avoid sending them
+      Object.keys(orderPayload).forEach(key => {
+        if (orderPayload[key] === undefined || orderPayload[key] === null || orderPayload[key] === '') {
+          delete orderPayload[key];
+        }
+      });
+
+      // CRITICAL: Biteship requires EITHER area_id OR postal_code, NOT both
+      // If area_id is provided, remove postal_code to avoid conflict
+      if (orderPayload.origin_area_id && orderPayload.origin_postal_code) {
+        delete orderPayload.origin_postal_code;
+        logger.info('Removed origin_postal_code because origin_area_id is provided');
+      }
+      
+      if (orderPayload.destination_area_id && orderPayload.destination_postal_code) {
+        delete orderPayload.destination_postal_code;
+        logger.info('Removed destination_postal_code because destination_area_id is provided');
+      }
+
+      // Log payload for debugging
+      logger.info(`Creating Biteship order with payload:`, {
+        origin_area_id: orderPayload.origin_area_id,
+        origin_postal_code: orderPayload.origin_postal_code,
+        destination_area_id: orderPayload.destination_area_id,
+        destination_postal_code: orderPayload.destination_postal_code,
+        courier_company: orderPayload.courier_company,
+        courier_type: orderPayload.courier_type,
+        items_count: orderPayload.items?.length || 0
+      });
+
+      // Create order in Biteship
+      const biteshipOrderResult = await BiteshipService.createWaybill(orderPayload);
+      
+      if (!biteshipOrderResult.success) {
+        logger.error(`Failed to create Biteship order for order ${id}:`, biteshipOrderResult.error);
+        return res.status(500).json({
+          success: false,
+          error: `Failed to create shipping order: ${biteshipOrderResult.error}`,
+          code: biteshipOrderResult.code,
+          details: biteshipOrderResult.details
+        });
+      }
+
+      const biteshipOrder = biteshipOrderResult.data;
+
+      // Use transaction to update order status and create shipping
+      const result = await prisma.$transaction(async (tx) => {
+        // Create shipping record
+        // Biteship order response structure: 
+        // { id, courier: { tracking_id, company, type }, delivery: { datetime }, status }
+        // Note: tracking_number should only be set if courier.tracking_id exists
+        // Do not use biteshipOrder.id as fallback (that's waybill_id, not tracking number)
+        // Tracking number will be updated later via webhook (courier_waybill_id or courier_tracking_id)
+        const shipping = await tx.shipping.create({
+          data: {
+            order_id: id,
+            biteship_order_id: biteshipOrder.id || null, // Store Biteship order ID for webhook matching
+            courier: biteshipOrder.courier?.company || 'JNE',
+            tracking_number: biteshipOrder.courier?.tracking_id || null, // Only use actual tracking_id, don't fallback to waybill_id
+            estimated_delivery: biteshipOrder.delivery?.datetime ? new Date(biteshipOrder.delivery.datetime) : null,
+            shipping_status: biteshipOrder.status || 'confirmed',
+            shipped_at: new Date()
+          }
+        });
+
+        // Update order status
+        const updatedOrder = await tx.order.update({
+          where: { id },
+          data: { status }
+        });
+
+        // Create transaction log
+        await tx.transaction.create({
+          data: {
+            user_id: order.user_id,
+            order_id: id,
+            status: 'success',
+            message: `Order status updated to ${status} and shipping order created in Biteship`
+          }
+        });
+
+        return { order: updatedOrder, shipping };
+      });
+
+      logger.info(`Order status updated: ${id} to ${status} and Biteship order created by ${req.user.email}`);
+
+      return res.json({
+        success: true,
+        message: 'Order status updated and shipping order created successfully',
+        data: result.order,
+        shipping: result.shipping,
+        biteship_order: biteshipOrder
+      });
+    }
+
+    // For other status transitions, just update the status
+    const updatedOrder = await prisma.$transaction(async (tx) => {
+      const order = await tx.order.update({
       where: { id },
       data: { status }
     });
 
     // Create transaction log
-    await prisma.transaction.create({
+      await tx.transaction.create({
       data: {
         user_id: order.user_id,
-        order_id: order.id,
+          order_id: id,
         status: 'success',
         message: `Order status updated to ${status}`
       }
+      });
+
+      return order;
     });
 
     logger.info(`Order status updated: ${id} to ${status} by ${req.user.email}`);
@@ -509,6 +870,166 @@ const updateOrderStatus = async (req, res) => {
   }
 };
 
+// Get all orders (admin only)
+const getAllOrders = async (req, res) => {
+  try {
+    const { page = 1, limit = 10, status, payment_status, user_id } = req.query;
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const where = {};
+    if (status) where.status = status;
+    if (payment_status) where.payment_status = payment_status;
+    if (user_id) where.user_id = user_id;
+
+    const [orders, total] = await Promise.all([
+      prisma.order.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { created_at: 'desc' },
+        include: {
+          user: {
+            select: {
+              id: true,
+              full_name: true,
+              email: true,
+              phone: true
+            }
+          },
+          address: {
+            select: {
+              address_line: true,
+              city: true,
+              province: true,
+              postal_code: true
+            }
+          },
+          order_items: {
+            include: {
+              product_variant: {
+                include: {
+                  product: {
+                    select: {
+                      name: true,
+                      product_images: {
+                        where: { is_primary: true },
+                        select: {
+                          image_name: true
+                        }
+                      }
+                    }
+                  },
+                  variant_options: {
+                    select: {
+                      option_name: true,
+                      option_value: true
+                    }
+                  }
+                }
+              }
+            }
+          },
+          shipping: {
+            select: {
+              courier: true,
+              tracking_number: true,
+              shipping_status: true,
+              estimated_delivery: true
+            }
+          }
+        }
+      }),
+      prisma.order.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: orders,
+      pagination: {
+        page: parseInt(page),
+        limit: parseInt(limit),
+        total,
+        pages: Math.ceil(total / parseInt(limit))
+      }
+    });
+  } catch (error) {
+    logger.error('Get all orders error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch orders'
+    });
+  }
+};
+
+// Get order by ID (admin only)
+const getOrderByIdAdmin = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const order = await prisma.order.findUnique({
+      where: { id },
+      include: {
+        user: {
+          select: {
+            id: true,
+            full_name: true,
+            email: true,
+            phone: true
+          }
+        },
+        address: true,
+        order_items: {
+          include: {
+            product_variant: {
+              include: {
+                product: {
+                  select: {
+                    name: true,
+                    product_images: {
+                      where: { is_primary: true },
+                      select: {
+                        image_name: true
+                      }
+                    }
+                  }
+                },
+                variant_options: {
+                  select: {
+                    option_name: true,
+                    option_value: true
+                  }
+                }
+              }
+            }
+          }
+        },
+        shipping: true,
+        payments: {
+          orderBy: { payment_date: 'desc' }
+        }
+      }
+    });
+
+    if (!order) {
+      return res.status(404).json({
+        success: false,
+        error: 'Order not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: order
+    });
+  } catch (error) {
+    logger.error('Get order by ID (admin) error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch order'
+    });
+  }
+};
+
 module.exports = {
   getUserOrders,
   getOrderById,
@@ -516,5 +1037,7 @@ module.exports = {
   updateOrderStatus,
   cancelOrder,
   getPaymentMethods,
-  getOrderPaymentStatus
+  getOrderPaymentStatus,
+  getAllOrders,
+  getOrderByIdAdmin
 };

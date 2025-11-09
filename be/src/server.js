@@ -20,6 +20,8 @@ const addressRoutes = require('./routes/addresses');
 const paymentRoutes = require('./routes/payments');
 const shippingRoutes = require('./routes/shipping');
 const userRoutes = require('./routes/users');
+const adminOrderRoutes = require('./routes/adminOrders');
+const dashboardRoutes = require('./routes/dashboard');
 const exchangeRateRoutes = require('./routes/exchangeRates');
 const cacheRoutes = require('./routes/cache');
 
@@ -89,20 +91,24 @@ app.use('/api/addresses', addressRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/shipping', shippingRoutes);
 app.use('/api/admin/users', userRoutes);
+app.use('/api/admin/orders', adminOrderRoutes);
+app.use('/api/admin/dashboard', dashboardRoutes);
 app.use('/api/rates', exchangeRateRoutes);
 app.use('/api/cache', cacheRoutes);
+
+// 404 handler for API routes (must be before static file serving)
+app.use('/api/*', (req, res) => {
+  logger.warn(`API route not found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({
+    error: 'Route not found',
+    message: `Cannot ${req.method} ${req.originalUrl}`
+  });
+});
 
 app.use(express.static(distPath));
 
 app.get("*", (req, res) => {
   res.sendFile(path.join(distPath, "index.html"));
-});
-// 404 handler
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Route not found',
-    message: `Cannot ${req.method} ${req.originalUrl}`
-  });
 });
 
 // Error handling middleware

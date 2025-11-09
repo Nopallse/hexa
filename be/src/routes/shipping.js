@@ -124,6 +124,20 @@ router.delete('/locations/:id', [
 ], locationController.deleteLocation);
 
 // ========== SHIPPING MANAGEMENT ROUTES ==========
+
+// Get all shipping records (admin only)
+router.get('/', [
+  authenticateToken,
+  requireRole(['admin'])
+], shippingController.getAllShipping);
+
+// Get shipping statistics (admin only)
+router.get('/stats', [
+  authenticateToken,
+  requireRole(['admin'])
+], shippingController.getShippingStats);
+
+// Create shipping info (admin only)
 router.post('/', [
   authenticateToken,
   requireRole(['admin']),
@@ -168,6 +182,18 @@ router.post('/rates', [
   return shippingController.getShippingRates(req, res);
 });
 
+// Biteship webhook endpoint (public, no authentication required)
+// IMPORTANT: This route must be placed before other routes to avoid conflicts
+router.post('/webhook/biteship', (req, res, next) => {
+  console.log('Biteship webhook received:', {
+    method: req.method,
+    url: req.url,
+    body: req.body,
+    headers: req.headers
+  });
+  shippingController.handleBiteshipWebhook(req, res, next);
+});
+
 // Track shipment (public endpoint)
 router.get('/track/:waybillId', shippingController.trackShipment);
 
@@ -176,6 +202,12 @@ router.get('/track/fedex/:waybillId', (req, res) => {
   req.query.courier = 'fedex';
   return shippingController.trackShipment(req, res);
 });
+
+// Get shipping by ID (admin only) - must be before /:id routes
+router.get('/detail/:id', [
+  authenticateToken,
+  requireRole(['admin'])
+], shippingController.getShippingById);
 
 // Update shipping info (admin only)
 router.put('/:id', [
@@ -199,7 +231,7 @@ router.put('/:id', [
   return shippingController.updateShipping(req, res);
 });
 
-// Get shipping info for order
-router.get('/:orderId', authenticateToken, shippingController.getShippingInfo);
+// Get shipping info for order (customer)
+router.get('/order/:orderId', authenticateToken, shippingController.getShippingInfo);
 
 module.exports = router;

@@ -1,0 +1,1 @@
+import{ae as e}from"./index-CjRkbdsW.js";const o={getProducts:async s=>(await e.get("/products",{params:s})).data,getProductById:async s=>(await e.get(`/products/${s}`)).data,searchProducts:async(s,t)=>(await e.get("/products",{params:{...t,search:s}})).data,getProductsByCategory:async(s,t)=>(await e.get("/products",{params:{...t,category:s}})).data};export{o as p};

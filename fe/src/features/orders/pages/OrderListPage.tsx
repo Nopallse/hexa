@@ -44,11 +44,11 @@ export default function OrderListPage() {
 
   const statusTabs = [
     { label: 'Semua', value: '' },
-    { label: 'Pending', value: 'pending' },
-    { label: 'Processing', value: 'processing' },
-    { label: 'Shipped', value: 'shipped' },
-    { label: 'Delivered', value: 'delivered' },
-    { label: 'Cancelled', value: 'cancelled' },
+    { label: 'Belum Bayar', value: 'belum_bayar' },
+    { label: 'Dikemas', value: 'dikemas' },
+    { label: 'Dikirim', value: 'dikirim' },
+    { label: 'Diterima', value: 'diterima' },
+    { label: 'Dibatalkan', value: 'dibatalkan' },
   ];
 
   const fetchOrders = async (params: OrderQueryParams = {}) => {

@@ -44,7 +44,7 @@ router.get('/:id/payment-status', authenticateToken, orderController.getOrderPay
 router.put('/:id/status', [
   authenticateToken,
   requireRole(['admin']),
-  body('status').isIn(['pending', 'processing', 'shipped', 'delivered', 'cancelled'])
+  body('status').isIn(['belum_bayar', 'dikemas', 'dikirim', 'diterima', 'dibatalkan'])
 ], async (req, res) => {
   const errors = validationResult(req);
   if (!errors.isEmpty()) {

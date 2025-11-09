@@ -169,7 +169,7 @@ const verifyPayment = async (req, res) => {
         where: { id: payment.order_id },
         data: {
           payment_status: payment_status === 'paid' ? 'paid' : 'unpaid',
-          status: payment_status === 'paid' ? 'processing' : payment.order.status
+          status: payment_status === 'paid' ? 'dikemas' : payment.order.status
         }
       });
 
@@ -349,7 +349,7 @@ const capturePayPalPayment = async (req, res) => {
         where: { id: payment.order_id },
         data: {
           payment_status: 'paid',
-          status: 'processing'
+          status: 'dikemas'
         }
       });
 
@@ -429,7 +429,7 @@ const handlePayPalWebhook = async (req, res) => {
           },
           data: {
             payment_status: 'paid',
-            status: 'processing'
+            status: 'dikemas'
           }
         });
         break;
@@ -755,13 +755,16 @@ const createMidtransPayment = async (req, res) => {
     }
 
     // Save Midtrans payment record
+    // Store the uniqueOrderId in a separate field or use it to find the payment later
     await prisma.payment.create({
       data: {
         order_id,
         payment_method: 'midtrans',
         amount: calculatedTotal, // Use calculated total
         payment_reference: midtransPayment.data.token,
-        payment_status: 'pending'
+        payment_status: 'pending',
+        // Store the unique order ID that was sent to Midtrans for reference
+        // We'll use payment_reference to match, but also need to handle order_id matching
       }
     });
 
@@ -789,6 +792,13 @@ const createMidtransPayment = async (req, res) => {
 // Handle Midtrans notification
 const handleMidtransNotification = async (req, res) => {
   try {
+    logger.info('Midtrans notification received:', {
+      method: req.method,
+      url: req.url,
+      originalUrl: req.originalUrl,
+      body: req.body
+    });
+    
     const notificationData = req.body;
 
     // Process notification
@@ -804,7 +814,7 @@ const handleMidtransNotification = async (req, res) => {
     const { order_id, transaction_status, fraud_status } = result.data;
 
     // Handle test notifications from Midtrans
-    if (order_id.startsWith('payment_notif_test_')) {
+    if (order_id && order_id.startsWith('payment_notif_test_')) {
       return res.json({
         success: true,
         message: 'Test notification received successfully'
@@ -812,24 +822,71 @@ const handleMidtransNotification = async (req, res) => {
     }
 
     // Find payment record
-    const payment = await prisma.payment.findFirst({
+    // The order_id from Midtrans includes timestamp: "order-id-timestamp"
+    // Example: "522804cd-c3ff-4d07-ac4a-89f6edb2a2d0-1762607516770"
+    // Original order_id: "522804cd-c3ff-4d07-ac4a-89f6edb2a2d0"
+    // We need to extract the original order_id by removing the timestamp part
+    // UUID format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx (36 chars)
+    // So if order_id is longer than 36 chars, it likely has a timestamp appended
+    
+    let originalOrderId = order_id;
+    if (order_id.length > 36) {
+      // Extract UUID part (first 36 characters)
+      originalOrderId = order_id.substring(0, 36);
+    } else if (order_id.includes('-') && order_id.split('-').length > 5) {
+      // Alternative: if it has more than 5 parts (UUID has 5 parts), remove the last part
+      const parts = order_id.split('-');
+      originalOrderId = parts.slice(0, 5).join('-');
+    }
+    
+    logger.info(`Extracting order_id: ${order_id} -> ${originalOrderId}`);
+    
+    // Try to find payment by original order_id first
+    // Get the most recent payment for this order by sorting by id (UUIDs are sequential)
+    let payment = await prisma.payment.findFirst({
       where: {
-        order_id: order_id,
+        order_id: originalOrderId,
         payment_method: 'midtrans'
       },
       include: {
         order: true
+      },
+      orderBy: {
+        id: 'desc' // Get the most recent payment for this order
       }
     });
 
+    // If not found, try to find by the full order_id (in case it's stored differently)
     if (!payment) {
+      logger.info(`Payment not found with original order_id, trying full order_id: ${order_id}`);
+      payment = await prisma.payment.findFirst({
+        where: {
+          order_id: order_id,
+          payment_method: 'midtrans'
+        },
+        include: {
+          order: true
+        },
+        orderBy: {
+          id: 'desc'
+        }
+      });
+    }
+
+    if (!payment) {
+      logger.error(`Payment record not found for order_id: ${order_id} (original: ${originalOrderId})`);
       return res.status(404).json({
         success: false,
-        error: 'Payment record not found'
+        error: 'Payment record not found',
+        debug: {
+          received_order_id: order_id,
+          extracted_order_id: originalOrderId
+        }
       });
     }
 
     // Update payment and order status based on transaction status
+    // Status order: belum_bayar, dikemas, dikirim, diterima, dibatalkan
     let paymentStatus = 'pending';
     let orderStatus = payment.order.status;
 
@@ -837,22 +894,25 @@ const handleMidtransNotification = async (req, res) => {
       case 'capture':
         if (fraud_status === 'accept') {
           paymentStatus = 'paid';
-          orderStatus = 'processing';
+          orderStatus = 'dikemas'; // Setelah bayar, status menjadi dikemas
         } else {
           paymentStatus = 'failed';
+          // Tetap belum_bayar jika payment failed
         }
         break;
       case 'settlement':
         paymentStatus = 'paid';
-        orderStatus = 'processing';
+        orderStatus = 'dikemas'; // Setelah bayar, status menjadi dikemas
         break;
       case 'pending':
         paymentStatus = 'pending';
+        // Tetap belum_bayar jika masih pending
         break;
       case 'deny':
       case 'expire':
       case 'cancel':
         paymentStatus = 'failed';
+        orderStatus = 'dibatalkan'; // Jika payment gagal, order dibatalkan
         break;
     }
 
@@ -1231,6 +1291,206 @@ const continueMidtransPayment = async (req, res) => {
   }
 };
 
+// Get all payments (admin only)
+const getAllPayments = async (req, res) => {
+  try {
+    const { 
+      page = 1, 
+      limit = 10, 
+      payment_status, 
+      payment_method,
+      order_id,
+      user_id,
+      startDate,
+      endDate
+    } = req.query;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    // Build where clause
+    const where = {};
+    if (payment_status) where.payment_status = payment_status;
+    if (payment_method) where.payment_method = payment_method;
+    if (order_id) where.order_id = order_id;
+    if (user_id) where.order = { user_id };
+    
+    // Filter by payment_date if date range is provided
+    if (startDate || endDate) {
+      where.payment_date = {};
+      if (startDate) where.payment_date.gte = new Date(startDate);
+      if (endDate) where.payment_date.lte = new Date(endDate);
+    }
+
+    const [payments, total] = await Promise.all([
+      prisma.payment.findMany({
+        where,
+        skip,
+        take: parseInt(limit),
+        orderBy: { payment_date: 'desc' },
+        include: {
+          order: {
+            select: {
+              id: true,
+              status: true,
+              total_amount: true,
+              shipping_cost: true,
+              payment_status: true,
+              created_at: true,
+              user: {
+                select: {
+                  id: true,
+                  full_name: true,
+                  email: true,
+                  phone: true
+                }
+              }
+            }
+          }
+        }
+      }),
+      prisma.payment.count({ where })
+    ]);
+
+    const totalPages = Math.ceil(total / parseInt(limit));
+
+    res.json({
+      success: true,
+      data: payments.map(payment => ({
+        id: payment.id,
+        orderId: payment.order_id,
+        orderStatus: payment.order.status,
+        paymentMethod: payment.payment_method,
+        paymentStatus: payment.payment_status,
+        amount: payment.amount,
+        currencyCode: payment.currency_code,
+        paymentReference: payment.payment_reference,
+        paymentDate: payment.payment_date,
+        customer: payment.order.user,
+        orderTotal: payment.order.total_amount,
+        orderShippingCost: payment.order.shipping_cost,
+        orderCreatedAt: payment.order.created_at
+      })),
+      pagination: {
+        current_page: parseInt(page),
+        total_pages: totalPages,
+        total_items: total,
+        items_per_page: parseInt(limit),
+        has_next_page: parseInt(page) < totalPages,
+        has_prev_page: parseInt(page) > 1
+      }
+    });
+  } catch (error) {
+    logger.error('Get all payments error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch payments'
+    });
+  }
+};
+
+// Get payment statistics (admin only)
+const getPaymentStats = async (req, res) => {
+  try {
+    const [totalPayments, paidPayments, pendingPayments, failedPayments, totalRevenue] = await Promise.all([
+      prisma.payment.count(),
+      prisma.payment.count({ where: { payment_status: 'paid' } }),
+      prisma.payment.count({ where: { payment_status: 'pending' } }),
+      prisma.payment.count({ where: { payment_status: 'failed' } }),
+      prisma.payment.aggregate({
+        where: { payment_status: 'paid' },
+        _sum: { amount: true }
+      })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        totalPayments,
+        paidPayments,
+        pendingPayments,
+        failedPayments,
+        totalRevenue: totalRevenue._sum.amount ? parseFloat(totalRevenue._sum.amount) : 0
+      }
+    });
+  } catch (error) {
+    logger.error('Get payment stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch payment statistics'
+    });
+  }
+};
+
+// Get payment by ID (admin only)
+const getPaymentById = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const payment = await prisma.payment.findUnique({
+      where: { id },
+      include: {
+        order: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                full_name: true,
+                email: true,
+                phone: true
+              }
+            },
+            address: true,
+            order_items: {
+              include: {
+                product_variant: {
+                  include: {
+                    product: {
+                      select: {
+                        name: true,
+                        product_images: {
+                          where: { is_primary: true },
+                          take: 1,
+                          select: {
+                            image_name: true
+                          }
+                        }
+                      }
+                    },
+                    variant_options: {
+                      select: {
+                        option_name: true,
+                        option_value: true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
+
+    if (!payment) {
+      return res.status(404).json({
+        success: false,
+        error: 'Payment not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: payment
+    });
+  } catch (error) {
+    logger.error('Get payment by ID error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch payment details'
+    });
+  }
+};
+
 module.exports = {
   createPayment,
   getPaymentInfo,
@@ -1244,5 +1504,8 @@ module.exports = {
   getMidtransTransactionStatus,
   getPaymentStatus,
   cancelActivePayment,
-  continueMidtransPayment
+  continueMidtransPayment,
+  getAllPayments,
+  getPaymentStats,
+  getPaymentById
 };

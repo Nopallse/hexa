@@ -122,21 +122,13 @@ export const shippingApi = {
   // Get shipping statistics
   getShippingStats: async (): Promise<ShippingStatsResponse> => {
     try {
-      // TODO: Replace with actual API call to backend
-      // const response = await axiosInstance.get('/api/shipping/stats');
-      // return response.data;
-      
-      // Mock response for development
-      return {
-        success: true,
-        message: 'Shipping statistics retrieved successfully',
-        data: mockShippingStats,
-      };
+      const response = await axiosInstance.get('/shipping/stats');
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
         message: 'Failed to fetch shipping statistics',
-        error: error.message,
+        error: error.response?.data?.error || error.message,
       };
     }
   },
@@ -149,41 +141,15 @@ export const shippingApi = {
     courier?: string;
     startDate?: string;
     endDate?: string;
-  }): Promise<ShippingListResponse> => {
+  }): Promise<ShippingListResponse & { pagination?: any }> => {
     try {
-      // TODO: Replace with actual API call to backend
-      // const response = await axiosInstance.get('/api/shipping/data', { params });
-      // return response.data;
-      
-      // Mock response for development
-      let filteredData = [...mockShippingData];
-      
-      // Apply filters
-      if (params?.status) {
-        filteredData = filteredData.filter(item => item.status === params.status);
-      }
-      
-      if (params?.courier) {
-        filteredData = filteredData.filter(item => item.courier === params.courier);
-      }
-      
-      // Apply pagination
-      const page = params?.page || 1;
-      const limit = params?.limit || 10;
-      const startIndex = (page - 1) * limit;
-      const endIndex = startIndex + limit;
-      const paginatedData = filteredData.slice(startIndex, endIndex);
-      
-      return {
-        success: true,
-        message: 'Shipping data retrieved successfully',
-        data: paginatedData,
-      };
+      const response = await axiosInstance.get('/shipping', { params });
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
         message: 'Failed to fetch shipping data',
-        error: error.message,
+        error: error.response?.data?.error || error.message,
       };
     }
   },
@@ -191,140 +157,51 @@ export const shippingApi = {
   // Get shipping detail by ID
   getShippingDetail: async (id: string): Promise<ShippingResponse> => {
     try {
-      // TODO: Replace with actual API call to backend
-      // const response = await axiosInstance.get(`/api/shipping/${id}`);
-      // return response.data;
-      
-      // Mock response for development
-      const shippingData = mockShippingData.find(item => item.id === id);
-      
-      if (!shippingData) {
-        return {
-          success: false,
-          message: 'Shipping data not found',
-          error: 'Shipping data not found',
-        };
-      }
-      
-      return {
-        success: true,
-        message: 'Shipping detail retrieved successfully',
-        data: shippingData,
-      };
+      const response = await axiosInstance.get(`/shipping/detail/${id}`);
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
         message: 'Failed to fetch shipping detail',
-        error: error.message,
+        error: error.response?.data?.error || error.message,
       };
     }
   },
 
   // Update shipping status
-  updateShippingStatus: async (id: string, status: string): Promise<ShippingResponse> => {
+  updateShippingStatus: async (id: string, data: {
+    courier?: string;
+    tracking_number?: string;
+    shipping_status?: string;
+    estimated_delivery?: string;
+    shipped_at?: string;
+    delivered_at?: string;
+  }): Promise<ShippingResponse> => {
     try {
-      // TODO: Replace with actual API call to backend
-      // const response = await axiosInstance.patch(`/api/shipping/${id}/status`, { status });
-      // return response.data;
-      
-      // Mock response for development
-      const shippingData = mockShippingData.find(item => item.id === id);
-      
-      if (!shippingData) {
-        return {
-          success: false,
-          message: 'Shipping data not found',
-          error: 'Shipping data not found',
-        };
-      }
-      
-      // Mock update
-      shippingData.status = status as any;
-      
-      return {
-        success: true,
-        message: 'Shipping status updated successfully',
-        data: shippingData,
-      };
+      const response = await axiosInstance.put(`/shipping/${id}`, data);
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
         message: 'Failed to update shipping status',
-        error: error.message,
+        error: error.response?.data?.error || error.message,
       };
     }
   },
 
   // Get tracking information
-  getTrackingInfo: async (trackingNumber: string): Promise<ShippingResponse> => {
+  getTrackingInfo: async (trackingNumber: string, courier?: string): Promise<ShippingResponse> => {
     try {
-      // TODO: Replace with actual API call to Biteship API
-      // const response = await axiosInstance.get(`/api/shipping/tracking/${trackingNumber}`);
-      // return response.data;
-      
-      // Mock response for development
-      const mockTrackingData = {
-        trackingNumber,
-        status: 'in_transit',
-        courier: 'JNE',
-        origin: 'Jakarta',
-        destination: 'Bandung',
-        estimatedDelivery: '2024-01-20',
-        history: [
-          {
-            status: 'picked_up',
-            description: 'Paket telah diambil oleh kurir',
-            timestamp: '2024-01-18T10:00:00Z',
-            location: 'Jakarta',
-          },
-          {
-            status: 'in_transit',
-            description: 'Paket dalam perjalanan ke tujuan',
-            timestamp: '2024-01-18T14:30:00Z',
-            location: 'Jakarta',
-          },
-          {
-            status: 'in_transit',
-            description: 'Paket tiba di hub Bandung',
-            timestamp: '2024-01-19T08:15:00Z',
-            location: 'Bandung',
-          },
-        ],
-      };
-      
-      return {
-        success: true,
-        message: 'Tracking information retrieved successfully',
-        data: mockTrackingData,
-      };
+      const params = courier ? { courier } : {};
+      const response = await axiosInstance.get(`/shipping/track/${trackingNumber}`, { params });
+      return response.data;
     } catch (error: any) {
       return {
         success: false,
         message: 'Failed to fetch tracking information',
-        error: error.message,
+        error: error.response?.data?.error || error.message,
       };
     }
   },
 
-  // Refresh shipping data from Biteship
-  refreshShippingData: async (): Promise<ShippingResponse> => {
-    try {
-      // TODO: Replace with actual API call to backend
-      // const response = await axiosInstance.post('/api/shipping/refresh');
-      // return response.data;
-      
-      // Mock response for development
-      return {
-        success: true,
-        message: 'Shipping data refreshed successfully',
-        data: { refreshedAt: new Date().toISOString() },
-      };
-    } catch (error: any) {
-      return {
-        success: false,
-        message: 'Failed to refresh shipping data',
-        error: error.message,
-      };
-    }
-  },
 };

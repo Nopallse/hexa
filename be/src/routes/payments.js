@@ -5,6 +5,42 @@ const paymentController = require('../controllers/paymentController');
 
 const router = express.Router();
 
+// IMPORTANT: Midtrans notification webhook must be placed FIRST before other routes
+// This route has no authentication to allow Midtrans to send notifications
+router.post('/midtrans/notification', (req, res, next) => {
+  console.log('Midtrans notification received:', {
+    method: req.method,
+    url: req.url,
+    originalUrl: req.originalUrl,
+    body: req.body,
+    headers: req.headers
+  });
+  paymentController.handleMidtransNotification(req, res, next);
+});
+
+// Temporary route for incorrect URL (without 's' in payments)
+// This handles the case where Midtrans dashboard is configured with wrong URL
+router.post('/payment/midtrans/notification', paymentController.handleMidtransNotification);
+
+// ========== ADMIN PAYMENT MANAGEMENT ROUTES ==========
+
+// Get all payments (admin only)
+router.get('/admin/all', [
+  authenticateToken,
+  requireRole(['admin'])
+], paymentController.getAllPayments);
+
+// Get payment statistics (admin only)
+router.get('/admin/stats', [
+  authenticateToken,
+  requireRole(['admin'])
+], paymentController.getPaymentStats);
+
+// Get payment by ID (admin only) - MUST be before /:orderId route
+router.get('/admin/detail/:id', [
+  authenticateToken,
+  requireRole(['admin'])
+], paymentController.getPaymentById);
 
 // Create Midtrans payment
 router.post('/midtrans/create', [
@@ -22,13 +58,6 @@ router.post('/midtrans/create', [
   }
   return paymentController.createMidtransPayment(req, res);
 });
-
-// Midtrans notification webhook (no authentication required)
-router.post('/midtrans/notification', paymentController.handleMidtransNotification);
-
-// Temporary route for incorrect URL (without 's' in payments)
-// This handles the case where Midtrans dashboard is configured with wrong URL
-router.post('/payment/midtrans/notification', paymentController.handleMidtransNotification);
 
 // Get payment status for an order
 router.get('/status/:orderId', authenticateToken, paymentController.getPaymentStatus);
@@ -57,8 +86,8 @@ router.post('/midtrans/continue', [
 });
 
 
-// Get payment info for order
-router.get('/:orderId', authenticateToken, paymentController.getPaymentInfo);
+// Get payment info for order (customer)
+router.get('/order/:orderId', authenticateToken, paymentController.getPaymentInfo);
 
 // Verify payment (admin only)
 router.put('/:id/verify', [

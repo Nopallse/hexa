@@ -63,7 +63,7 @@ export interface Order {
   address_id: string;
   total_amount: number;
   shipping_cost: number;
-  status: 'pending' | 'confirmed' | 'shipped' | 'delivered' | 'cancelled';
+  status: 'belum_bayar' | 'dikemas' | 'dikirim' | 'diterima' | 'dibatalkan';
   payment_status: 'unpaid' | 'paid' | 'failed' | 'refunded';
   created_at: string;
   updated_at: string;

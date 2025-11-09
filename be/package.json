@@ -12,6 +12,7 @@
     "db:studio": "prisma studio",
     "db:seed": "node prisma/seed.js",
     "db:seed:currencies": "node prisma/seedCurrencies.js",
+    "migrate:variants": "node migrate-products-without-variants.js",
     "setup": "node setup-local-db.js",
     "setup:local": "node setup-local-db.js",
     "test:api": "node test-api.js",

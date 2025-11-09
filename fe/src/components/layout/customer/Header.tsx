@@ -43,6 +43,7 @@ import {
   ExpandLess as ExpandLessIcon,
   Language as LanguageIcon,
   AttachMoney as CurrencyIcon,
+  Inventory as ProductsIcon,
 } from '@mui/icons-material';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
@@ -573,6 +574,26 @@ export default function Header() {
                 </Button>
                 
                 <Button
+                  component={Link}
+                  to="/products"
+                  variant="text"
+                  sx={{
+                    color: location.pathname.startsWith('/products') ? 'primary.main' : 'text.primary',
+                    textTransform: 'none',
+                    fontWeight: location.pathname.startsWith('/products') ? 600 : 500,
+                    px: 2,
+                    py: 1,
+                    '&:hover': {
+                      color: 'primary.main',
+                    },
+                    backgroundColor: 'transparent !important',
+                    boxShadow: 'none !important',
+                  }}
+                >
+                  Produk
+                </Button>
+                
+                <Button
                   variant="text"
                   onClick={handleCategoryMenuOpen}
                   sx={{
@@ -747,7 +768,7 @@ export default function Header() {
           categories.map((category) => (
           <MenuItem 
             key={category.id}
-            onClick={() => { navigate(`/categories/${category.id}`); handleCategoryMenuClose(); }}
+            onClick={() => { navigate(`/products?category=${category.id}`); handleCategoryMenuClose(); }}
             sx={{ py: 1.5, px: 2 }}
           >
             <Typography variant="body2">{category.name}</Typography>
@@ -855,11 +876,27 @@ export default function Header() {
             </ListItemButton>
           </ListItem>
           
+          {/* Products */}
+          <ListItem disablePadding>
+            <ListItemButton 
+              onClick={() => { navigate('/products'); handleMobileDrawerClose(); }}
+              selected={location.pathname.startsWith('/products')}
+            >
+              <ListItemIcon>
+                <ProductsIcon />
+              </ListItemIcon>
+              <ListItemText primary="Produk" />
+            </ListItemButton>
+          </ListItem>
+          
           {/* Categories with Submenu */}
           <ListItem disablePadding>
             <ListItemButton 
               onClick={() => setCategoriesExpanded(!categoriesExpanded)}
             >
+              <ListItemIcon>
+                <CategoryIcon />
+              </ListItemIcon>
               <ListItemText primary={t('header.categories')} />
               {categoriesExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
             </ListItemButton>
@@ -883,7 +920,7 @@ export default function Header() {
                     <ListItemButton 
                       sx={{ pl: 4 }}
                       onClick={() => { 
-                        navigate(`/categories/${category.id}`); 
+                        navigate(`/products?category=${category.id}`); 
                         handleMobileDrawerClose(); 
                       }}
                     >

@@ -1,0 +1,1 @@
+const a="https://hexacrochet.my.id/uploads";function r(t,e="/images/placeholder.png"){return t?t.startsWith("http://")||t.startsWith("https://")?t:`${a}/${t}`:e}function g(t){return r(t,"/images/category-placeholder.png")}function o(t){return r(t,"/images/product-placeholder.png")}export{o as a,r as b,g};

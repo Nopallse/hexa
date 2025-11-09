@@ -16,9 +16,7 @@ import {
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { CartItem as CartItemType } from '../types';
-import { cartApi } from '../services/cartApi';
-import { useCartStore } from '../store/cartStore';
+import { useCartStore } from '@/store/cartStore';
 import CartItem from '../components/CartItem';
 import CartSummary from '../components/CartSummary';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
@@ -28,48 +26,41 @@ export default function CartPage() {
   const navigate = useNavigate();
   const { loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
-  const [loading, setLoading] = useState(true);
+  // Gunakan store global untuk items dan state
+  const { items, isLoading, error: storeError, syncWithServer } = useCartStore();
   const [error, setError] = useState<string | null>(null);
-  const [items, setItems] = useState<CartItemType[]>([]);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  const { setItems: setStoreItems } = useCartStore();
-
-  const fetchCart = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const response = await cartApi.getCart();
-
-      if (response.success) {
-        setItems(response.data);
-        setStoreItems(response.data);
-      } else {
-        setError('Gagal memuat keranjang');
-      }
-    } catch (err: any) {
-      console.error('Error fetching cart:', err);
-      setError(err.response?.data?.error || 'Gagal memuat keranjang');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleItemUpdate = () => {
-    fetchCart();
-  };
-
-  const handleItemRemove = () => {
-    fetchCart();
-  };
-
-  const handleCartCleared = () => {
-    setItems([]);
-  };
-
+  // Sync dengan server saat component mount
   useEffect(() => {
-    fetchCart();
-  }, []);
+    const fetchData = async () => {
+      await syncWithServer();
+      setInitialLoading(false);
+    };
+    fetchData();
+  }, [syncWithServer]);
+
+  // Handle error dari store
+  useEffect(() => {
+    if (storeError) {
+      setError(storeError);
+    }
+  }, [storeError]);
+
+  const handleItemUpdate = async () => {
+    // Sync dengan server untuk mendapatkan data terbaru
+    await syncWithServer();
+  };
+
+  const handleItemRemove = async () => {
+    // Sync dengan server untuk mendapatkan data terbaru
+    await syncWithServer();
+  };
+
+  const handleCartCleared = async () => {
+    // Sync dengan server untuk mendapatkan data terbaru
+    await syncWithServer();
+  };
 
   // Filter items
   const availableItems = items.filter(item => item.product_variant.product.deleted_at === null);
@@ -124,7 +115,7 @@ export default function CartPage() {
             minWidth: 0,
             order: { xs: 1, lg: 1 }
           }}>
-            {loading ? (
+            {initialLoading ? (
               <Stack spacing={2}>
                 {[...Array(3)].map((_, index) => (
                   <Skeleton key={index} variant="rectangular" height={120} sx={{ borderRadius: 2 }} />

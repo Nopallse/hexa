@@ -386,10 +386,10 @@ class BiteshipService {
     ];
   }
 
-  // Create waybill
+  // Create order (waybill)
   async createWaybill(params = {}) {
     try {
-      const response = await axios.post(`${this.baseURL}/v1/waybills`, params, {
+      const response = await axios.post(`${this.baseURL}/v1/orders`, params, {
         headers: {
           'Authorization': `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json'
@@ -397,20 +397,31 @@ class BiteshipService {
         timeout: this.timeout
       });
 
-      logger.info(`Biteship waybill created: ${response.data?.id}`);
+      logger.info(`Biteship order created: ${response.data?.id}`);
       
       return {
         success: true,
         data: response.data
       };
     } catch (error) {
-      logger.error('Biteship create waybill error:', error);
+      logger.error('Biteship create order error:', error);
       
       if (error.response) {
+        const errorData = error.response.data;
+        logger.error('Biteship error response:', {
+          status: error.response.status,
+          code: errorData?.code,
+          error: errorData?.error,
+          message: errorData?.message,
+          details: errorData?.details
+        });
+        
         return {
           success: false,
-          error: error.response.data?.message || 'Failed to create waybill',
-          status: error.response.status
+          error: errorData?.error || errorData?.message || 'Failed to create order',
+          status: error.response.status,
+          code: errorData?.code,
+          details: errorData?.details
         };
       }
       

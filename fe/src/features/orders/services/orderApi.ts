@@ -93,4 +93,11 @@ export const orderApi = {
     });
     return response.data;
   },
+
+  // Track shipment
+  trackShipment: async (waybillId: string, courier?: string): Promise<ApiResponse> => {
+    const params = courier ? { courier } : {};
+    const response = await axiosInstance.get(`/shipping/track/${waybillId}`, { params });
+    return response.data;
+  },
 };

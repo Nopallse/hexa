@@ -1,11 +1,10 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { CartItem } from '@/types/global';
 import axiosInstance from '@/services/interceptors';
-import { AddToCartRequest, UpdateCartItemRequest } from '@/features/cart/types';
+import { AddToCartRequest, UpdateCartItemRequest, CartItem as CartItemType } from '@/features/cart/types';
 
 interface CartState {
-  items: CartItem[];
+  items: CartItemType[];
   totalItems: number;
   totalPrice: number;
   isLoading: boolean;
@@ -33,20 +32,20 @@ export const useCartStore = create<CartState>()(
       addItem: async (itemData: AddToCartRequest) => {
         set({ isLoading: true, error: null });
         try {
-          const response = await axiosInstance.post<{ data: CartItem }>('/cart', itemData);
+          const response = await axiosInstance.post<{ data: CartItemType }>('/cart', itemData);
           const newItem = response.data.data;
 
           const currentItems = get().items;
           const existingItemIndex = currentItems.findIndex(
-            item => item.productId === newItem.productId && item.variantId === newItem.variantId
+            item => item.product_variant_id === newItem.product_variant_id
           );
 
-          let updatedItems: CartItem[];
+          let updatedItems: CartItemType[];
           if (existingItemIndex >= 0) {
             // Update existing item
             updatedItems = currentItems.map((item, index) =>
               index === existingItemIndex
-                ? { ...item, quantity: item.quantity + newItem.quantity, subtotal: item.subtotal + newItem.subtotal }
+                ? { ...item, quantity: item.quantity + newItem.quantity }
                 : item
             );
           } else {
@@ -114,7 +113,7 @@ export const useCartStore = create<CartState>()(
         set({ isLoading: true, error: null });
         try {
           const updateData: UpdateCartItemRequest = { quantity };
-          const response = await axiosInstance.put<{ data: CartItem }>(`/cart/${cartItemId}`, updateData);
+          const response = await axiosInstance.put<{ data: CartItemType }>(`/cart/${cartItemId}`, updateData);
           const updatedItem = response.data.data;
 
           const currentItems = get().items;
@@ -169,7 +168,7 @@ export const useCartStore = create<CartState>()(
         try {
           // Get both cart items and summary
           const [cartResponse, summaryResponse] = await Promise.all([
-            axiosInstance.get<{ data: CartItem[] }>('/cart'),
+            axiosInstance.get<{ data: CartItemType[] }>('/cart'),
             axiosInstance.get<{ data: { totalItems: number; itemCount: number } }>('/cart/summary')
           ]);
           
@@ -222,9 +221,12 @@ export const useCartStore = create<CartState>()(
 );
 
 // Helper function untuk menghitung summary keranjang
-function calculateCartSummary(items: CartItem[]) {
+function calculateCartSummary(items: CartItemType[]) {
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = items.reduce((sum, item) => sum + item.subtotal, 0);
+  const totalPrice = items.reduce((sum, item) => {
+    const price = parseFloat(item.product_variant.price);
+    return sum + (price * item.quantity);
+  }, 0);
   
   return { totalItems, totalPrice };
 }

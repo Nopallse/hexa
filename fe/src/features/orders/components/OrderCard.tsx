@@ -3,7 +3,6 @@ import {
   CardContent,
   Box,
   Typography,
-  Stack,
   Chip,
   Button,
   useTheme,
@@ -40,15 +39,15 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'pending':
+      case 'belum_bayar':
         return 'warning';
-      case 'processing':
+      case 'dikemas':
         return 'primary';
-      case 'shipped':
-        return 'primary';
-      case 'delivered':
+      case 'dikirim':
+        return 'info';
+      case 'diterima':
         return 'success';
-      case 'cancelled':
+      case 'dibatalkan':
         return 'error';
       default:
         return 'default';
@@ -57,15 +56,15 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
 
   const getStatusLabel = (status: string) => {
     switch (status) {
-      case 'pending':
-        return 'Menunggu Konfirmasi';
-      case 'processing':
-        return 'Sedang Diproses';
-      case 'shipped':
+      case 'belum_bayar':
+        return 'Belum Bayar';
+      case 'dikemas':
+        return 'Dikemas';
+      case 'dikirim':
         return 'Dikirim';
-      case 'delivered':
-        return 'Selesai';
-      case 'cancelled':
+      case 'diterima':
+        return 'Diterima';
+      case 'dibatalkan':
         return 'Dibatalkan';
       default:
         return status;
@@ -103,6 +102,11 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
   };
 
   const handleCancelOrder = async () => {
+    if (!order?.id) {
+      console.error('Order ID is missing');
+      return;
+    }
+
     if (!window.confirm('Apakah Anda yakin ingin membatalkan pesanan ini?')) {
       return;
     }
@@ -123,8 +127,10 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
     }
   };
 
-  const canCancel = order.status === 'pending';
-  const primaryImage = order.order_items[0]?.product_variant?.product?.product_images?.[0]?.image_name;
+  const canCancel = order?.status === 'belum_bayar';
+  const firstOrderItem = order?.order_items && order.order_items.length > 0 ? order.order_items[0] : null;
+  const productImages = firstOrderItem?.product_variant?.product?.product_images;
+  const primaryImage = productImages && productImages.length > 0 ? productImages[0]?.image_name : null;
 
   return (
     <Card
@@ -145,7 +151,7 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
           {/* Order Image */}
           <Box sx={{ flexShrink: 0 }}>
             <Avatar
-              src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(order.order_items[0]?.product_variant?.product?.name?.substring(0, 10) || 'Order')}`}
+              src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(firstOrderItem?.product_variant?.product?.name?.substring(0, 10) || 'Order')}`}
               alt="Order items"
               sx={{
                 width: 80,
@@ -175,59 +181,43 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
                 lineHeight: 1.3,
                 fontSize: '1rem',
               }}
-              title={`Order #${order.id.slice(-8).toUpperCase()}`}
+              title={`Order #${order.id ? order.id.slice(-8).toUpperCase() : 'N/A'}`}
             >
-              Order #{order.id.slice(-8).toUpperCase()}
+              Order #{order.id ? order.id.slice(-8).toUpperCase() : 'N/A'}
             </Typography>
             
-            {/* Status Chips */}
-            <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
+            {/* Status Chip - Hanya status utama order */}
+            <Box sx={{ mb: 1 }}>
               <Chip
-                label={getStatusLabel(order.status)}
+                label={getStatusLabel(order?.status || '')}
                 size="small"
                 variant="outlined"
                 sx={{ 
                   fontSize: '0.7rem',
                   height: 20,
-                  borderColor: getStatusColor(order.status) === 'warning' ? 'warning.main' : 
-                              getStatusColor(order.status) === 'success' ? 'success.main' :
-                              getStatusColor(order.status) === 'error' ? 'error.main' : 'primary.main',
-                  color: getStatusColor(order.status) === 'warning' ? 'warning.main' : 
-                         getStatusColor(order.status) === 'success' ? 'success.main' :
-                         getStatusColor(order.status) === 'error' ? 'error.main' : 'primary.main',
+                  borderColor: getStatusColor(order?.status || '') === 'warning' ? 'warning.main' : 
+                              getStatusColor(order?.status || '') === 'success' ? 'success.main' :
+                              getStatusColor(order?.status || '') === 'error' ? 'error.main' :
+                              getStatusColor(order?.status || '') === 'info' ? 'info.main' : 'primary.main',
+                  color: getStatusColor(order?.status || '') === 'warning' ? 'warning.main' : 
+                         getStatusColor(order?.status || '') === 'success' ? 'success.main' :
+                         getStatusColor(order?.status || '') === 'error' ? 'error.main' :
+                         getStatusColor(order?.status || '') === 'info' ? 'info.main' : 'primary.main',
                   '& .MuiChip-label': {
                     px: 1,
                   }
                 }}
               />
-              <Chip
-                label={getPaymentStatusLabel(order.payment_status)}
-                size="small"
-                variant="outlined"
-                sx={{ 
-                  fontSize: '0.7rem',
-                  height: 20,
-                  borderColor: getPaymentStatusColor(order.payment_status) === 'warning' ? 'warning.main' : 
-                              getPaymentStatusColor(order.payment_status) === 'success' ? 'success.main' :
-                              getPaymentStatusColor(order.payment_status) === 'error' ? 'error.main' : 'primary.main',
-                  color: getPaymentStatusColor(order.payment_status) === 'warning' ? 'warning.main' : 
-                         getPaymentStatusColor(order.payment_status) === 'success' ? 'success.main' :
-                         getPaymentStatusColor(order.payment_status) === 'error' ? 'error.main' : 'primary.main',
-                  '& .MuiChip-label': {
-                    px: 1,
-                  }
-                }}
-              />
-            </Stack>
+            </Box>
 
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-              Dibuat: {formatDate(order.created_at)}
+              Dibuat: {order?.created_at ? formatDate(order.created_at) : 'N/A'}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-              {order.order_items.length} item{order.order_items.length > 1 ? 's' : ''}
+              {order?.order_items?.length || 0} item{(order?.order_items?.length || 0) > 1 ? 's' : ''}
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-              {order.address.city}, {order.address.province}
+              {order?.address?.city || ''}, {order?.address?.province || ''}
             </Typography>
           </Box>
 
@@ -244,7 +234,7 @@ export default function OrderCard({ order, onView }: OrderCardProps) {
                 Total
               </Typography>
               <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: '1rem' }}>
-                {formatPrice(Number(order.total_amount) + Number(order.shipping_cost))}
+                {formatPrice((Number(order?.total_amount) || 0) + (Number(order?.shipping_cost) || 0))}
               </Typography>
             </Box>
 
