@@ -156,54 +156,62 @@ export default function ShippingMethodSelector({
 
   // Fetch shipping rates when address is selected
   useEffect(() => {
-    if (selectedAddress && cartItems.length > 0 && activeOrigin && debouncedFetchKey && debouncedFetchKey !== lastFetchKey) {
-      fetchShippingRates();
-    }
-  }, [debouncedFetchKey, activeOrigin]);
+    const fetchShippingRates = async () => {
+      if (!selectedAddress || !activeOrigin || cartItems.length === 0) {
+        setShippingMethods([]);
+        setError(null);
+        return;
+      }
+      
+      // Create fetch key for this request
+      const currentFetchKey = `${selectedAddress.id}_${selectedAddress.postal_code}_${totalWeight}_${shippingItems.length}`;
+      
+      // Skip if this is the same request
+      if (currentFetchKey === lastFetchKey) return;
+      
+      try {
+        setLoading(true);
+        setError(null);
+        setLastFetchKey(currentFetchKey);
 
-  const fetchShippingRates = async () => {
-    if (!selectedAddress || !debouncedFetchKey || !activeOrigin) return;
-    
-    // Prevent duplicate requests
-    if (loading) return;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      setLastFetchKey(debouncedFetchKey);
+        const response = await shippingApi.getShippingRates({
+          origin_postal_code: activeOrigin.postal_code,
+          destination_postal_code: selectedAddress.postal_code,
+          origin_country: 'ID', // Always ID for origin
+          destination_country: selectedAddress.country,
+          items: shippingItems
+        });
 
-      const response = await shippingApi.getShippingRates({
-        origin_postal_code: activeOrigin.postal_code,
-        destination_postal_code: selectedAddress.postal_code,
-        origin_country: 'ID', // Always ID for origin
-        destination_country: selectedAddress.country,
-        items: shippingItems
-      });
-
-      // Check if this is still the current request
-      if (debouncedFetchKey === lastFetchKey || !lastFetchKey) {
-        if (response.success && response.data) {
-          // Transform Biteship response to our format
-          const rawPricing = response.data.pricing || [];
-          const transformedMethods = rawPricing.map((method: any) => 
-            transformBiteshipMethod(method)
-          );
-          setShippingMethods(transformedMethods);
-          setProvider(response.provider || '');
-          setIsInternational(selectedAddress.country !== 'ID');
-        } else {
-          setError(response.error || 'Failed to fetch shipping rates');
+        // Check if this is still the current request
+        if (currentFetchKey === lastFetchKey || !lastFetchKey) {
+          if (response.success && response.data) {
+            // Transform Biteship response to our format
+            const rawPricing = response.data.pricing || [];
+            const transformedMethods = rawPricing.map((method: any) => 
+              transformBiteshipMethod(method)
+            );
+            setShippingMethods(transformedMethods);
+            setProvider(response.provider || '');
+            setIsInternational(selectedAddress.country !== 'ID');
+          } else {
+            setError(response.error || 'Failed to fetch shipping rates');
+            setShippingMethods([]);
+          }
         }
+      } catch (err: any) {
+        // Check if this is still the current request
+        if (currentFetchKey === lastFetchKey || !lastFetchKey) {
+          setError(err.message || 'Failed to fetch shipping rates');
+          setShippingMethods([]);
+        }
+      } finally {
+        setLoading(false);
       }
-    } catch (err: any) {
-      // Check if this is still the current request
-      if (debouncedFetchKey === lastFetchKey || !lastFetchKey) {
-        setError(err.message || 'Failed to fetch shipping rates');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    fetchShippingRates();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedAddress?.id, selectedAddress?.postal_code, activeOrigin?.postal_code, cartItems.length, totalWeight, shippingItems.length]);
 
   // Cleanup on unmount
   React.useEffect(() => {
@@ -340,7 +348,11 @@ export default function ShippingMethodSelector({
             {error}
             <Button 
               size="small" 
-              onClick={fetchShippingRates}
+              onClick={() => {
+                // Reset lastFetchKey to force re-fetch
+                setLastFetchKey(null);
+                setError(null);
+              }}
               sx={{ ml: 2 }}
             >
               Coba Lagi

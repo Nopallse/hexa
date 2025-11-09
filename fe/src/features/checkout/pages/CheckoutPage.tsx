@@ -234,12 +234,30 @@ export default function CheckoutPage() {
                   setSelectedAddress(addressId);
                   // Find address data from addresses list
                   const addressData = addresses.find(addr => addr.id === addressId);
-                  setSelectedAddressData(addressData);
+                  if (addressData) {
+                    setSelectedAddressData(addressData);
+                  }
                   // Reset shipping method when address changes
                   setSelectedShippingMethod(null);
                   setShippingCost(15000); // Reset to default
                 }}
-                onAddressesLoaded={setAddresses}
+                onAddressesLoaded={(loadedAddresses) => {
+                  setAddresses(loadedAddresses);
+                  // Set selectedAddressData if selectedAddress exists
+                  if (selectedAddress) {
+                    const addressData = loadedAddresses.find(addr => addr.id === selectedAddress);
+                    if (addressData) {
+                      setSelectedAddressData(addressData);
+                    }
+                  } else if (loadedAddresses.length > 0) {
+                    // Auto-select primary address if no address selected
+                    const primaryAddress = loadedAddresses.find(addr => addr.is_primary) || loadedAddresses[0];
+                    if (primaryAddress) {
+                      setSelectedAddress(primaryAddress.id);
+                      setSelectedAddressData(primaryAddress);
+                    }
+                  }
+                }}
               />
 
               {/* Shipping Method Selection */}
