@@ -7,21 +7,40 @@ class MidtransService {
     this.serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-UtRW_uI4F5Wz6Pv8Tq8TQ';
     this.clientKey = process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-UtRW_uI4F5Wz6Pv8Tq8TQ';
     
-    // Check if explicitly set to use sandbox (override NODE_ENV)
-    const forceSandbox = process.env.MIDTRANS_USE_SANDBOX === 'true' || process.env.MIDTRANS_USE_SANDBOX === '1';
-    this.isProduction = !forceSandbox && process.env.NODE_ENV === 'production';
-    
     // Validate key format
     const isSandboxKey = this.serverKey.startsWith('SB-Mid-');
     const isProductionKey = this.serverKey.startsWith('Mid-server-') && !this.serverKey.startsWith('SB-Mid-');
     
+    // Check if explicitly set to use sandbox (override NODE_ENV)
+    const forceSandbox = process.env.MIDTRANS_USE_SANDBOX === 'true' || process.env.MIDTRANS_USE_SANDBOX === '1';
+    
+    // Auto-detect sandbox if using sandbox key format
+    // If using sandbox key, always use sandbox environment regardless of NODE_ENV
+    if (isSandboxKey || forceSandbox) {
+      this.isProduction = false;
+      console.log('🔵 Using SANDBOX environment (detected from key format or MIDTRANS_USE_SANDBOX)');
+    } else if (isProductionKey) {
+      // Only use production if explicitly using production key
+      this.isProduction = process.env.NODE_ENV === 'production';
+      if (this.isProduction) {
+        console.log('🟢 Using PRODUCTION environment');
+      } else {
+        console.log('🔵 Using SANDBOX environment (NODE_ENV is not production)');
+      }
+    } else {
+      // Default to sandbox if key format is unknown
+      this.isProduction = false;
+      console.warn('⚠️  WARNING: Unknown key format, defaulting to SANDBOX');
+    }
+    
     // Warn if key format doesn't match environment
     if (this.isProduction && isSandboxKey) {
       console.warn('⚠️  WARNING: Production environment but using sandbox key format (SB-Mid-*)');
-      console.warn('⚠️  Consider using production key or set MIDTRANS_USE_SANDBOX=true');
-    } else if (!this.isProduction && isProductionKey) {
+      console.warn('⚠️  Auto-switching to SANDBOX environment');
+      this.isProduction = false;
+    } else if (!this.isProduction && isProductionKey && process.env.NODE_ENV === 'production') {
       console.warn('⚠️  WARNING: Sandbox environment but using production key format (Mid-server-*)');
-      console.warn('⚠️  Consider using sandbox key (SB-Mid-*)');
+      console.warn('⚠️  If you want to use production, ensure NODE_ENV=production and use production key');
     }
     
     // Initialize Midtrans Snap client
