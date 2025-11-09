@@ -18,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCartStore } from '@/features/cart/store/cartStore';
+import { useCartStore } from '@/store/cartStore';
 import { useOrderStore } from '@/features/orders/store/orderStore';
 import { orderApi } from '@/features/orders/services/orderApi';
 import { CartItem } from '@/features/cart/types';
@@ -46,7 +46,7 @@ export default function CheckoutPage() {
   const [selectedShippingMethod, setSelectedShippingMethod] = useState<ShippingMethod | null>(null);
   const [shippingCost, setShippingCost] = useState(15000); // Default shipping cost
 
-  const { items: cartItems, clearCart } = useCartStore();
+  const { items: cartItems, clearCart, syncWithServer } = useCartStore();
   const { addOrder, setPaymentMethods, paymentMethods } = useOrderStore();
 
   // Filter available cart items with memoization
@@ -120,8 +120,21 @@ export default function CheckoutPage() {
   };
 
   useEffect(() => {
+    const initializeCheckout = async () => {
+      try {
+        // Sync cart with server first
+        await syncWithServer();
+      } catch (error) {
+        console.error('Error syncing cart:', error);
+      }
+    };
+
+    initializeCheckout();
+  }, [syncWithServer]);
+
+  useEffect(() => {
     // Only redirect to cart if we're not in the middle of creating an order and order hasn't been created
-    if (cartItems.length === 0 && !creatingOrder && !orderCreated) {
+    if (cartItems.length === 0 && !creatingOrder && !orderCreated && !loading) {
       navigate('/cart');
       return;
     }
@@ -131,8 +144,10 @@ export default function CheckoutPage() {
       fetchPaymentMethods();
     }
     
-    setLoading(false);
-  }, [cartItems.length, navigate, creatingOrder, orderCreated, fetchPaymentMethods, paymentMethods.length]);
+    if (loading) {
+      setLoading(false);
+    }
+  }, [cartItems.length, navigate, creatingOrder, orderCreated, fetchPaymentMethods, paymentMethods.length, loading]);
 
   if (loading) {
     return (

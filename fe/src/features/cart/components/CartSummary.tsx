@@ -16,8 +16,7 @@ import {
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CartItem } from '../types';
-import { cartApi } from '../services/cartApi';
-import { useCartStore } from '../store/cartStore';
+import { useCartStore } from '@/store/cartStore';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 interface CartSummaryProps {
@@ -31,7 +30,7 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
   const [clearing, setClearing] = useState(false);
   const { formatPrice } = useCurrencyConversion();
   
-  const { clearCart, getTotalItems, getTotalPrice } = useCartStore();
+  const { clearCart } = useCartStore();
 
   const formatCartPrice = (price: number | string): string => {
     const numPrice = typeof price === 'string' ? parseFloat(price) : price;
@@ -45,12 +44,8 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
 
     try {
       setClearing(true);
-      const response = await cartApi.clearCart();
-
-      if (response.success) {
-        clearCart();
-        onCartCleared();
-      }
+      await clearCart();
+      onCartCleared();
     } catch (err: any) {
       console.error('Error clearing cart:', err);
       alert(err.response?.data?.error || 'Gagal mengosongkan keranjang');
@@ -60,7 +55,16 @@ export default function CartSummary({ items, onCartCleared }: CartSummaryProps) 
   };
 
   const handleCheckout = () => {
-    navigate('/checkout');
+    try {
+      // Ensure we have available items before navigating
+      if (totalItems === 0) {
+        console.warn('Cannot checkout: No available items in cart');
+        return;
+      }
+      navigate('/checkout');
+    } catch (error) {
+      console.error('Error navigating to checkout:', error);
+    }
   };
 
   // Filter available items (not deleted)
