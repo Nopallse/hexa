@@ -6,7 +6,23 @@ class MidtransService {
     // Use fallback values for testing if environment variables are not set
     this.serverKey = process.env.MIDTRANS_SERVER_KEY || 'SB-Mid-server-UtRW_uI4F5Wz6Pv8Tq8TQ';
     this.clientKey = process.env.MIDTRANS_CLIENT_KEY || 'SB-Mid-client-UtRW_uI4F5Wz6Pv8Tq8TQ';
-    this.isProduction = process.env.NODE_ENV === 'production';
+    
+    // Check if explicitly set to use sandbox (override NODE_ENV)
+    const forceSandbox = process.env.MIDTRANS_USE_SANDBOX === 'true' || process.env.MIDTRANS_USE_SANDBOX === '1';
+    this.isProduction = !forceSandbox && process.env.NODE_ENV === 'production';
+    
+    // Validate key format
+    const isSandboxKey = this.serverKey.startsWith('SB-Mid-');
+    const isProductionKey = this.serverKey.startsWith('Mid-server-') && !this.serverKey.startsWith('SB-Mid-');
+    
+    // Warn if key format doesn't match environment
+    if (this.isProduction && isSandboxKey) {
+      console.warn('⚠️  WARNING: Production environment but using sandbox key format (SB-Mid-*)');
+      console.warn('⚠️  Consider using production key or set MIDTRANS_USE_SANDBOX=true');
+    } else if (!this.isProduction && isProductionKey) {
+      console.warn('⚠️  WARNING: Sandbox environment but using production key format (Mid-server-*)');
+      console.warn('⚠️  Consider using sandbox key (SB-Mid-*)');
+    }
     
     // Initialize Midtrans Snap client
     this.snap = new midtransClient.Snap({
@@ -17,9 +33,16 @@ class MidtransService {
     
     // Debug logging
     console.log('MidtransService initialized:');
-    console.log('- Server Key:', this.serverKey ? 'SET' : 'NOT SET');
-    console.log('- Client Key:', this.clientKey ? 'SET' : 'NOT SET');
+    console.log('- Server Key:', this.serverKey ? `${this.serverKey.substring(0, 25)}...` : 'NOT SET');
+    console.log('- Client Key:', this.clientKey ? `${this.clientKey.substring(0, 25)}...` : 'NOT SET');
     console.log('- Environment:', this.isProduction ? 'PRODUCTION' : 'SANDBOX');
+    console.log('- NODE_ENV:', process.env.NODE_ENV || 'not set');
+    console.log('- MIDTRANS_USE_SANDBOX:', process.env.MIDTRANS_USE_SANDBOX || 'not set');
+    console.log('- Key Type:', isSandboxKey ? 'SANDBOX KEY' : isProductionKey ? 'PRODUCTION KEY' : 'UNKNOWN FORMAT');
+    
+    if (!this.serverKey || !this.clientKey) {
+      console.error('❌ ERROR: Midtrans keys are not properly configured!');
+    }
   }
 
   // Generate signature for Midtrans
