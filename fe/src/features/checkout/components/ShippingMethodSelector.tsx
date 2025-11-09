@@ -211,7 +211,7 @@ export default function ShippingMethodSelector({
 
     fetchShippingRates();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedAddress?.id, selectedAddress?.postal_code, activeOrigin?.postal_code, cartItems.length, totalWeight, shippingItems.length]);
+  }, [selectedAddress, activeOrigin, cartItems.length, totalWeight, shippingItems.length]);
 
   // Cleanup on unmount
   React.useEffect(() => {

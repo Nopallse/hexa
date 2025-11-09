@@ -149,6 +149,23 @@ export default function CheckoutPage() {
     }
   }, [cartItems.length, navigate, creatingOrder, orderCreated, fetchPaymentMethods, paymentMethods.length, loading]);
 
+  // Sync selectedAddressData when addresses or selectedAddress changes
+  useEffect(() => {
+    if (selectedAddress && addresses.length > 0) {
+      const addressData = addresses.find(addr => addr.id === selectedAddress);
+      if (addressData && (!selectedAddressData || selectedAddressData.id !== addressData.id)) {
+        setSelectedAddressData(addressData);
+      }
+    } else if (!selectedAddress && addresses.length > 0 && !selectedAddressData) {
+      // Auto-select primary address if no address selected
+      const primaryAddress = addresses.find(addr => addr.is_primary) || addresses[0];
+      if (primaryAddress) {
+        setSelectedAddress(primaryAddress.id);
+        setSelectedAddressData(primaryAddress);
+      }
+    }
+  }, [selectedAddress, addresses, selectedAddressData]);
+
   if (loading) {
     return (
       <Box sx={{ minHeight: '100vh', py: 4 }}>
@@ -243,20 +260,7 @@ export default function CheckoutPage() {
                 }}
                 onAddressesLoaded={(loadedAddresses) => {
                   setAddresses(loadedAddresses);
-                  // Set selectedAddressData if selectedAddress exists
-                  if (selectedAddress) {
-                    const addressData = loadedAddresses.find(addr => addr.id === selectedAddress);
-                    if (addressData) {
-                      setSelectedAddressData(addressData);
-                    }
-                  } else if (loadedAddresses.length > 0) {
-                    // Auto-select primary address if no address selected
-                    const primaryAddress = loadedAddresses.find(addr => addr.is_primary) || loadedAddresses[0];
-                    if (primaryAddress) {
-                      setSelectedAddress(primaryAddress.id);
-                      setSelectedAddressData(primaryAddress);
-                    }
-                  }
+                  // The useEffect above will handle setting selectedAddressData
                 }}
               />
 
