@@ -1,6 +1,9 @@
 const nodemailer = require('nodemailer');
 const logger = require('../utils/logger');
 
+// Email service disabled flag
+const EMAIL_SERVICE_DISABLED = true;
+
 // Create reusable transporter
 let transporter = null;
 
@@ -13,56 +16,31 @@ const initTransporter = () => {
   // Check if email is configured
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     logger.warn('Email configuration not found. Email service will not work.');
-    logger.warn('Required environment variables: SMTP_HOST, SMTP_USER, SMTP_PASS');
     return null;
   }
+  console.log(process.env.SMTP_HOST, process.env.SMTP_USER, process.env.SMTP_PASS);
 
-  const port = parseInt(process.env.SMTP_PORT || '587');
-  const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
-  const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
-  
-  logger.info(`Initializing email transporter: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure}, skipVerification: ${skipVerification})`);
+  transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587'),
+    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
 
-  try {
-    transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: port,
-      secure: isSecure, // true for 465, false for other ports
-      requireTLS: !isSecure && port === 587, // Require TLS for port 587
-      auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
-      },
-      tls: {
-        // Do not fail on invalid certificates (useful for self-signed certs)
-        rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
-        // Use default ciphers (removed SSLv3 as it's deprecated and insecure)
-      },
-      // Increased timeouts for production environments with network latency
-      connectionTimeout: parseInt(process.env.SMTP_CONNECTION_TIMEOUT || '30000'), // 30 seconds default
-      greetingTimeout: parseInt(process.env.SMTP_GREETING_TIMEOUT || '30000'), // 30 seconds default
-      socketTimeout: parseInt(process.env.SMTP_SOCKET_TIMEOUT || '30000'), // 30 seconds default
-      // DNS options for better connection
-      dnsTimeout: parseInt(process.env.SMTP_DNS_TIMEOUT || '10000'), // 10 seconds
-      // Pool connections
-      pool: true,
-      maxConnections: 1,
-      maxMessages: 3,
-      // Disable verification if needed (for production with network restrictions)
-      disableFileAccess: true,
-      disableUrlAccess: true,
-    });
-
-    logger.info('Email transporter initialized successfully');
-    return transporter;
-  } catch (error) {
-    logger.error('Failed to initialize email transporter:', error);
-    return null;
-  }
+  return transporter;
 };
 
 // Send verification email
 const sendVerificationEmail = async (email, fullName, verificationToken) => {
+  // Email service disabled
+  if (EMAIL_SERVICE_DISABLED) {
+    logger.info(`Email service disabled. Verification email would be sent to ${email} (skipped)`);
+    return { messageId: 'disabled', accepted: [email] };
+  }
+
   const emailTransporter = initTransporter();
   
   if (!emailTransporter) {
@@ -72,22 +50,6 @@ const sendVerificationEmail = async (email, fullName, verificationToken) => {
   }
 
   try {
-    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
-    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
-    if (!skipVerification) {
-      try {
-        await emailTransporter.verify();
-        logger.info('Email transporter connection verified');
-      } catch (verifyError) {
-        logger.error('Email transporter verification failed:', verifyError);
-        // If verification fails, log warning but continue (some servers block verify but allow send)
-        logger.warn('Continuing without verification - email may still send successfully');
-        // Uncomment below to throw error instead of continuing
-        // throw new Error(`Email service connection failed: ${verifyError.message}`);
-      }
-    } else {
-      logger.warn('Skipping email transporter verification (SMTP_SKIP_VERIFICATION=true)');
-    }
 
     // Create verification URL
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -161,14 +123,7 @@ const sendVerificationEmail = async (email, fullName, verificationToken) => {
     
     return info;
   } catch (error) {
-    logger.error('Error sending verification email:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      stack: error.stack
-    });
+    logger.error('Error sending verification email:', error);
     throw error;
   }
 };
@@ -191,6 +146,12 @@ const formatCurrency = (amount, currencyCode = 'IDR') => {
 
 // Send order confirmation email
 const sendOrderConfirmationEmail = async (orderData, userEmail, userName) => {
+  // Email service disabled
+  if (EMAIL_SERVICE_DISABLED) {
+    logger.info(`Email service disabled. Order confirmation email would be sent to ${userEmail} (skipped)`);
+    return { messageId: 'disabled', accepted: [userEmail] };
+  }
+
   const emailTransporter = initTransporter();
   
   if (!emailTransporter) {
@@ -199,17 +160,6 @@ const sendOrderConfirmationEmail = async (orderData, userEmail, userName) => {
   }
 
   try {
-    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
-    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
-    if (!skipVerification) {
-      try {
-        await emailTransporter.verify();
-      } catch (verifyError) {
-        logger.error('Email transporter verification failed:', verifyError);
-        logger.warn('Continuing without verification - email may still send successfully');
-      }
-    }
-
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
     const totalAmount = parseFloat(orderData.total_amount) + parseFloat(orderData.shipping_cost);
@@ -351,20 +301,19 @@ const sendOrderConfirmationEmail = async (orderData, userEmail, userName) => {
     
     return info;
   } catch (error) {
-    logger.error('Error sending order confirmation email:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      stack: error.stack
-    });
+    logger.error('Error sending order confirmation email:', error);
     throw error;
   }
 };
 
 // Send payment invoice email
 const sendPaymentInvoiceEmail = async (orderData, paymentData, userEmail, userName) => {
+  // Email service disabled
+  if (EMAIL_SERVICE_DISABLED) {
+    logger.info(`Email service disabled. Payment invoice email would be sent to ${userEmail} (skipped)`);
+    return { messageId: 'disabled', accepted: [userEmail] };
+  }
+
   const emailTransporter = initTransporter();
   
   if (!emailTransporter) {
@@ -373,17 +322,6 @@ const sendPaymentInvoiceEmail = async (orderData, paymentData, userEmail, userNa
   }
 
   try {
-    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
-    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
-    if (!skipVerification) {
-      try {
-        await emailTransporter.verify();
-      } catch (verifyError) {
-        logger.error('Email transporter verification failed:', verifyError);
-        logger.warn('Continuing without verification - email may still send successfully');
-      }
-    }
-
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
     const totalAmount = parseFloat(paymentData.amount);
@@ -526,20 +464,19 @@ const sendPaymentInvoiceEmail = async (orderData, paymentData, userEmail, userNa
     
     return info;
   } catch (error) {
-    logger.error('Error sending payment invoice email:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      stack: error.stack
-    });
+    logger.error('Error sending payment invoice email:', error);
     throw error;
   }
 };
 
 // Send order status update email
 const sendOrderStatusUpdateEmail = async (orderData, oldStatus, newStatus, userEmail, userName) => {
+  // Email service disabled
+  if (EMAIL_SERVICE_DISABLED) {
+    logger.info(`Email service disabled. Order status update email would be sent to ${userEmail} (skipped)`);
+    return { messageId: 'disabled', accepted: [userEmail] };
+  }
+
   const emailTransporter = initTransporter();
   
   if (!emailTransporter) {
@@ -548,17 +485,6 @@ const sendOrderStatusUpdateEmail = async (orderData, oldStatus, newStatus, userE
   }
 
   try {
-    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
-    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
-    if (!skipVerification) {
-      try {
-        await emailTransporter.verify();
-      } catch (verifyError) {
-        logger.error('Email transporter verification failed:', verifyError);
-        logger.warn('Continuing without verification - email may still send successfully');
-      }
-    }
-
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
 
@@ -673,20 +599,19 @@ const sendOrderStatusUpdateEmail = async (orderData, oldStatus, newStatus, userE
     
     return info;
   } catch (error) {
-    logger.error('Error sending order status update email:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      stack: error.stack
-    });
+    logger.error('Error sending order status update email:', error);
     throw error;
   }
 };
 
 // Send shipping update email
 const sendShippingUpdateEmail = async (orderData, shippingData, userEmail, userName) => {
+  // Email service disabled
+  if (EMAIL_SERVICE_DISABLED) {
+    logger.info(`Email service disabled. Shipping update email would be sent to ${userEmail} (skipped)`);
+    return { messageId: 'disabled', accepted: [userEmail] };
+  }
+
   const emailTransporter = initTransporter();
   
   if (!emailTransporter) {
@@ -695,17 +620,6 @@ const sendShippingUpdateEmail = async (orderData, shippingData, userEmail, userN
   }
 
   try {
-    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
-    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
-    if (!skipVerification) {
-      try {
-        await emailTransporter.verify();
-      } catch (verifyError) {
-        logger.error('Email transporter verification failed:', verifyError);
-        logger.warn('Continuing without verification - email may still send successfully');
-      }
-    }
-
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
     const trackingUrl = `${baseUrl}/shipping/track/${shippingData.tracking_number || orderData.id}`;
@@ -799,14 +713,7 @@ const sendShippingUpdateEmail = async (orderData, shippingData, userEmail, userN
     
     return info;
   } catch (error) {
-    logger.error('Error sending shipping update email:', {
-      message: error.message,
-      code: error.code,
-      command: error.command,
-      response: error.response,
-      responseCode: error.responseCode,
-      stack: error.stack
-    });
+    logger.error('Error sending shipping update email:', error);
     throw error;
   }
 };
