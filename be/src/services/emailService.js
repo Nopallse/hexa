@@ -13,21 +13,45 @@ const initTransporter = () => {
   // Check if email is configured
   if (!process.env.SMTP_HOST || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
     logger.warn('Email configuration not found. Email service will not work.');
+    logger.warn('Required environment variables: SMTP_HOST, SMTP_USER, SMTP_PASS');
     return null;
   }
-  console.log(process.env.SMTP_HOST, process.env.SMTP_USER, process.env.SMTP_PASS);
 
-  transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT || '587'),
-    secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  const port = parseInt(process.env.SMTP_PORT || '587');
+  const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
+  
+  logger.info(`Initializing email transporter: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`);
 
-  return transporter;
+  try {
+    transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: port,
+      secure: isSecure, // true for 465, false for other ports
+      requireTLS: !isSecure && port === 587, // Require TLS for port 587
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: {
+        // Do not fail on invalid certificates (useful for self-signed certs)
+        rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
+        // Use default ciphers (removed SSLv3 as it's deprecated and insecure)
+      },
+      connectionTimeout: 10000, // 10 seconds
+      greetingTimeout: 10000, // 10 seconds
+      socketTimeout: 10000, // 10 seconds
+      // Pool connections
+      pool: true,
+      maxConnections: 1,
+      maxMessages: 3,
+    });
+
+    logger.info('Email transporter initialized successfully');
+    return transporter;
+  } catch (error) {
+    logger.error('Failed to initialize email transporter:', error);
+    return null;
+  }
 };
 
 // Send verification email
@@ -41,6 +65,14 @@ const sendVerificationEmail = async (email, fullName, verificationToken) => {
   }
 
   try {
+    // Verify connection before sending
+    try {
+      await emailTransporter.verify();
+      logger.info('Email transporter connection verified');
+    } catch (verifyError) {
+      logger.error('Email transporter verification failed:', verifyError);
+      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    }
 
     // Create verification URL
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -114,7 +146,14 @@ const sendVerificationEmail = async (email, fullName, verificationToken) => {
     
     return info;
   } catch (error) {
-    logger.error('Error sending verification email:', error);
+    logger.error('Error sending verification email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -145,6 +184,14 @@ const sendOrderConfirmationEmail = async (orderData, userEmail, userName) => {
   }
 
   try {
+    // Verify connection before sending
+    try {
+      await emailTransporter.verify();
+    } catch (verifyError) {
+      logger.error('Email transporter verification failed:', verifyError);
+      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    }
+
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
     const totalAmount = parseFloat(orderData.total_amount) + parseFloat(orderData.shipping_cost);
@@ -286,7 +333,14 @@ const sendOrderConfirmationEmail = async (orderData, userEmail, userName) => {
     
     return info;
   } catch (error) {
-    logger.error('Error sending order confirmation email:', error);
+    logger.error('Error sending order confirmation email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -301,6 +355,14 @@ const sendPaymentInvoiceEmail = async (orderData, paymentData, userEmail, userNa
   }
 
   try {
+    // Verify connection before sending
+    try {
+      await emailTransporter.verify();
+    } catch (verifyError) {
+      logger.error('Email transporter verification failed:', verifyError);
+      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    }
+
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
     const totalAmount = parseFloat(paymentData.amount);
@@ -443,7 +505,14 @@ const sendPaymentInvoiceEmail = async (orderData, paymentData, userEmail, userNa
     
     return info;
   } catch (error) {
-    logger.error('Error sending payment invoice email:', error);
+    logger.error('Error sending payment invoice email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -458,6 +527,14 @@ const sendOrderStatusUpdateEmail = async (orderData, oldStatus, newStatus, userE
   }
 
   try {
+    // Verify connection before sending
+    try {
+      await emailTransporter.verify();
+    } catch (verifyError) {
+      logger.error('Email transporter verification failed:', verifyError);
+      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    }
+
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
 
@@ -572,7 +649,14 @@ const sendOrderStatusUpdateEmail = async (orderData, oldStatus, newStatus, userE
     
     return info;
   } catch (error) {
-    logger.error('Error sending order status update email:', error);
+    logger.error('Error sending order status update email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: error.stack
+    });
     throw error;
   }
 };
@@ -587,6 +671,14 @@ const sendShippingUpdateEmail = async (orderData, shippingData, userEmail, userN
   }
 
   try {
+    // Verify connection before sending
+    try {
+      await emailTransporter.verify();
+    } catch (verifyError) {
+      logger.error('Email transporter verification failed:', verifyError);
+      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    }
+
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
     const orderUrl = `${baseUrl}/orders/${orderData.id}`;
     const trackingUrl = `${baseUrl}/shipping/track/${shippingData.tracking_number || orderData.id}`;
@@ -680,7 +772,14 @@ const sendShippingUpdateEmail = async (orderData, shippingData, userEmail, userN
     
     return info;
   } catch (error) {
-    logger.error('Error sending shipping update email:', error);
+    logger.error('Error sending shipping update email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      response: error.response,
+      responseCode: error.responseCode,
+      stack: error.stack
+    });
     throw error;
   }
 };
