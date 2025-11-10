@@ -19,8 +19,9 @@ const initTransporter = () => {
 
   const port = parseInt(process.env.SMTP_PORT || '587');
   const isSecure = process.env.SMTP_SECURE === 'true' || port === 465;
+  const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
   
-  logger.info(`Initializing email transporter: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure})`);
+  logger.info(`Initializing email transporter: ${process.env.SMTP_HOST}:${port} (secure: ${isSecure}, skipVerification: ${skipVerification})`);
 
   try {
     transporter = nodemailer.createTransport({
@@ -37,13 +38,19 @@ const initTransporter = () => {
         rejectUnauthorized: process.env.SMTP_TLS_REJECT_UNAUTHORIZED !== 'false',
         // Use default ciphers (removed SSLv3 as it's deprecated and insecure)
       },
-      connectionTimeout: 10000, // 10 seconds
-      greetingTimeout: 10000, // 10 seconds
-      socketTimeout: 10000, // 10 seconds
+      // Increased timeouts for production environments with network latency
+      connectionTimeout: parseInt(process.env.SMTP_CONNECTION_TIMEOUT || '30000'), // 30 seconds default
+      greetingTimeout: parseInt(process.env.SMTP_GREETING_TIMEOUT || '30000'), // 30 seconds default
+      socketTimeout: parseInt(process.env.SMTP_SOCKET_TIMEOUT || '30000'), // 30 seconds default
+      // DNS options for better connection
+      dnsTimeout: parseInt(process.env.SMTP_DNS_TIMEOUT || '10000'), // 10 seconds
       // Pool connections
       pool: true,
       maxConnections: 1,
       maxMessages: 3,
+      // Disable verification if needed (for production with network restrictions)
+      disableFileAccess: true,
+      disableUrlAccess: true,
     });
 
     logger.info('Email transporter initialized successfully');
@@ -65,13 +72,21 @@ const sendVerificationEmail = async (email, fullName, verificationToken) => {
   }
 
   try {
-    // Verify connection before sending
-    try {
-      await emailTransporter.verify();
-      logger.info('Email transporter connection verified');
-    } catch (verifyError) {
-      logger.error('Email transporter verification failed:', verifyError);
-      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
+    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
+    if (!skipVerification) {
+      try {
+        await emailTransporter.verify();
+        logger.info('Email transporter connection verified');
+      } catch (verifyError) {
+        logger.error('Email transporter verification failed:', verifyError);
+        // If verification fails, log warning but continue (some servers block verify but allow send)
+        logger.warn('Continuing without verification - email may still send successfully');
+        // Uncomment below to throw error instead of continuing
+        // throw new Error(`Email service connection failed: ${verifyError.message}`);
+      }
+    } else {
+      logger.warn('Skipping email transporter verification (SMTP_SKIP_VERIFICATION=true)');
     }
 
     // Create verification URL
@@ -184,12 +199,15 @@ const sendOrderConfirmationEmail = async (orderData, userEmail, userName) => {
   }
 
   try {
-    // Verify connection before sending
-    try {
-      await emailTransporter.verify();
-    } catch (verifyError) {
-      logger.error('Email transporter verification failed:', verifyError);
-      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
+    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
+    if (!skipVerification) {
+      try {
+        await emailTransporter.verify();
+      } catch (verifyError) {
+        logger.error('Email transporter verification failed:', verifyError);
+        logger.warn('Continuing without verification - email may still send successfully');
+      }
     }
 
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -355,12 +373,15 @@ const sendPaymentInvoiceEmail = async (orderData, paymentData, userEmail, userNa
   }
 
   try {
-    // Verify connection before sending
-    try {
-      await emailTransporter.verify();
-    } catch (verifyError) {
-      logger.error('Email transporter verification failed:', verifyError);
-      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
+    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
+    if (!skipVerification) {
+      try {
+        await emailTransporter.verify();
+      } catch (verifyError) {
+        logger.error('Email transporter verification failed:', verifyError);
+        logger.warn('Continuing without verification - email may still send successfully');
+      }
     }
 
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -527,12 +548,15 @@ const sendOrderStatusUpdateEmail = async (orderData, oldStatus, newStatus, userE
   }
 
   try {
-    // Verify connection before sending
-    try {
-      await emailTransporter.verify();
-    } catch (verifyError) {
-      logger.error('Email transporter verification failed:', verifyError);
-      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
+    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
+    if (!skipVerification) {
+      try {
+        await emailTransporter.verify();
+      } catch (verifyError) {
+        logger.error('Email transporter verification failed:', verifyError);
+        logger.warn('Continuing without verification - email may still send successfully');
+      }
     }
 
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
@@ -671,12 +695,15 @@ const sendShippingUpdateEmail = async (orderData, shippingData, userEmail, userN
   }
 
   try {
-    // Verify connection before sending
-    try {
-      await emailTransporter.verify();
-    } catch (verifyError) {
-      logger.error('Email transporter verification failed:', verifyError);
-      throw new Error(`Email service connection failed: ${verifyError.message}`);
+    // Verify connection before sending (skip if SMTP_SKIP_VERIFICATION is true)
+    const skipVerification = process.env.SMTP_SKIP_VERIFICATION === 'true';
+    if (!skipVerification) {
+      try {
+        await emailTransporter.verify();
+      } catch (verifyError) {
+        logger.error('Email transporter verification failed:', verifyError);
+        logger.warn('Continuing without verification - email may still send successfully');
+      }
     }
 
     const baseUrl = process.env.FRONTEND_URL || process.env.CORS_ORIGIN || 'http://localhost:5173';
