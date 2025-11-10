@@ -79,7 +79,7 @@ const theme = createTheme({
       contrastText: '#FFFFFF',
     },
     secondary: {
-      main: '#  ',      // Purple-pink pastel
+      main: '#A682DB',      // Purple-pink pastel
       light: '#C2A6E8',     // Versi lebih cerah
       dark: '#7458A3',      // Versi lebih pekat
       contrastText: '#FFFFFF',

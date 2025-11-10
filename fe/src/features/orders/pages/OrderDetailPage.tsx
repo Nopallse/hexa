@@ -30,6 +30,7 @@ import {
   Refresh as RefreshIcon,
   LocalShipping as ShippingIcon,
   OpenInNew as OpenInNewIcon,
+  ShoppingCart as ShoppingCartIcon,
 } from '@mui/icons-material';
 import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
@@ -38,9 +39,12 @@ import { orderApi } from '../services/orderApi';
 import { useOrderStore } from '../store/orderStore';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import MidtransPaymentButton from '@/features/payments/components/MidtransPaymentButton';
+import { getProductImageUrl } from '@/utils/image';
+import { useMediaQuery } from '@mui/material';
 
 export default function OrderDetailPage() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const location = useLocation();
@@ -365,48 +369,24 @@ export default function OrderDetailPage() {
         {/* Order Header */}
         <Card sx={{ mb: 4, borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
           <CardContent sx={{ p: 3 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems="flex-start" spacing={2}>
-              <Box>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'flex-start' }} spacing={2}>
+              <Box sx={{ flex: 1 }}>
                 <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
                   Order #{order.id.slice(-8).toUpperCase()}
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 2 }}>
+                <Typography variant="body1" color="text.secondary">
                   Dibuat pada {formatDate(order.created_at)}
                 </Typography>
-                <Stack direction="row" spacing={1}>
-                  <Chip
-                    label={getStatusLabel(order.status)}
-                    color={getStatusColor(order.status) as any}
-                    variant="outlined"
-                    sx={{ borderRadius: 2 }}
-                  />
-                  <Chip
-                    label={getPaymentStatusLabel(order.payment_status)}
-                    color={getPaymentStatusColor(order.payment_status) as any}
-                    variant="outlined"
-                    sx={{ borderRadius: 2 }}
-                  />
-                </Stack>
               </Box>
 
-              {canCancel && (
-                <Button
+              <Box sx={{ display: 'flex', alignItems: 'flex-start' }}>
+                <Chip
+                  label={getStatusLabel(order.status)}
+                  color={getStatusColor(order.status) as any}
                   variant="outlined"
-                  startIcon={<CancelIcon />}
-                  onClick={handleCancelOrder}
-                  disabled={cancelling}
-                  color="error"
-                  sx={{ 
-                    borderRadius: 2,
-                    fontWeight: 500,
-                    '&:hover': {
-                      backgroundColor: 'error.light',
-                    },
-                  }}
-                >
-                  {cancelling ? 'Membatalkan...' : 'Batalkan Pesanan'}
-                </Button>
-              )}
+                  sx={{ borderRadius: 2 }}
+                />
+              </Box>
             </Stack>
           </CardContent>
         </Card>
@@ -422,15 +402,17 @@ export default function OrderDetailPage() {
                 <Stack spacing={2}>
                   {order.order_items.map((item) => {
                     const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
+                    const displayImage = primaryImage || null;
                     
                     return (
                       <Box
                         key={item.id}
                         sx={{
                           display: 'flex',
-                          alignItems: 'center',
-                          gap: 3,
-                          p: 3,
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          alignItems: { xs: 'flex-start', sm: 'center' },
+                          gap: { xs: 1, sm: 3 },
+                          p: { xs: 1, sm: 3 },
                           borderRadius: 2,
                           backgroundColor: 'grey.50',
                           border: 'none',
@@ -440,79 +422,133 @@ export default function OrderDetailPage() {
                           },
                         }}
                       >
-                        {/* Product Image */}
-                        <Box sx={{ flexShrink: 0 }}>
-                          <Avatar
-                            src={primaryImage ? `/uploads/${primaryImage}` : `https://placehold.co/80x80/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
-                            alt={item.product_variant.product.name}
-                            sx={{
-                              width: 80,
-                              height: 80,
-                              borderRadius: 2,
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                            }}
-                            variant="rounded"
-                          />
-                        </Box>
+                        {/* Product Image & Info Container */}
+                        <Box sx={{ 
+                          display: 'flex', 
+                          alignItems: 'center',
+                          gap: { xs: 1, sm: 3 },
+                          flex: 1,
+                          minWidth: 0,
+                          width: { xs: '100%', sm: 'auto' }
+                        }}>
+                          {/* Product Image */}
+                          <Box sx={{ 
+                            display: 'flex', 
+                            flexDirection: 'column',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            gap: 1,
+                            flexShrink: 0
+                          }}>
+                            <Avatar
+                              src={displayImage ? getProductImageUrl(displayImage) : undefined}
+                              alt={item.product_variant.product.name}
+                              sx={{
+                                width: { xs: 70, sm: 80 },
+                                height: { xs: 70, sm: 80 },
+                                borderRadius: 2,
+                                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                              }}
+                              variant="rounded"
+                            >
+                              <ShoppingCartIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+                            </Avatar>
+                          </Box>
 
-                        {/* Product Info */}
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Typography 
-                            variant="h6" 
-                            fontWeight={600} 
-                            sx={{ 
-                              mb: 1, 
-                              color: 'text.primary',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              display: '-webkit-box',
-                              WebkitLineClamp: 2,
-                              WebkitBoxOrient: 'vertical',
-                              lineHeight: 1.3,
-                              fontSize: '1rem',
-                            }}
-                            title={item.product_variant.product.name}
-                          >
-                            {item.product_variant.product.name}
-                          </Typography>
-                          
-                          {/* Variant Options */}
-                          {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
-                            <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
-                              {item.product_variant.variant_options.map((option, index) => (
-                                <Chip
-                                  key={index}
-                                  label={`${option.option_value}`}
-                                  size="small"
-                                  variant="outlined"
+                          {/* Product Info */}
+                          <Box sx={{ flex: 1, minWidth: 0 }}>
+                            <Typography 
+                              variant="h6" 
+                              fontWeight={600} 
+                              sx={{ 
+                                mb: 1, 
+                                color: 'text.primary',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: { xs: '0.875rem', sm: '1rem' }
+                              }}
+                              title={item.product_variant.product.name}
+                            >
+                              {item.product_variant.product.name}
+                            </Typography>
+                            
+                            {/* Variant Options */}
+                            {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
+                              <Stack 
+                                direction="row" 
+                                spacing={0.5} 
+                                sx={{ 
+                                  mb: 1, 
+                                  flexWrap: 'wrap',
+                                  gap: { xs: 0.5, sm: 0.5 }
+                                }}
+                              >
+                                {item.product_variant.variant_options.map((option, index) => (
+                                  <Chip
+                                    key={index}
+                                    label={`${option.option_value}`}
+                                    size="small"
+                                    variant="outlined"
+                                    sx={{ 
+                                      fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                                      height: { xs: 18, sm: 20 },
+                                      borderColor: 'primary.main',
+                                      color: 'primary.main',
+                                      '& .MuiChip-label': {
+                                        px: { xs: 0.75, sm: 1 },
+                                      }
+                                    }}
+                                  />
+                                ))}
+                              </Stack>
+                            )}
+
+                            {/* Stock and Price - split left (stock text & price) and right (qty info) */}
+                            <Box
+                              sx={{
+                                display: 'flex',
+                                flexDirection: 'row',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                mt: { xs: 1, sm: 1 }
+                              }}
+                            >
+                              {/* Left: Stock info and Price stacked vertical */}
+                              <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary" 
                                   sx={{ 
-                                    fontSize: '0.7rem',
-                                    height: 20,
-                                    borderColor: 'primary.main',
-                                    color: 'primary.main',
-                                    '& .MuiChip-label': {
-                                      px: 1,
-                                    }
+                                    fontSize: { xs: '0.7rem', sm: '0.75rem' } 
                                   }}
-                                />
-                              ))}
-                            </Stack>
-                          )}
+                                >
+                                  Qty: {item.quantity}
+                                </Typography>
+                                <Typography 
+                                  variant="h6" 
+                                  color="primary.main" 
+                                  fontWeight={700} 
+                                  sx={{ 
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                    lineHeight: 1.2
+                                  }}
+                                >
+                                  {formatPrice(Number(item.price))}
+                                </Typography>
+                              </Box>
 
-                    
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                            Qty: {item.quantity} × {formatPrice(Number(item.price))}
-                          </Typography>
-                        </Box>
-
-                        {/* Price */}
-                        <Box sx={{ textAlign: 'right', minWidth: 100 }}>
-                          <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                            Total
-                          </Typography>
-                          <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: '1rem' }}>
-                            {formatPrice(Number(item.price) * Number(item.quantity))}
-                          </Typography>
+                              {/* Right: Total Price */}
+                              <Box sx={{ ml: { xs: 1, sm: 2 }, minWidth: 100, textAlign: 'right' }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' }, mb: 0.5 }}>
+                                  Total
+                                </Typography>
+                                <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}>
+                                  {formatPrice(Number(item.price) * Number(item.quantity))}
+                                </Typography>
+                              </Box>
+                            </Box>
+                          </Box>
                         </Box>
                       </Box>
                     );
@@ -945,17 +981,40 @@ export default function OrderDetailPage() {
                   </Typography>
                 </Box>
 
-                {(order.payment_status === 'unpaid' || order.payment_status === 'pending') && order.status !== 'dibatalkan' && (
+                {((order.payment_status === 'unpaid' || order.payment_status === 'pending') && order.status !== 'dibatalkan') || canCancel ? (
                   <>
                     <Divider sx={{ my: 3 }} />
-                    <MidtransPaymentButton
-                      order={order}
-                      onSuccess={handlePaymentSuccess}
-                      onError={handlePaymentError}
-                      paymentMethod="bank_transfer"
-                    />
+                    <Stack spacing={2}>
+                      {(order.payment_status === 'unpaid' || order.payment_status === 'pending') && order.status !== 'dibatalkan' && (
+                        <MidtransPaymentButton
+                          order={order}
+                          onSuccess={handlePaymentSuccess}
+                          onError={handlePaymentError}
+                          paymentMethod="bank_transfer"
+                        />
+                      )}
+                      {canCancel && (
+                        <Button
+                          variant="outlined"
+                          fullWidth
+                          startIcon={<CancelIcon />}
+                          onClick={handleCancelOrder}
+                          disabled={cancelling}
+                          color="error"
+                          sx={{ 
+                            borderRadius: 2,
+                            fontWeight: 500,
+                            '&:hover': {
+                              backgroundColor: 'error.light',
+                            },
+                          }}
+                        >
+                          {cancelling ? 'Membatalkan...' : 'Batalkan Pesanan'}
+                        </Button>
+                      )}
+                    </Stack>
                   </>
-                )}
+                ) : null}
               </CardContent>
             </Card>
           </Grid>

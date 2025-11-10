@@ -102,6 +102,7 @@ export default function ShippingMethodSelector({
   const [activeOrigin, setActiveOrigin] = useState<any>(null);
   const [provider, setProvider] = useState<string>('');
   const [isInternational, setIsInternational] = useState(false);
+  const [showAllMethods, setShowAllMethods] = useState(false);
 
   // Calculate items for shipping calculation
   const shippingItems = React.useMemo(() => 
@@ -190,9 +191,17 @@ export default function ShippingMethodSelector({
             const transformedMethods = rawPricing.map((method: any) => 
               transformBiteshipMethod(method)
             );
+            // Sort by price (cheapest first)
+            transformedMethods.sort((a, b) => a.price - b.price);
             setShippingMethods(transformedMethods);
             setProvider(response.provider || '');
             setIsInternational(selectedAddress.country !== 'ID');
+            
+            // Auto-select cheapest method if no method is selected
+            if (transformedMethods.length > 0 && !selectedMethod) {
+              const cheapestMethod = transformedMethods[0];
+              onMethodSelect(cheapestMethod);
+            }
           } else {
             setError(response.error || 'Failed to fetch shipping rates');
             setShippingMethods([]);
@@ -257,20 +266,6 @@ export default function ShippingMethodSelector({
     }
   };
 
-  const getProviderInfo = (provider: string) => {
-    switch (provider) {
-      case 'biteship':
-        return { name: 'Biteship', color: 'primary', icon: '🚚' };
-      case 'fedex':
-        return { name: 'FedEx', color: 'error', icon: '📦' };
-      case 'fedex-estimated':
-        return { name: 'FedEx (Estimated)', color: 'warning', icon: '📦' };
-      case 'indonesia-estimated':
-        return { name: 'Indonesia (Estimated)', color: 'info', icon: '🇮🇩' };
-      default:
-        return { name: 'Shipping', color: 'default', icon: '📦' };
-    }
-  };
 
   if (!selectedAddress) {
     return (
@@ -285,40 +280,71 @@ export default function ShippingMethodSelector({
   }
 
   return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+    <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          mb: { xs: 2, sm: 3 },
+          flexWrap: 'wrap',
+          gap: 1
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <ShippingIcon sx={{ fontSize: '1.5rem', mr: 1, color: 'primary.main' }} />
-            <Typography variant="h6" fontWeight={600}>
-              Pilih Metode Pengiriman
+            <ShippingIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mr: 1, color: 'primary.main' }} />
+            <Typography 
+              variant="h6" 
+              fontWeight={600}
+              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
+              Opsi Pengiriman
             </Typography>
           </Box>
-          {provider && (
-            <Chip
-              label={`${getProviderInfo(provider).icon} ${getProviderInfo(provider).name}`}
-              color={getProviderInfo(provider).color as any}
-              size="small"
-              variant="outlined"
-            />
-          )}
         </Box>
 
         {/* Address Info */}
-        <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Box sx={{ 
+          mb: { xs: 2, sm: 3 }, 
+          p: { xs: 1.5, sm: 2 }, 
+          backgroundColor: 'grey.50', 
+          borderRadius: 2 
+        }}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              mb: 1,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
+          >
             Alamat Pengiriman:
           </Typography>
-          <Typography variant="body1" fontWeight={500}>
+          <Typography 
+            variant="body1" 
+            fontWeight={500}
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+          >
             {selectedAddress.recipient_name}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+          >
             {selectedAddress.address_line}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+          >
             {selectedAddress.city}, {selectedAddress.province} {selectedAddress.postal_code}
           </Typography>
-          <Typography variant="body2" color="text.secondary">
+          <Typography 
+            variant="body2" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+          >
             {selectedAddress.country === 'ID' ? '🇮🇩 Indonesia' : `🌍 ${selectedAddress.country}`}
             {isInternational && (
               <Chip
@@ -326,7 +352,7 @@ export default function ShippingMethodSelector({
                 size="small"
                 color="warning"
                 variant="outlined"
-                sx={{ ml: 1, fontSize: '0.7rem' }}
+                sx={{ ml: 1, fontSize: { xs: '0.65rem', sm: '0.7rem' }, height: { xs: 18, sm: 20 } }}
               />
             )}
           </Typography>
@@ -364,96 +390,339 @@ export default function ShippingMethodSelector({
         {!loading && !error && shippingMethods.length > 0 && (
           <FormControl component="fieldset" fullWidth>
             <FormLabel component="legend" sx={{ mb: 2, fontWeight: 600 }}>
-              Pilih Metode Pengiriman
+              Metode Pengiriman
             </FormLabel>
-            <RadioGroup
-              value={selectedMethod || ''}
-              onChange={(e) => {
-                const method = shippingMethods.find(m => 
-                  `${m.courier_code}_${m.courier_service_code}` === e.target.value
-                );
-                if (method) {
-                  onMethodSelect(method);
-                }
-              }}
-            >
-              <Stack spacing={2}>
-                {shippingMethods.map((method) => {
-                  const methodId = `${method.courier_code}_${method.courier_service_code}`;
-                  const isSelected = selectedMethod === methodId;
+            
+            {/* Show selected method only if not showing all */}
+            {!showAllMethods && selectedMethod && (() => {
+              const selectedMethodData = shippingMethods.find(m => 
+                `${m.courier_code}_${m.courier_service_code}` === selectedMethod
+              );
+              
+              if (!selectedMethodData) return null;
+              
+              return (
+                <Box sx={{ mb: 2 }}>
+                  <Card
+                    sx={{
+                      border: `2px solid ${theme.palette.primary.main}`,
+                      backgroundColor: 'white',
+                      borderRadius: 2,
+                      boxShadow: `0 2px 8px ${theme.palette.primary.main}20`,
+                      transition: 'all 0.2s ease',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        width: 4,
+                        height: '100%',
+                        backgroundColor: theme.palette.primary.main,
+                      }
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 2.5, sm: 3 }, pl: { xs: 3, sm: 3.5 } }}>
+                      {/* Header: Courier Name and Badges */}
+                      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1.5, flexWrap: 'wrap', gap: 1 }}>
+                        <Typography 
+                          variant="h6" 
+                          fontWeight={700} 
+                          sx={{ 
+                            fontSize: { xs: '1rem', sm: '1.125rem' },
+                            color: 'text.primary'
+                          }}
+                        >
+                          {selectedMethodData.courier_name}
+                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                          <Chip
+                            label={getServiceTypeLabel(selectedMethodData.service_type)}
+                            color={getServiceTypeColor(selectedMethodData.service_type)}
+                            size="small"
+                            sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                              height: { xs: 22, sm: 26 },
+                              fontWeight: 600
+                            }}
+                          />
+
+                        </Box>
+                      </Box>
+                      
+                      {/* Service Description */}
+                      {selectedMethodData.description && (
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: 2, 
+                            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                            lineHeight: 1.5
+                          }}
+                        >
+                          {selectedMethodData.description}
+                        </Typography>
+                      )}
+                      
+                      {/* Price and Delivery Time */}
+                      <Box sx={{ 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'space-between',
+                        gap: { xs: 2, sm: 3 }, 
+                        flexWrap: 'wrap',
+                        pt: 1.5,
+                        borderTop: '1px solid',
+                        borderColor: 'grey.200'
+                      }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <MoneyIcon sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' }, color: 'success.main' }} />
+                          <Typography 
+                            variant="h6" 
+                            fontWeight={700} 
+                            color="success.main" 
+                            sx={{ 
+                              fontSize: { xs: '1rem', sm: '1.125rem' }
+                            }}
+                          >
+                            {formatPrice(selectedMethodData.price, selectedMethodData.currency || 'IDR')}
+                          </Typography>
+                        </Box>
+                        
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                          <ScheduleIcon sx={{ fontSize: { xs: '1rem', sm: '1.125rem' }, color: 'text.secondary' }} />
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                              fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                              fontWeight: 500
+                            }}
+                          >
+                            {getDeliveryTime(selectedMethodData.min_day, selectedMethodData.max_day)}
+                          </Typography>
+                        </Box>
+                      </Box>
+                    </CardContent>
+                  </Card>
                   
-                  return (
-                    <Card
-                      key={methodId}
+                  {shippingMethods.length > 1 && (
+                    <Button
+                      variant="outlined"
+                      fullWidth
+                      onClick={() => setShowAllMethods(true)}
                       sx={{
-                        border: isSelected ? `2px solid ${theme.palette.primary.main}` : '1px solid',
-                        borderColor: isSelected ? 'primary.main' : 'grey.300',
-                        backgroundColor: isSelected ? 'primary.light' : 'white',
-                        transition: 'all 0.2s ease',
-                        cursor: 'pointer',
-                        '&:hover': {
-                          borderColor: 'primary.main',
-                          backgroundColor: 'primary.light',
-                        },
-                      }}
-                      onClick={() => {
-                        const methodId = `${method.courier_code}_${method.courier_service_code}`;
-                        onMethodSelect(method);
+                        mt: 2,
+                        py: 1,
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        fontSize: { xs: '0.875rem', sm: '0.9rem' }
                       }}
                     >
-                      <CardContent sx={{ p: 2 }}>
-                        <FormControlLabel
-                          value={methodId}
-                          control={<Radio />}
-                          label=""
-                          sx={{ m: 0 }}
-                        />
-                        <Box sx={{ ml: 4 }}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1, flexWrap: 'wrap', gap: 1 }}>
-                            <Typography variant="subtitle1" fontWeight={600}>
-                              {method.courier_name}
-                            </Typography>
-                            <Chip
-                              label={getServiceTypeLabel(method.service_type)}
-                              color={getServiceTypeColor(method.service_type)}
-                              size="small"
+                      Lihat Semua Opsi ({shippingMethods.length})
+                    </Button>
+                  )}
+                </Box>
+              );
+            })()}
+            
+            {/* Show all methods */}
+            {showAllMethods && (
+              <Box>
+                <RadioGroup
+                  value={selectedMethod || ''}
+                  onChange={(e) => {
+                    const method = shippingMethods.find(m => 
+                      `${m.courier_code}_${m.courier_service_code}` === e.target.value
+                    );
+                    if (method) {
+                      onMethodSelect(method);
+                      setShowAllMethods(false);
+                    }
+                  }}
+                >
+                  <Stack spacing={2}>
+                    {shippingMethods.map((method) => {
+                      const methodId = `${method.courier_code}_${method.courier_service_code}`;
+                      const isSelected = selectedMethod === methodId;
+                      
+                      return (
+                        <Card
+                          key={methodId}
+                          sx={{
+                            border: isSelected ? `2px solid ${theme.palette.primary.main}` : '1px solid',
+                            borderColor: isSelected ? 'primary.main' : 'grey.300',
+                            backgroundColor: isSelected ? 'white' : 'white',
+                            borderRadius: 2,
+                            boxShadow: isSelected 
+                              ? `0 2px 8px ${theme.palette.primary.main}20` 
+                              : '0 1px 3px rgba(0,0,0,0.1)',
+                            transition: 'all 0.2s ease',
+                            cursor: 'pointer',
+                            position: 'relative',
+                            overflow: 'hidden',
+                            '&::before': isSelected ? {
+                              content: '""',
+                              position: 'absolute',
+                              top: 0,
+                              left: 0,
+                              width: 4,
+                              height: '100%',
+                              backgroundColor: theme.palette.primary.main,
+                            } : {},
+                            '&:hover': {
+                              borderColor: 'primary.main',
+                              backgroundColor: 'grey.50',
+                              boxShadow: `0 2px 8px ${theme.palette.primary.main}20`,
+                              transform: 'translateY(-2px)',
+                              '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                width: 4,
+                                height: '100%',
+                                backgroundColor: theme.palette.primary.main,
+                              }
+                            },
+                            '&:active': {
+                              transform: 'translateY(0)',
+                            }
+                          }}
+                          onClick={() => {
+                            const methodId = `${method.courier_code}_${method.courier_service_code}`;
+                            onMethodSelect(method);
+                            setShowAllMethods(false);
+                          }}
+                        >
+                          <CardContent sx={{ p: { xs: 2.5, sm: 3 }, pl: { xs: 3, sm: isSelected ? 3.5 : 2.5 } }}>
+                            <FormControlLabel
+                              value={methodId}
+                              control={<Radio />}
+                              label=""
+                              sx={{ 
+                                m: 0,
+                                position: 'absolute',
+                                top: { xs: 16, sm: 20 },
+                                left: { xs: 8, sm: 12 }
+                              }}
                             />
-                            {method.provider && method.provider !== provider && (
-                              <Chip
-                                label={`${getProviderInfo(method.provider).icon} ${getProviderInfo(method.provider).name}`}
-                                color={getProviderInfo(method.provider).color as any}
-                                size="small"
-                                variant="outlined"
-                              />
-                            )}
-                          </Box>
-                          
-                          <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                            {method.description}
-                          </Typography>
-                          
-                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <MoneyIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'success.main' }} />
-                              <Typography variant="h6" fontWeight={600} color="success.main">
-                                {formatPrice(method.price, method.currency || 'IDR')}
-                              </Typography>
+                            <Box sx={{ ml: { xs: 3, sm: 4 } }}>
+                              {/* Header: Courier Name and Badges */}
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between', 
+                                mb: 1.5, 
+                                flexWrap: 'wrap', 
+                                gap: 1 
+                              }}>
+                                <Typography 
+                                  variant="h6" 
+                                  fontWeight={isSelected ? 700 : 600} 
+                                  sx={{ 
+                                    fontSize: { xs: '1rem', sm: '1.125rem' },
+                                    color: 'text.primary'
+                                  }}
+                                >
+                                  {method.courier_name}
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                  <Chip
+                                    label={getServiceTypeLabel(method.service_type)}
+                                    color={getServiceTypeColor(method.service_type)}
+                                    size="small"
+                                    sx={{ 
+                                      fontSize: { xs: '0.7rem', sm: '0.75rem' }, 
+                                      height: { xs: 22, sm: 26 },
+                                      fontWeight: 600
+                                    }}
+                                  />
+                                </Box>
+                              </Box>
+                              
+                              {/* Service Description */}
+                              {method.description && (
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary" 
+                                  sx={{ 
+                                    mb: 2, 
+                                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                    lineHeight: 1.5
+                                  }}
+                                >
+                                  {method.description}
+                                </Typography>
+                              )}
+                              
+                              {/* Price and Delivery Time */}
+                              <Box sx={{ 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                justifyContent: 'space-between',
+                                gap: { xs: 2, sm: 3 }, 
+                                flexWrap: 'wrap',
+                                pt: 1.5,
+                                borderTop: '1px solid',
+                                borderColor: 'grey.200'
+                              }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <MoneyIcon sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' }, color: 'success.main' }} />
+                                  <Typography 
+                                    variant="h6" 
+                                    fontWeight={700} 
+                                    color="success.main" 
+                                    sx={{ 
+                                      fontSize: { xs: '1rem', sm: '1.125rem' }
+                                    }}
+                                  >
+                                    {formatPrice(method.price, method.currency || 'IDR')}
+                                  </Typography>
+                                </Box>
+                                
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                  <ScheduleIcon sx={{ fontSize: { xs: '1rem', sm: '1.125rem' }, color: 'text.secondary' }} />
+                                  <Typography 
+                                    variant="body2" 
+                                    color="text.secondary" 
+                                    sx={{ 
+                                      fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                      fontWeight: 500
+                                    }}
+                                  >
+                                    {getDeliveryTime(method.min_day, method.max_day)}
+                                  </Typography>
+                                </Box>
+                              </Box>
                             </Box>
-                            
-                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                              <ScheduleIcon sx={{ fontSize: '1rem', mr: 0.5, color: 'text.secondary' }} />
-                              <Typography variant="body2" color="text.secondary">
-                                {getDeliveryTime(method.min_day, method.max_day)}
-                              </Typography>
-                            </Box>
-                          </Box>
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  );
-                })}
-              </Stack>
-            </RadioGroup>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
+                  </Stack>
+                </RadioGroup>
+                
+                <Button
+                  variant="outlined"
+                  fullWidth
+                  onClick={() => setShowAllMethods(false)}
+                  sx={{
+                    mt: 2,
+                    py: 1,
+                    borderRadius: 2,
+                    textTransform: 'none',
+                    fontWeight: 500,
+                    fontSize: { xs: '0.875rem', sm: '0.9rem' }
+                  }}
+                >
+                  Tutup
+                </Button>
+              </Box>
+            )}
           </FormControl>
         )}
 

@@ -14,15 +14,20 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   FormControl,
   InputLabel,
   Select,
   MenuItem,
   Grid,
+  RadioGroup,
+  Radio,
+  Chip,
 } from '@mui/material';
 import {
   Add as AddIcon,
   LocationOn as LocationIcon,
+  Edit as EditIcon,
 } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { addressApi } from '@/features/addresses/services/addressApi';
@@ -44,6 +49,7 @@ export default function ShippingAddress({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showSelectDialog, setShowSelectDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -243,20 +249,43 @@ export default function ShippingAddress({
   return (
     <>
       <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
-        <CardContent sx={{ p: 3 }}>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'text.primary' }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Typography 
+            variant="h6" 
+            fontWeight={600} 
+            sx={{ 
+              mb: { xs: 1.5, sm: 2 }, 
+              color: 'text.primary',
+              fontSize: { xs: '1rem', sm: '1.25rem' }
+            }}
+          >
             Alamat Pengiriman
           </Typography>
 
           {error && (
-            <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }} onClose={() => setError(null)}>
+            <Alert 
+              severity="error" 
+              sx={{ 
+                mb: 2, 
+                borderRadius: 2,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }} 
+              onClose={() => setError(null)}
+            >
               {error}
             </Alert>
           )}
 
           {/* No addresses - show message */}
           {addresses.length === 0 && (
-            <Alert severity="info" sx={{ mb: 3, borderRadius: 2 }}>
+            <Alert 
+              severity="info" 
+              sx={{ 
+                mb: { xs: 2, sm: 3 }, 
+                borderRadius: 2,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
               Anda belum memiliki alamat pengiriman. Silakan tambahkan alamat terlebih dahulu.
             </Alert>
           )}
@@ -265,35 +294,102 @@ export default function ShippingAddress({
           {selectedAddressData && (
             <Box
               sx={{
-                p: 2,
+                p: { xs: 1.5, sm: 2 },
                 border: '2px solid',
                 borderColor: 'primary.main',
                 borderRadius: 2,
                 backgroundColor: 'action.hover',
-                mb: 2,
+                mb: { xs: 1.5, sm: 2 },
               }}
             >
-              <Stack direction="row" spacing={2} alignItems="flex-start">
+              <Stack direction="row" spacing={{ xs: 1.5, sm: 2 }} alignItems="flex-start">
                 <LocationIcon 
                   color="primary" 
-                  sx={{ mt: 0.5, flexShrink: 0 }} 
+                  sx={{ 
+                    mt: 0.5, 
+                    flexShrink: 0,
+                    fontSize: { xs: '1.25rem', sm: '1.5rem' }
+                  }} 
                 />
                 <Box sx={{ flex: 1 }}>
-                  <Typography variant="subtitle1" fontWeight={600}>
-                    {selectedAddressData.recipient_name}
-                  </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                    <Typography 
+                      variant="subtitle1" 
+                      fontWeight={600}
+                      sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                    >
+                      {selectedAddressData.recipient_name}
+                    </Typography>
+                    {selectedAddressData.is_primary && (
+                      <Chip
+                        label="Utama"
+                        size="small"
+                        color="primary"
+                        sx={{ 
+                          fontSize: { xs: '0.65rem', sm: '0.7rem' }, 
+                          height: { xs: 18, sm: 20 } 
+                        }}
+                      />
+                    )}
+                  </Box>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      mt: 0.5,
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }}
+                  >
                     {selectedAddressData.phone_number}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      mt: 1,
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                    }}
+                  >
                     {selectedAddressData.address_line}
                   </Typography>
-                  <Typography variant="body2" color="text.secondary">
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                  >
                     {selectedAddressData.city}, {selectedAddressData.province} {selectedAddressData.postal_code}
+                  </Typography>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mt: 0.5 }}
+                  >
+                    {selectedAddressData.country === 'ID' ? '🇮🇩 Indonesia' : `🌍 ${selectedAddressData.country}`}
                   </Typography>
                 </Box>
               </Stack>
             </Box>
+          )}
+
+          {/* Change Address Button - Show if there are multiple addresses */}
+          {addresses.length > 1 && selectedAddressData && !showAddForm && (
+            <Button
+              variant="outlined"
+              startIcon={<EditIcon />}
+              onClick={() => setShowSelectDialog(true)}
+              fullWidth
+              sx={{
+                mb: { xs: 1.5, sm: 2 },
+                py: { xs: 1, sm: 1.25 },
+                borderRadius: 2,
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                minHeight: { xs: 40, sm: 44 },
+                textTransform: 'none',
+              }}
+            >
+              Ganti Alamat ({addresses.length} alamat tersedia)
+            </Button>
           )}
 
           {!showAddForm && (
@@ -303,9 +399,11 @@ export default function ShippingAddress({
               onClick={() => setShowAddForm(true)}
               fullWidth
               sx={{
-                py: 1.5,
+                py: { xs: 1.25, sm: 1.5 },
                 borderRadius: 2,
                 fontWeight: addresses.length === 0 ? 600 : 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                minHeight: { xs: 44, sm: 48 },
                 ...(addresses.length === 0 && {
                   backgroundColor: 'primary.main',
                   '&:hover': {
@@ -319,6 +417,136 @@ export default function ShippingAddress({
           )}
         </CardContent>
       </Card>
+
+      {/* Select Address Dialog */}
+      <Dialog
+        open={showSelectDialog}
+        onClose={() => setShowSelectDialog(false)}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: { borderRadius: 2 }
+        }}
+      >
+        <DialogTitle>
+          <Typography variant="h6" fontWeight={600} sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}>
+            Pilih Alamat Pengiriman
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <FormControl component="fieldset" fullWidth>
+            <RadioGroup
+              value={selectedAddress || ''}
+              onChange={(e) => {
+                onAddressSelect(e.target.value);
+                setShowSelectDialog(false);
+              }}
+            >
+              <Stack spacing={2}>
+                {addresses.map((address) => (
+                  <Card
+                    key={address.id}
+                    sx={{
+                      border: selectedAddress === address.id ? '2px solid' : '1px solid',
+                      borderColor: selectedAddress === address.id ? 'primary.main' : 'grey.300',
+                      backgroundColor: selectedAddress === address.id ? 'primary.light' : 'white',
+                      transition: 'all 0.2s ease',
+                      cursor: 'pointer',
+                      '&:hover': {
+                        borderColor: 'primary.main',
+                        backgroundColor: 'primary.light',
+                      },
+                    }}
+                    onClick={() => {
+                      onAddressSelect(address.id);
+                      setShowSelectDialog(false);
+                    }}
+                  >
+                    <CardContent sx={{ p: { xs: 1.5, sm: 2 } }}>
+                      <FormControlLabel
+                        value={address.id}
+                        control={<Radio />}
+                        label=""
+                        sx={{ m: 0 }}
+                      />
+                      <Box sx={{ ml: { xs: 3, sm: 4 } }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5, flexWrap: 'wrap' }}>
+                          <Typography 
+                            variant="subtitle1" 
+                            fontWeight={600}
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+                          >
+                            {address.recipient_name}
+                          </Typography>
+                          {address.is_primary && (
+                            <Chip
+                              label="Utama"
+                              size="small"
+                              color="primary"
+                              sx={{ 
+                                fontSize: { xs: '0.65rem', sm: '0.7rem' }, 
+                                height: { xs: 18, sm: 20 } 
+                              }}
+                            />
+                          )}
+                        </Box>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: 0.5,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                          }}
+                        >
+                          {address.phone_number}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: 0.5,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                          }}
+                        >
+                          {address.address_line}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                        >
+                          {address.city}, {address.province} {address.postal_code}
+                        </Typography>
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary"
+                          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mt: 0.5 }}
+                        >
+                          {address.country === 'ID' ? '🇮🇩 Indonesia' : `🌍 ${address.country}`}
+                        </Typography>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                ))}
+              </Stack>
+            </RadioGroup>
+          </FormControl>
+        </DialogContent>
+        <DialogActions sx={{ p: { xs: 2, sm: 3 }, pt: 0 }}>
+          <Button
+            onClick={() => setShowSelectDialog(false)}
+            variant="outlined"
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+            }}
+          >
+            Batal
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Add New Address Dialog */}
       <Dialog

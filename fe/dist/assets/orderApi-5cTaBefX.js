@@ -1,0 +1,1 @@
+import{af as r}from"./index-tvCmUXkA.js";const n={getAllOrders:async s=>(await r.get("/admin/orders",{params:s})).data,getOrderById:async s=>(await r.get(`/admin/orders/${s}`)).data,updateOrderStatus:async(s,e)=>(await r.put(`/orders/${s}/status`,{status:e})).data};export{n as a};

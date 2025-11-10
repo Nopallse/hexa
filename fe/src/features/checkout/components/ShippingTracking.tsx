@@ -10,24 +10,18 @@ import {
   Chip,
   useTheme,
   Button,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
-  Timeline,
-  TimelineItem,
-  TimelineSeparator,
-  TimelineConnector,
-  TimelineContent,
-  TimelineDot,
-  TimelineOppositeContent,
+  Stepper,
+  Step,
+  StepLabel,
+  useMediaQuery,
 } from '@mui/material';
 import {
   LocalShipping as ShippingIcon,
-  ExpandMore as ExpandMoreIcon,
   Refresh as RefreshIcon,
   CheckCircle as CheckCircleIcon,
   Schedule as ScheduleIcon,
   LocationOn as LocationIcon,
+  RadioButtonUnchecked as RadioButtonUncheckedIcon,
 } from '@mui/icons-material';
 import { shippingApi } from '@/services/shippingApi';
 import { TrackingResponse, TrackingEvent } from '../types/shipping';
@@ -44,6 +38,7 @@ export default function ShippingTracking({
   onClose 
 }: ShippingTrackingProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [trackingData, setTrackingData] = useState<TrackingResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -124,16 +119,7 @@ export default function ShippingTracking({
     }
   };
 
-  const getProviderInfo = (provider: string) => {
-    switch (provider) {
-      case 'biteship':
-        return { name: 'Biteship', color: 'primary', icon: '🚚' };
-      case 'fedex':
-        return { name: 'FedEx', color: 'error', icon: '📦' };
-      default:
-        return { name: 'Shipping', color: 'default', icon: '📦' };
-    }
-  };
+
 
   const formatDate = (dateString: string) => {
     try {
@@ -152,11 +138,24 @@ export default function ShippingTracking({
 
   if (loading) {
     return (
-      <Card>
-        <CardContent>
-          <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', py: 4 }}>
+      <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Box sx={{ 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            py: { xs: 3, sm: 4 },
+            flexDirection: { xs: 'column', sm: 'row' },
+            gap: { xs: 1, sm: 2 }
+          }}>
             <CircularProgress size={24} />
-            <Typography variant="body2" sx={{ ml: 2 }}>
+            <Typography 
+              variant="body2" 
+              sx={{ 
+                ml: { xs: 0, sm: 2 },
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
               Mencari informasi tracking...
             </Typography>
           </Box>
@@ -167,15 +166,25 @@ export default function ShippingTracking({
 
   if (error) {
     return (
-      <Card>
-        <CardContent>
+      <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
           <Alert 
             severity="error" 
             action={
-              <Button size="small" onClick={fetchTrackingData} startIcon={<RefreshIcon />}>
+              <Button 
+                size="small" 
+                onClick={fetchTrackingData} 
+                startIcon={<RefreshIcon />}
+                sx={{
+                  fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                }}
+              >
                 Coba Lagi
               </Button>
             }
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
           >
             {error}
           </Alert>
@@ -186,9 +195,14 @@ export default function ShippingTracking({
 
   if (!trackingData) {
     return (
-      <Card>
-        <CardContent>
-          <Alert severity="info">
+      <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+        <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+          <Alert 
+            severity="info"
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
+          >
             Tidak ada data tracking tersedia
           </Alert>
         </CardContent>
@@ -197,56 +211,101 @@ export default function ShippingTracking({
   }
 
   return (
-    <Card>
-      <CardContent>
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+    <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'space-between', 
+          mb: { xs: 2, sm: 3 },
+          flexWrap: 'wrap',
+          gap: 1
+        }}>
           <Box sx={{ display: 'flex', alignItems: 'center' }}>
-            <ShippingIcon sx={{ fontSize: '1.5rem', mr: 1, color: 'primary.main' }} />
-            <Typography variant="h6" fontWeight={600}>
+            <ShippingIcon sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' }, mr: 1, color: 'primary.main' }} />
+            <Typography 
+              variant="h6" 
+              fontWeight={600}
+              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               Tracking Pengiriman
             </Typography>
           </Box>
-          {provider && (
-            <Chip
-              label={`${getProviderInfo(provider).icon} ${getProviderInfo(provider).name}`}
-              color={getProviderInfo(provider).color as any}
-              size="small"
-              variant="outlined"
-            />
-          )}
+       
         </Box>
 
         {/* Tracking Info */}
-        <Box sx={{ mb: 3, p: 2, backgroundColor: 'grey.50', borderRadius: 2 }}>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+        <Box sx={{ 
+          mb: { xs: 2, sm: 3 }, 
+          p: { xs: 1.5, sm: 2 }, 
+          backgroundColor: 'grey.50', 
+          borderRadius: 2 
+        }}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              mb: 1,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
+          >
             Nomor Tracking:
           </Typography>
-          <Typography variant="h6" fontWeight={600} sx={{ mb: 2 }}>
+          <Typography 
+            variant="h6" 
+            fontWeight={600} 
+            sx={{ 
+              mb: { xs: 1.5, sm: 2 },
+              fontSize: { xs: '1rem', sm: '1.25rem' }
+            }}
+          >
             {trackingData.tracking_number}
           </Typography>
           
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: { xs: 1, sm: 2 }, flexWrap: 'wrap' }}>
             <Chip
               label={getStatusLabel(trackingData.status)}
               color={getStatusColor(trackingData.status) as any}
               icon={getStatusIcon(trackingData.status)}
               variant="filled"
+              sx={{ 
+                fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                height: { xs: 24, sm: 28 }
+              }}
             />
             {trackingData.carrier && (
               <Chip
                 label={trackingData.carrier}
                 variant="outlined"
                 size="small"
+                sx={{ 
+                  fontSize: { xs: '0.65rem', sm: '0.75rem' },
+                  height: { xs: 20, sm: 24 }
+                }}
               />
             )}
           </Box>
           
-          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+          <Typography 
+            variant="body2" 
+            color="text.secondary" 
+            sx={{ 
+              mt: 1,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
+          >
             {trackingData.message}
           </Typography>
           
           {trackingData.estimated_delivery && (
-            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            <Typography 
+              variant="body2" 
+              color="text.secondary" 
+              sx={{ 
+                mt: 1,
+                fontSize: { xs: '0.75rem', sm: '0.875rem' }
+              }}
+            >
               Estimasi Pengiriman: {formatDate(trackingData.estimated_delivery)}
             </Typography>
           )}
@@ -255,65 +314,147 @@ export default function ShippingTracking({
         {/* Tracking Events */}
         {trackingData.events && trackingData.events.length > 0 && (
           <Box>
-            <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
+            <Typography 
+              variant="subtitle1" 
+              fontWeight={600} 
+              sx={{ 
+                mb: { xs: 1.5, sm: 2 },
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
               Riwayat Pengiriman
             </Typography>
             
-            <Timeline>
+            <Stepper 
+              orientation="vertical" 
+              sx={{ 
+                '& .MuiStepLabel-root': { alignItems: 'flex-start' },
+                '& .MuiStepContent-root': { ml: { xs: 2, sm: 3 } }
+              }}
+            >
               {trackingData.events.map((event: TrackingEvent, index: number) => (
-                <TimelineItem key={index}>
-                  <TimelineOppositeContent
-                    sx={{ m: 'auto 0' }}
-                    align="right"
-                    variant="body2"
-                    color="text.secondary"
-                  >
-                    {formatDate(event.timestamp)}
-                  </TimelineOppositeContent>
-                  <TimelineSeparator>
-                    <TimelineDot color={getStatusColor(event.status) as any}>
-                      {getStatusIcon(event.status)}
-                    </TimelineDot>
-                    {index < trackingData.events.length - 1 && <TimelineConnector />}
-                  </TimelineSeparator>
-                  <TimelineContent sx={{ py: '12px', px: 2 }}>
-                    <Typography variant="subtitle2" fontWeight={600}>
-                      {event.description}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                      {event.location}
-                    </Typography>
-                    {event.details && (
-                      <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                        {event.details}
-                      </Typography>
+                <Step key={index} active={index === 0} completed={index > 0}>
+                  <StepLabel
+                    StepIconComponent={() => (
+                      <Box
+                        sx={{ 
+                          width: { xs: 20, sm: 24 },
+                          height: { xs: 20, sm: 24 },
+                          borderRadius: '50%',
+                          bgcolor: index === 0 ? 'primary.main' : 'grey.300',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: 'white',
+                        }}
+                      >
+                        {index === 0 ? (
+                          <CheckCircleIcon sx={{ fontSize: { xs: 16, sm: 20 } }} />
+                        ) : (
+                          <RadioButtonUncheckedIcon sx={{ fontSize: { xs: 16, sm: 20 } }} />
+                        )}
+                      </Box>
                     )}
-                  </TimelineContent>
-                </TimelineItem>
+                  >
+                    <Box>
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={600} 
+                        sx={{ 
+                          mb: 0.5,
+                          fontSize: { xs: '0.875rem', sm: '1rem' }
+                        }}
+                      >
+                        {event.description}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          mb: 0.5,
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                        }}
+                      >
+                        {event.location}
+                      </Typography>
+                      {event.details && (
+                        <Typography 
+                          variant="body2" 
+                          color="text.secondary" 
+                          sx={{ 
+                            mb: 0.5,
+                            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                          }}
+                        >
+                          {event.details}
+                        </Typography>
+                      )}
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ 
+                          mt: 0.5,
+                          fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                          fontStyle: 'italic'
+                        }}
+                      >
+                        {formatDate(event.timestamp)}
+                      </Typography>
+                    </Box>
+                  </StepLabel>
+                </Step>
               ))}
-            </Timeline>
+            </Stepper>
           </Box>
         )}
 
         {/* No Events */}
         {(!trackingData.events || trackingData.events.length === 0) && (
-          <Alert severity="info">
+          <Alert 
+            severity="info"
+            sx={{ 
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
+          >
             Belum ada riwayat pengiriman tersedia
           </Alert>
         )}
 
         {/* Actions */}
-        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 2 }}>
+        <Box sx={{ 
+          display: 'flex', 
+          justifyContent: 'flex-end', 
+          mt: { xs: 2, sm: 3 }, 
+          gap: { xs: 1, sm: 2 },
+          flexWrap: 'wrap'
+        }}>
           <Button
             variant="outlined"
             startIcon={<RefreshIcon />}
             onClick={fetchTrackingData}
             disabled={loading}
+            sx={{
+              borderRadius: 2,
+              textTransform: 'none',
+              fontWeight: 500,
+              fontSize: { xs: '0.875rem', sm: '1rem' },
+              minHeight: { xs: 40, sm: 44 },
+            }}
           >
             Refresh
           </Button>
           {onClose && (
-            <Button variant="contained" onClick={onClose}>
+            <Button 
+              variant="contained" 
+              onClick={onClose}
+              sx={{
+                borderRadius: 2,
+                textTransform: 'none',
+                fontWeight: 500,
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                minHeight: { xs: 40, sm: 44 },
+              }}
+            >
               Tutup
             </Button>
           )}

@@ -9,6 +9,7 @@ import {
   Avatar,
   useTheme,
   Chip,
+  useMediaQuery,
 } from '@mui/material';
 import {
   ShoppingCart as ShoppingCartIcon,
@@ -42,139 +43,145 @@ export default function CheckoutSummary({
   selectedShippingMethod,
 }: CheckoutSummaryProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { formatPrice } = useCurrencyConversion();
 
-  const getProviderLabel = (provider: string) => {
-    switch (provider) {
-      case 'biteship':
-        return '🚚 Biteship';
-      case 'fedex':
-        return '📦 FedEx';
-      case 'fedex-estimated':
-        return '📦 FedEx (Est.)';
-      case 'indonesia-estimated':
-        return '🇮🇩 Indonesia (Est.)';
-      default:
-        return '📦 Shipping';
-    }
-  };
-
-  const getProviderColor = (provider: string) => {
-    switch (provider) {
-      case 'biteship':
-        return 'primary';
-      case 'fedex':
-        return 'error';
-      case 'fedex-estimated':
-        return 'warning';
-      case 'indonesia-estimated':
-        return 'info';
-      default:
-        return 'default';
-    }
-  };
 
   return (
     <Card sx={{ 
-      position: 'sticky', 
-      top: 24,
+      position: { xs: 'static', lg: 'sticky' }, 
+      top: { lg: 24 },
       borderRadius: 2,
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       border: 'none',
     }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
-          Ringkasan Pesanan
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Typography 
+          variant="h6" 
+          fontWeight={600} 
+          sx={{ 
+            mb: { xs: 2, sm: 3 }, 
+            color: 'text.primary',
+            fontSize: { xs: '1rem', sm: '1.25rem' }
+          }}
+        >
+          Rincian Pembayaran
         </Typography>
 
-        {/* Items List */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="subtitle1" fontWeight={600} sx={{ mb: 2 }}>
-            Item ({items.length})
-          </Typography>
-          <Stack spacing={2}>
-            {items.map((item) => {
-              const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
-              
-              return (
-                <Box
-                  key={item.id}
-                  sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 2,
-                    p: 2,
-                    borderRadius: 2,
-                    backgroundColor: 'grey.50',
-                  }}
-                >
-                  <Avatar
-                    src={primaryImage || `https://placehold.co/50x50/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
-                    alt={item.product_variant.product.name}
+        {/* Items List - Hide on mobile (shown in main content) */}
+        {!isMobile && (
+          <Box sx={{ mb: 3 }}>
+            <Typography 
+              variant="subtitle1" 
+              fontWeight={600} 
+              sx={{ 
+                mb: 2,
+                fontSize: { xs: '0.875rem', sm: '1rem' }
+              }}
+            >
+              Item ({items.length})
+            </Typography>
+            <Stack spacing={2}>
+              {items.map((item) => {
+                const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
+                
+                return (
+                  <Box
+                    key={item.id}
                     sx={{
-                      width: 50,
-                      height: 50,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 2,
+                      p: { xs: 1.5, sm: 2 },
                       borderRadius: 2,
-                      flexShrink: 0,
-                      boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
+                      backgroundColor: 'grey.50',
                     }}
-                    variant="rounded"
                   >
-                    <ShoppingCartIcon />
-                  </Avatar>
-                  
-                  <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography 
-                      variant="subtitle2" 
-                      fontWeight={600} 
-                      sx={{ 
-                        mb: 0.5,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                    <Avatar
+                      src={primaryImage || `https://placehold.co/50x50/9682DB/FFFFFF/png?text=${encodeURIComponent(item.product_variant.product.name.substring(0, 10))}`}
+                      alt={item.product_variant.product.name}
+                      sx={{
+                        width: { xs: 40, sm: 50 },
+                        height: { xs: 40, sm: 50 },
+                        borderRadius: 2,
+                        flexShrink: 0,
+                        boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                       }}
-                      title={item.product_variant.product.name}
+                      variant="rounded"
                     >
-                      {item.product_variant.product.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                      {item.product_variant.variant_name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-                      Qty: {item.quantity}
+                      <ShoppingCartIcon />
+                    </Avatar>
+                    
+                    <Box sx={{ flex: 1, minWidth: 0 }}>
+                      <Typography 
+                        variant="subtitle2" 
+                        fontWeight={600} 
+                        sx={{ 
+                          mb: 0.5,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          fontSize: { xs: '0.875rem', sm: '0.9rem' }
+                        }}
+                        title={item.product_variant.product.name}
+                      >
+                        {item.product_variant.product.name}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                      >
+                        {item.product_variant.variant_name}
+                      </Typography>
+                      <Typography 
+                        variant="body2" 
+                        color="text.secondary" 
+                        sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                      >
+                        Qty: {item.quantity}
+                      </Typography>
+                    </Box>
+                    
+                    <Typography
+                      variant="body2"
+                      fontWeight={600}
+                      color="primary.main"
+                      sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' } }}
+                    >
+                      {formatPrice(parseFloat(item.product_variant.price) * item.quantity)}
                     </Typography>
                   </Box>
-                  
-                  <Typography
-                    variant="body2"
-                    fontWeight={600}
-                    color="primary.main"
-                    sx={{ fontSize: '0.9rem' }}
-                  >
-                    {formatPrice(parseFloat(item.product_variant.price) * item.quantity)}
-                  </Typography>
-                </Box>
-              );
-            })}
-          </Stack>
-        </Box>
+                );
+              })}
+            </Stack>
+          </Box>
+        )}
 
-        <Divider sx={{ my: 2 }} />
+        <Divider sx={{ my: { xs: 2, sm: 2 } }} />
 
         {/* Price Breakdown */}
-        <Stack spacing={2}>
+        <Stack spacing={{ xs: 1.5, sm: 2 }}>
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between',
-            py: 2,
-            px: 2,
+            py: { xs: 1.5, sm: 2 },
+            px: { xs: 1.5, sm: 2 },
             backgroundColor: 'grey.50',
             borderRadius: 2,
           }}>
-            <Typography variant="body1" fontWeight={500}>
+            <Typography 
+              variant="body1" 
+              fontWeight={500}
+              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+            >
               Subtotal
             </Typography>
-            <Typography variant="body1" fontWeight={600}>
+            <Typography 
+              variant="body1" 
+              fontWeight={600}
+              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+            >
               {formatPrice(subtotal)}
             </Typography>
           </Box>
@@ -183,32 +190,37 @@ export default function CheckoutSummary({
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center',
-            py: 2,
-            px: 2,
+            py: { xs: 1.5, sm: 2 },
+            px: { xs: 1.5, sm: 2 },
             backgroundColor: 'grey.50',
             borderRadius: 2,
           }}>
             <Box>
-              <Typography variant="body1" fontWeight={500}>
+              <Typography 
+                variant="body1" 
+                fontWeight={500}
+                sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+              >
                 Biaya Pengiriman
               </Typography>
               {selectedShippingMethod && (
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                  <Typography variant="body2" color="text.secondary">
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5, flexWrap: 'wrap' }}>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary"
+                    sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                  >
                     {selectedShippingMethod.courier_name} - {selectedShippingMethod.courier_service_name}
                   </Typography>
-                  {selectedShippingMethod.provider && (
-                    <Chip
-                      label={getProviderLabel(selectedShippingMethod.provider)}
-                      size="small"
-                      color={getProviderColor(selectedShippingMethod.provider) as any}
-                      variant="outlined"
-                    />
-                  )}
+                 
                 </Box>
               )}
             </Box>
-            <Typography variant="body1" fontWeight={600}>
+            <Typography 
+              variant="body1" 
+              fontWeight={600}
+              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+            >
               {formatPrice(shippingCost)}
             </Typography>
           </Box>
@@ -216,22 +228,30 @@ export default function CheckoutSummary({
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between',
-            py: 2,
-            px: 2,
+            py: { xs: 1.5, sm: 2 },
+            px: { xs: 1.5, sm: 2 },
             backgroundColor: 'primary.main',
             borderRadius: 2,
             color: 'white',
           }}>
-            <Typography variant="h6" fontWeight={600}>
+            <Typography 
+              variant="h6" 
+              fontWeight={600}
+              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               Total
             </Typography>
-            <Typography variant="h6" fontWeight={700}>
+            <Typography 
+              variant="h6" 
+              fontWeight={700}
+              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               {formatPrice(total)}
             </Typography>
           </Box>
         </Stack>
 
-        <Divider sx={{ my: 3 }} />
+        <Divider sx={{ my: { xs: 2, sm: 3 } }} />
 
         {/* Create Order & Payment Button */}
         <Button
@@ -242,10 +262,11 @@ export default function CheckoutSummary({
           disabled={disabled || creatingOrder}
           fullWidth
           sx={{
-            py: 1.5,
+            py: { xs: 1.25, sm: 1.5 },
             borderRadius: 2,
             fontWeight: 600,
-            fontSize: '1rem',
+            fontSize: { xs: '0.875rem', sm: '1rem' },
+            minHeight: { xs: 44, sm: 48 },
             backgroundColor: 'primary.main',
             '&:hover': {
               backgroundColor: 'primary.dark',
@@ -260,7 +281,15 @@ export default function CheckoutSummary({
         </Button>
 
 
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 2, textAlign: 'center' }}>
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          sx={{ 
+            mt: 2, 
+            textAlign: 'center',
+            fontSize: { xs: '0.75rem', sm: '0.875rem' }
+          }}
+        >
           Dengan melanjutkan, Anda menyetujui syarat dan ketentuan kami
         </Typography>
       </CardContent>

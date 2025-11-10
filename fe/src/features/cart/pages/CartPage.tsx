@@ -6,6 +6,7 @@ import {
   Alert,
   Skeleton,
   useTheme,
+  useMediaQuery,
   Button,
   Chip,
 } from '@mui/material';
@@ -23,6 +24,7 @@ import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 
 export default function CartPage() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const { loading: currencyLoading, error: currencyError } = useCurrencyConversion();
   
@@ -124,37 +126,66 @@ export default function CartPage() {
   }, [availableItems.map(item => item.id).join(','), initialLoading]);
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="xl">
+    <Box sx={{ minHeight: '100vh', py: { xs: 2, sm: 4 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
         {/* Navigation Header */}
-        <Box sx={{ mb: 3 }}>
-         
-          
-          <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Typography 
+            variant="h4" 
+            fontWeight={600} 
+            sx={{ 
+              mb: 1, 
+              color: 'text.primary',
+              fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' }
+            }}
+          >
             Keranjang Belanja
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography 
+            variant="body1" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+          >
             Kelola item di keranjang belanja Anda
           </Typography>
         </Box>
 
         {/* Currency Loading State */}
         {currencyLoading && (
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert 
+            severity="info" 
+            sx={{ 
+              mb: 2,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
+          >
             Loading exchange rates...
           </Alert>
         )}
 
         {/* Currency Error State */}
         {currencyError && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert 
+            severity="warning" 
+            sx={{ 
+              mb: 2,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }}
+          >
             Failed to load exchange rates. Prices will be displayed in default currency.
           </Alert>
         )}
 
         {/* Error Alert */}
         {error && (
-          <Alert severity="error" sx={{ mb: 4 }} onClose={() => setError(null)}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: { xs: 2, sm: 4 },
+              fontSize: { xs: '0.75rem', sm: '0.875rem' }
+            }} 
+            onClose={() => setError(null)}
+          >
             {error}
           </Alert>
         )}
@@ -163,13 +194,14 @@ export default function CartPage() {
         <Box sx={{ 
           display: 'flex', 
           flexDirection: { xs: 'column', lg: 'row' }, 
-          gap: 4, 
+          gap: { xs: 2, sm: 3, lg: 4 }, 
           alignItems: 'flex-start' 
         }}>
           {/* Cart Items */}
           <Box sx={{ 
             flex: 1, 
             minWidth: 0,
+            width: { xs: '100%', lg: 'auto' },
             order: { xs: 1, lg: 1 }
           }}>
             {initialLoading ? (
@@ -182,32 +214,55 @@ export default function CartPage() {
               <Box
                 sx={{
                   textAlign: 'center',
-                  py: 8,
-                  px: 4,
+                  py: { xs: 4, sm: 8 },
+                  px: { xs: 2, sm: 4 },
                   borderRadius: 2,
                   backgroundColor: 'grey.50',
                 }}
               >
-                <ShoppingCart sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
+                <ShoppingCart sx={{ fontSize: { xs: 48, sm: 64 }, color: 'text.secondary', mb: 2 }} />
                 
-                <Typography variant="h5" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+                <Typography 
+                  variant="h5" 
+                  fontWeight={600} 
+                  sx={{ 
+                    mb: 1, 
+                    color: 'text.primary',
+                    fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' }
+                  }}
+                >
                   Keranjang Anda Kosong
                 </Typography>
-                <Typography variant="body1" color="text.secondary" sx={{ mb: 3 }}>
+                <Typography 
+                  variant="body1" 
+                  color="text.secondary" 
+                  sx={{ 
+                    mb: 3,
+                    fontSize: { xs: '0.875rem', sm: '1rem' }
+                  }}
+                >
                   Belum ada item di keranjang belanja Anda
                 </Typography>
                 
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
+                <Stack 
+                  direction={{ xs: 'column', sm: 'row' }} 
+                  spacing={2} 
+                  justifyContent="center"
+                  sx={{ width: '100%' }}
+                >
                   <Button
                     variant="contained"
                     size="large"
                     startIcon={<ShoppingBag />}
                     onClick={() => navigate('/products')}
+                    fullWidth={isMobile}
                     sx={{
-                      px: 3,
-                      py: 1.5,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 1.25, sm: 1.5 },
                       borderRadius: 2,
                       fontWeight: 600,
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      minHeight: { xs: 44, sm: 48 }
                     }}
                   >
                     Mulai Berbelanja
@@ -216,11 +271,14 @@ export default function CartPage() {
                     variant="outlined"
                     size="large"
                     onClick={() => navigate('/')}
+                    fullWidth={isMobile}
                     sx={{
-                      px: 3,
-                      py: 1.5,
+                      px: { xs: 2, sm: 3 },
+                      py: { xs: 1.25, sm: 1.5 },
                       borderRadius: 2,
                       fontWeight: 500,
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      minHeight: { xs: 44, sm: 48 }
                     }}
                   >
                     Kembali ke Beranda
@@ -228,18 +286,35 @@ export default function CartPage() {
                 </Stack>
               </Box>
             ) : (
-              <Stack spacing={2}>
+              <Stack spacing={{ xs: 1.5, sm: 2 }}>
                 {/* Available Items */}
                 {availableItems.length > 0 && (
                   <>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                      <Typography variant="h6" fontWeight={600} sx={{ color: 'text.primary' }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      flexDirection: { xs: 'column', sm: 'row' },
+                      justifyContent: 'space-between', 
+                      alignItems: { xs: 'flex-start', sm: 'center' }, 
+                      gap: { xs: 1, sm: 0 },
+                      mb: { xs: 1.5, sm: 2 } 
+                    }}>
+                      <Typography 
+                        variant="h6" 
+                        fontWeight={600} 
+                        sx={{ 
+                          color: 'text.primary',
+                          fontSize: { xs: '1rem', sm: '1.25rem' }
+                        }}
+                      >
                         Item Tersedia ({availableItems.length})
                       </Typography>
                       <Button
                         size="small"
                         onClick={() => handleSelectAll(selectedItems.size !== availableItems.length)}
-                        sx={{ textTransform: 'none' }}
+                        sx={{ 
+                          textTransform: 'none',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' }
+                        }}
                       >
                         {selectedItems.size === availableItems.length ? 'Batal Pilih Semua' : 'Pilih Semua'}
                       </Button>
@@ -261,14 +336,23 @@ export default function CartPage() {
                 {/* Deleted Items */}
                 {deletedItems.length > 0 && (
                   <>
-                    <Typography variant="h6" fontWeight={600} sx={{ mb: 2, color: 'error.main' }}>
+                    <Typography 
+                      variant="h6" 
+                      fontWeight={600} 
+                      sx={{ 
+                        mb: { xs: 1.5, sm: 2 }, 
+                        color: 'error.main',
+                        fontSize: { xs: '1rem', sm: '1.25rem' }
+                      }}
+                    >
                       Item Tidak Tersedia ({deletedItems.length})
                     </Typography>
                     <Alert 
                       severity="warning" 
                       sx={{ 
-                        mb: 2,
+                        mb: { xs: 1.5, sm: 2 },
                         borderRadius: 2,
+                        fontSize: { xs: '0.75rem', sm: '0.875rem' }
                       }}
                     >
                       Beberapa item di keranjang Anda sudah tidak tersedia. Item ini akan diabaikan saat checkout.
@@ -290,9 +374,11 @@ export default function CartPage() {
           {/* Cart Summary */}
           {items.length > 0 && (
             <Box sx={{ 
-              width: { xs: '100%', lg: '400px' }, 
+              width: { xs: '100%', lg: 400 }, 
               flexShrink: 0,
-              order: { xs: 2, lg: 2 }
+              order: { xs: 2, lg: 2 },
+              position: { xs: 'static', lg: 'sticky' },
+              top: { lg: 24 }
             }}>
               <CartSummary
                 items={items}

@@ -3,6 +3,7 @@ import {
   Typography, 
   Box, 
   useTheme,
+  useMediaQuery,
   Link,
   Stack,
   Chip,
@@ -37,14 +38,14 @@ import {
   Home, 
   ShoppingBag,
   ShoppingCart,
-  Favorite,
   Share,
-  ArrowBack,
   Star,
   Inventory,
   Category as CategoryIcon,
   Visibility,
   Image as ImageIcon,
+  Add,
+  Remove,
 } from '@mui/icons-material';
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -67,6 +68,8 @@ interface TabPanelProps {
 
 export default function ProductDetailPage() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { formatPrice, formatPriceRange } = useCurrencyConversion();
@@ -112,6 +115,63 @@ export default function ProductDetailPage() {
   // Handle tab change
   const handleTabChange = (event: React.SyntheticEvent, newValue: number) => {
     setTabValue(newValue);
+  };
+
+  // Handle quantity increment
+  const handleIncrement = () => {
+    if (!product) return;
+    
+    const hasVariants = product.product_variants && product.product_variants.length > 0;
+    const totalStock = hasVariants 
+      ? product.product_variants.reduce((sum, variant) => sum + variant.stock, 0)
+      : product.stock;
+    
+    let maxQty = 1;
+    if (hasVariants && product.product_variants) {
+      if (product.product_variants.length === 1) {
+        maxQty = product.product_variants[0].stock || 1;
+      } else if (selectedVariant) {
+        maxQty = selectedVariant.stock || 1;
+      }
+    } else {
+      maxQty = totalStock || 1;
+    }
+    
+    if (quantity < maxQty) {
+      setQuantity(quantity + 1);
+    } else {
+      toast.error(`Maksimal ${maxQty} unit`, {
+        duration: 2000,
+        position: 'bottom-right',
+      });
+    }
+  };
+
+  // Handle quantity decrement
+  const handleDecrement = () => {
+    if (quantity > 1) {
+      setQuantity(quantity - 1);
+    }
+  };
+
+  // Get max quantity based on selected variant
+  const getMaxQuantity = () => {
+    if (!product) return 1;
+    
+    const hasVariants = product.product_variants && product.product_variants.length > 0;
+    const totalStock = hasVariants 
+      ? product.product_variants.reduce((sum, variant) => sum + variant.stock, 0)
+      : product.stock;
+    
+    if (hasVariants && product.product_variants) {
+      if (product.product_variants.length === 1) {
+        return product.product_variants[0].stock || 1;
+      } else if (selectedVariant) {
+        return selectedVariant.stock || 1;
+      }
+      return 1;
+    }
+    return totalStock || 1;
   };
 
   // Handle add to cart
@@ -185,14 +245,6 @@ export default function ProductDetailPage() {
       });
     } finally {
       setAddingToCart(false);
-    }
-  };
-
-  // Handle add to wishlist
-  const handleAddToWishlist = () => {
-    if (product) {
-      // TODO: Implement add to wishlist functionality
-      console.log('Add to wishlist:', product);
     }
   };
 
@@ -403,18 +455,49 @@ export default function ProductDetailPage() {
 
   if (loading) {
     return (
-      <Box sx={{ minHeight: '100vh', py: 4 }}>
-        <Container maxWidth={false}>
-          <Skeleton variant="rectangular" height={400} sx={{ mb: 4, borderRadius: 3 }} />
-          <Box sx={{ display: 'flex', gap: 4 }}>
-            <Box sx={{ flex: 1 }}>
-              <Skeleton variant="text" height={48} sx={{ mb: 2 }} />
-              <Skeleton variant="text" height={24} sx={{ mb: 2 }} />
-              <Skeleton variant="text" height={32} sx={{ mb: 4 }} />
-              <Skeleton variant="rectangular" height={200} />
+      <Box sx={{ minHeight: '100vh', py: { xs: 2, sm: 4 } }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
+          <Skeleton 
+            variant="rectangular" 
+            height={{ xs: 280, sm: 350, md: 400 }} 
+            sx={{ mb: { xs: 2, sm: 4 }, borderRadius: 2 }} 
+          />
+          <Box sx={{ 
+            display: 'flex', 
+            flexDirection: { xs: 'column', md: 'row' },
+            gap: { xs: 2, sm: 3, md: 4 } 
+          }}>
+            <Box sx={{ flex: { xs: '1 1 100%', md: 1 }, width: { xs: '100%', md: 'auto' } }}>
+              <Skeleton 
+                variant="text" 
+                height={{ xs: 32, sm: 40, md: 48 }} 
+                sx={{ mb: 2 }} 
+              />
+              <Skeleton 
+                variant="text" 
+                height={{ xs: 24, sm: 28 }} 
+                sx={{ mb: 2, width: '60%' }} 
+              />
+              <Skeleton 
+                variant="text" 
+                height={{ xs: 20, sm: 24 }} 
+                sx={{ mb: { xs: 2, sm: 4 }, width: '80%' }} 
+              />
+              <Skeleton 
+                variant="rectangular" 
+                height={{ xs: 150, sm: 200 }} 
+                sx={{ borderRadius: 2 }} 
+              />
             </Box>
-            <Box sx={{ width: 300 }}>
-              <Skeleton variant="rectangular" height={300} sx={{ borderRadius: 3 }} />
+            <Box sx={{ 
+              width: { xs: '100%', md: 300 },
+              display: { xs: 'none', md: 'block' }
+            }}>
+              <Skeleton 
+                variant="rectangular" 
+                height={300} 
+                sx={{ borderRadius: 2 }} 
+              />
             </Box>
           </Box>
         </Container>
@@ -424,9 +507,16 @@ export default function ProductDetailPage() {
 
   if (error || !product) {
     return (
-      <Box sx={{ minHeight: '100vh', py: 4 }}>
-        <Container maxWidth={false}>
-          <Alert severity="error" sx={{ maxWidth: 600, mx: 'auto' }}>
+      <Box sx={{ minHeight: '100vh', py: { xs: 2, sm: 4 } }}>
+        <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              maxWidth: { xs: '100%', sm: 600 }, 
+              mx: { xs: 0, sm: 'auto' },
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
+          >
             {error || 'Produk tidak ditemukan'}
           </Alert>
         </Container>
@@ -467,7 +557,7 @@ export default function ProductDetailPage() {
   ) : '';
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4 }}>
+    <Box sx={{ minHeight: '100vh', py: { xs: 2, sm: 4 } }}>
       {/* Open Graph Meta Tags for Link Preview */}
       {product && (
         <Helmet>
@@ -501,38 +591,48 @@ export default function ProductDetailPage() {
         </Helmet>
       )}
 
-      <Container maxWidth="xl">
-
-        {/* Back Button */}
-        <Button
-          startIcon={<ArrowBack />}
-          onClick={() => navigate(-1)}
-          sx={{ mb: 4 }}
-        >
-          Kembali
-        </Button>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
 
         {/* Product Details */}
-        <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', md: 'row' },
+          gap: { xs: 2, sm: 3 },
+          alignItems: { xs: 'stretch', md: 'flex-start' }
+        }}>
           {/* Product Images */}
-          <Box sx={{ flex: '1 1 300px', minWidth: 300 }}>
-            <Card>
-              <CardContent>
-                <Typography variant="h6" fontWeight="bold" gutterBottom>
+          <Box sx={{ 
+            flex: { xs: '1 1 100%', md: '1 1 300px' },
+            width: { xs: '100%', md: 'auto' },
+            minWidth: { xs: 0, md: 300 }
+          }}>
+            <Card sx={{ boxShadow: { xs: 1, sm: 3 } }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Typography 
+                  variant="h6" 
+                  fontWeight="bold" 
+                  gutterBottom
+                  sx={{ fontSize: { xs: '1rem', sm: '1.25rem' }, display: { xs: 'none', sm: 'block' } }}
+                >
                   Galeri Gambar
                 </Typography>
                 
                 {/* Main Image Display */}
                 {displayImage ? (
                   <Box sx={{ textAlign: 'center', mb: 2 }}>
-                    <Avatar
+                    <Box
+                      component="img"
                       src={getProductImageUrl(displayImage)}
-                      variant="rounded"
+                      alt={product.name}
                       sx={{ 
                         width: '100%', 
-                        height: 300, 
+                        height: { xs: 280, sm: 350, md: 400 },
+                        maxHeight: { xs: '70vh', md: 'none' },
+                        objectFit: 'contain',
+                        borderRadius: 2,
                         transition: 'all 0.3s ease',
-                        boxShadow: 2
+                        boxShadow: 2,
+                        bgcolor: 'grey.50'
                       }}
                     />
                   </Box>
@@ -540,7 +640,11 @@ export default function ProductDetailPage() {
                   <Box sx={{ textAlign: 'center', mb: 2 }}>
                     <Avatar
                       variant="rounded"
-                      sx={{ width: '100%', height: 300 }}
+                      sx={{ 
+                        width: '100%', 
+                        height: { xs: 280, sm: 350, md: 400 },
+                        fontSize: { xs: '3rem', sm: '4rem' }
+                      }}
                     >
                       {product.name.charAt(0).toUpperCase()}
                     </Avatar>
@@ -550,14 +654,28 @@ export default function ProductDetailPage() {
                 {/* Thumbnails - All Images */}
                 {product.product_images && product.product_images.length > 0 ? (
                   <Box>
-                    <Typography variant="body2" color="textSecondary" gutterBottom>
+                    <Typography 
+                      variant="body2" 
+                      color="textSecondary" 
+                      gutterBottom
+                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
                       Semua Gambar ({product.product_images.length})
                     </Typography>
                     <Box sx={{ 
                       display: 'flex', 
-                      gap: 1, 
+                      gap: { xs: 0.75, sm: 1 }, 
                       flexWrap: 'wrap',
-                      justifyContent: 'center'
+                      justifyContent: { xs: 'flex-start', sm: 'center' },
+                      overflowX: { xs: 'auto', sm: 'visible' },
+                      pb: { xs: 1, sm: 0 },
+                      '&::-webkit-scrollbar': {
+                        height: 4,
+                      },
+                      '&::-webkit-scrollbar-thumb': {
+                        bgcolor: 'grey.300',
+                        borderRadius: 2,
+                      }
                     }}>
                       {product.product_images
                         .sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0))
@@ -565,24 +683,36 @@ export default function ProductDetailPage() {
                           <Box
                             key={image.id}
                             sx={{ position: 'relative' }}
+                            onClick={() => setSelectedImage(image.image_name)}
                             onMouseEnter={() => setSelectedImage(image.image_name)}
-                            onMouseLeave={() => setSelectedImage(primaryImage ? primaryImage.image_name : null)}
+                            onMouseLeave={() => {
+                              // Only reset on desktop
+                              if (!isTablet) {
+                                setSelectedImage(primaryImage ? primaryImage.image_name : null);
+                              }
+                            }}
                           >
-                            <Avatar
+                            <Box
+                              component="img"
                               src={getProductImageUrl(image.image_name)}
-                              variant="rounded"
+                              alt={`${product.name} - ${image.id}`}
                               sx={{ 
-                                width: 70, 
-                                height: 70,
+                                width: { xs: 60, sm: 70 }, 
+                                height: { xs: 60, sm: 70 },
+                                borderRadius: 1,
                                 cursor: 'pointer',
                                 border: selectedImage === image.image_name ? 3 : 2,
                                 borderColor: selectedImage === image.image_name ? 'primary.main' : 'divider',
                                 transition: 'all 0.2s ease',
                                 opacity: selectedImage === image.image_name ? 1 : 0.7,
+                                objectFit: 'cover',
                                 '&:hover': {
                                   opacity: 1,
                                   transform: 'scale(1.05)',
                                   borderColor: 'primary.main'
+                                },
+                                '&:active': {
+                                  transform: 'scale(0.95)',
                                 }
                               }}
                             />
@@ -593,11 +723,11 @@ export default function ProductDetailPage() {
                                 color="primary"
                                 sx={{
                                   position: 'absolute',
-                                  bottom: -8,
+                                  bottom: { xs: -6, sm: -8 },
                                   left: '50%',
                                   transform: 'translateX(-50%)',
-                                  fontSize: '0.65rem',
-                                  height: 16,
+                                  fontSize: { xs: '0.6rem', sm: '0.65rem' },
+                                  height: { xs: 14, sm: 16 },
                                   '& .MuiChip-label': {
                                     px: 0.5
                                   }
@@ -609,7 +739,7 @@ export default function ProductDetailPage() {
                     </Box>
                   </Box>
                 ) : (
-                  <Alert severity="info" sx={{ mt: 2 }}>
+                  <Alert severity="info" sx={{ mt: 2, fontSize: { xs: '0.75rem', sm: '0.875rem' } }}>
                     Belum ada gambar produk
                   </Alert>
                 )}
@@ -618,45 +748,121 @@ export default function ProductDetailPage() {
           </Box>
 
           {/* Product Details */}
-          <Box sx={{ flex: '2 1 500px', minWidth: 500 }}>
-            <Card>
-              <CardContent>
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h5" fontWeight="bold" gutterBottom>
-                    {product.name}
-                  </Typography>
+          <Box sx={{ 
+            flex: { xs: '1 1 100%', md: '2 1 500px' },
+            width: { xs: '100%', md: 'auto' },
+            minWidth: { xs: 0, md: 500 }
+          }}>
+            <Card sx={{ boxShadow: { xs: 1, sm: 3 } }}>
+              <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                <Box sx={{ 
+                  mb: { xs: 2, sm: 3 },
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'flex-start',
+                  gap: 2
+                }}>
+                  <Box sx={{ flex: 1 }}>
+                    <Typography 
+                      variant="h5" 
+                      fontWeight="bold" 
+                      gutterBottom
+                      sx={{ 
+                        fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem' },
+                        lineHeight: { xs: 1.3, sm: 1.4 }
+                      }}
+                    >
+                      {product.name}
+                    </Typography>
+                  </Box>
                   
+                  {/* Share Button in product info card */}
+                  <IconButton
+                    onClick={handleShare}
+                    sx={{
+                      border: `1px solid ${theme.palette.grey[300]}`,
+                      color: theme.palette.primary.main,
+                      width: { xs: 40, sm: 44 },
+                      height: { xs: 40, sm: 44 },
+                      flexShrink: 0,
+                      '&:hover': {
+                        backgroundColor: theme.palette.primary.light + '20',
+                        borderColor: theme.palette.primary.main,
+                      },
+                      '&:active': {
+                        transform: 'scale(0.95)',
+                      }
+                    }}
+                  >
+                    <Share sx={{ fontSize: { xs: '1.125rem', sm: '1.25rem' } }} />
+                  </IconButton>
+                </Box>
+                
+                <Box sx={{ mb: { xs: 2, sm: 3 } }}>
                   {product.product_variants && product.product_variants.length > 0 ? (
                     <Box>
-                      <Typography variant="h4" color="primary" fontWeight="bold">
+                      <Typography 
+                        variant="h4" 
+                        color="primary" 
+                        fontWeight="bold"
+                        sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}
+                      >
                         {formatPriceRange(product.product_variants)}
                       </Typography>
-                      <Typography variant="body2" color="textSecondary">
+                      <Typography 
+                        variant="body2" 
+                        color="textSecondary"
+                        sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' }, mt: 0.5 }}
+                      >
                         Total Stok: {product.total_stock || 0} unit
                       </Typography>
                     </Box>
                   ) : (
-                    <Typography variant="h4" color="primary" fontWeight="bold">
+                    <Typography 
+                      variant="h4" 
+                      color="primary" 
+                      fontWeight="bold"
+                      sx={{ fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' } }}
+                    >
                       {formatPrice(Number(product.price))}
                     </Typography>
                   )}
                 </Box>
 
-                <Divider sx={{ mb: 3 }} />
+                <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
 
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="bold" 
+                    gutterBottom
+                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                  >
                     Deskripsi
                   </Typography>
-                  <Typography variant="body1" color="textSecondary">
+                  <Typography 
+                    variant="body1" 
+                    color="textSecondary"
+                    sx={{ 
+                      fontSize: { xs: '0.875rem', sm: '1rem' },
+                      lineHeight: { xs: 1.6, sm: 1.75 },
+                      whiteSpace: 'pre-wrap',
+                      wordBreak: 'break-word'
+                    }}
+                  >
                     {product.description || 'Tidak ada deskripsi'}
                   </Typography>
                 </Box>
 
-                <Divider sx={{ mb: 3 }} />
+                <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
 
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="bold" 
+                    gutterBottom
+                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                  >
                     Kategori
                   </Typography>
                   {product.category ? (
@@ -665,41 +871,71 @@ export default function ProductDetailPage() {
                         label={product.category.name}
                         color="primary"
                         variant="outlined"
-                        sx={{ mb: 1 }}
+                        sx={{ 
+                          mb: 1,
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          height: { xs: 28, sm: 32 }
+                        }}
                       />
                       {product.category.description && (
-                        <Typography variant="body2" color="textSecondary">
+                        <Typography 
+                          variant="body2" 
+                          color="textSecondary"
+                          sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                        >
                           {product.category.description}
                         </Typography>
                       )}
                     </Box>
                   ) : (
-                    <Typography variant="body2" color="textSecondary">
+                    <Typography 
+                      variant="body2" 
+                      color="textSecondary"
+                      sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                    >
                       Tidak ada kategori
                     </Typography>
                   )}
                 </Box>
 
-                <Divider sx={{ mb: 3 }} />
+                <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
 
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="h6" fontWeight="bold" gutterBottom>
+                <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                  <Typography 
+                    variant="h6" 
+                    fontWeight="bold" 
+                    gutterBottom
+                    sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                  >
                     Informasi Produksi
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
+                  <Box sx={{ 
+                    display: 'flex', 
+                    gap: { xs: 1, sm: 2 }, 
+                    flexWrap: 'wrap', 
+                    alignItems: 'center' 
+                  }}>
                     {product.pre_order && product.pre_order > 0 ? (
                       <Chip 
                         label={`Pre-order ${product.pre_order} hari`}
                         color="warning"
                         variant="filled"
-                        sx={{ fontWeight: 'bold' }}
+                        sx={{ 
+                          fontWeight: 'bold',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          height: { xs: 28, sm: 32 }
+                        }}
                       />
                     ) : (
                       <Chip 
                         label="Tersedia Langsung"
                         color="success"
                         variant="filled"
-                        sx={{ fontWeight: 'bold' }}
+                        sx={{ 
+                          fontWeight: 'bold',
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          height: { xs: 28, sm: 32 }
+                        }}
                       />
                     )}
                     {product.product_variants && product.product_variants.length > 0 ? (
@@ -707,16 +943,32 @@ export default function ProductDetailPage() {
                         label={`Total Stok: ${product.total_stock || 0} unit`}
                         color={(product.total_stock || 0) > 0 ? 'success' : 'error'}
                         variant={(product.total_stock || 0) > 0 ? 'filled' : 'outlined'}
+                        sx={{ 
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          height: { xs: 28, sm: 32 }
+                        }}
                       />
                     ) : (
                       <Chip 
                         label={`Stok: ${product.stock || 0} unit`}
                         color={(product.stock || 0) > 0 ? 'success' : 'error'}
                         variant={(product.stock || 0) > 0 ? 'filled' : 'outlined'}
+                        sx={{ 
+                          fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                          height: { xs: 28, sm: 32 }
+                        }}
                       />
                     )}
                   </Box>
-                  <Typography variant="body2" color="textSecondary" sx={{ mt: 1 }}>
+                  <Typography 
+                    variant="body2" 
+                    color="textSecondary" 
+                    sx={{ 
+                      mt: 1,
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      lineHeight: { xs: 1.5, sm: 1.6 }
+                    }}
+                  >
                     {product.pre_order && product.pre_order > 0 
                       ? `Produk ini membutuhkan ${product.pre_order} hari untuk dibuat setelah order`
                       : 'Produk tersedia langsung dan siap dikirim'
@@ -727,11 +979,23 @@ export default function ProductDetailPage() {
                 {/* Variant Selection - E-commerce Style - Hanya tampil jika > 1 variant */}
                 {hasMultipleVariants && Object.keys(variantGroups).length > 0 && (
                   <React.Fragment>
-                    <Divider sx={{ mb: 3 }} />
+                    <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
                     
-                    <Box sx={{ mb: 3 }}>
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="h6" fontWeight="bold" gutterBottom>
+                    <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+                      <Box sx={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: { xs: 'flex-start', sm: 'center' },
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        gap: { xs: 1, sm: 0 },
+                        mb: 2 
+                      }}>
+                        <Typography 
+                          variant="h6" 
+                          fontWeight="bold" 
+                          gutterBottom={false}
+                          sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                        >
                           Pilih Varian
                         </Typography>
                         {product.product_variants && product.product_variants.length > 0 ? (
@@ -746,7 +1010,9 @@ export default function ProductDetailPage() {
                               color: 'white', 
                               border: '1px solid', 
                               borderColor: 'primary.dark', 
-                              letterSpacing: 0.5 
+                              letterSpacing: 0.5,
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 28 }
                             }} 
                           />
                         ) : (
@@ -754,17 +1020,30 @@ export default function ProductDetailPage() {
                             label={`Stok: ${product.stock || 0}`} 
                             color={(product.stock || 0) > 0 ? 'success' : 'error'} 
                             size="small" 
-                            variant={(product.stock || 0) > 0 ? 'filled' : 'outlined'} 
+                            variant={(product.stock || 0) > 0 ? 'filled' : 'outlined'}
+                            sx={{ 
+                              fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                              height: { xs: 24, sm: 28 }
+                            }}
                           />
                         )}
                       </Box>
                       
                       {Object.entries(variantGroups).map(([optionName, values]) => (
-                        <Box key={optionName} sx={{ mb: 2 }}>
-                          <Typography variant="subtitle2" fontWeight="bold" gutterBottom>
+                        <Box key={optionName} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+                          <Typography 
+                            variant="subtitle2" 
+                            fontWeight="bold" 
+                            gutterBottom
+                            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' }, mb: 1 }}
+                          >
                             {optionName}
                           </Typography>
-                          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                          <Box sx={{ 
+                            display: 'flex', 
+                            gap: { xs: 0.75, sm: 1 }, 
+                            flexWrap: 'wrap' 
+                          }}>
                             {values.map((value) => {
                               const isSelected = selectedOptions[optionName] === value;
                               
@@ -773,20 +1052,30 @@ export default function ProductDetailPage() {
                                   key={value}
                                   variant={isSelected ? "contained" : "outlined"}
                                   onClick={() => handleSelectOption(optionName, value)}
-                                  size="large"
+                                  size={isMobile ? "medium" : "large"}
                                   sx={{
-                                    minWidth: 80,
+                                    minWidth: { xs: 70, sm: 80 },
+                                    minHeight: { xs: 40, sm: 48 },
                                     borderWidth: 2,
                                     borderColor: isSelected ? 'primary.main' : 'divider',
                                     position: 'relative',
                                     textTransform: 'none',
+                                    fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                                    px: { xs: 1.5, sm: 2 },
                                     '&:hover': {
                                       borderWidth: 2,
                                       borderColor: 'primary.main'
+                                    },
+                                    '&:active': {
+                                      transform: 'scale(0.95)',
                                     }
                                   }}
                                 >
-                                  <Typography variant="body2" fontWeight={isSelected ? 'bold' : 'medium'}>
+                                  <Typography 
+                                    variant="body2" 
+                                    fontWeight={isSelected ? 'bold' : 'medium'}
+                                    sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+                                  >
                                     {value}
                                   </Typography>
                                   
@@ -795,17 +1084,17 @@ export default function ProductDetailPage() {
                                     <Box
                                       sx={{ 
                                         position: 'absolute', 
-                                        top: 4, 
-                                        right: 4, 
-                                        width: 16,
-                                        height: 16,
+                                        top: { xs: 2, sm: 4 }, 
+                                        right: { xs: 2, sm: 4 }, 
+                                        width: { xs: 14, sm: 16 },
+                                        height: { xs: 14, sm: 16 },
                                         bgcolor: 'white',
                                         color: 'primary.main',
                                         borderRadius: '50%',
                                         display: 'flex',
                                         alignItems: 'center',
                                         justifyContent: 'center',
-                                        fontSize: '12px',
+                                        fontSize: { xs: '10px', sm: '12px' },
                                         fontWeight: 'bold'
                                       }} 
                                     >
@@ -821,30 +1110,68 @@ export default function ProductDetailPage() {
 
                       {/* Selected Variant - Harga & Stok */}
                       {selectedVariant && (
-                        <Card variant="outlined" sx={{ mb: 3, bgcolor: 'primary.50', borderColor: 'primary.main' }}>
-                          <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                              <Box>
-                                <Typography variant="caption" color="text.secondary" display="block">
+                        <Card 
+                          variant="outlined" 
+                          sx={{ 
+                            mb: { xs: 2, sm: 3 }, 
+                            bgcolor: 'primary.50', 
+                            borderColor: 'primary.main' 
+                          }}
+                        >
+                          <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                            <Box sx={{ 
+                              display: 'flex', 
+                              flexDirection: { xs: 'column', sm: 'row' },
+                              justifyContent: 'space-between', 
+                              alignItems: { xs: 'flex-start', sm: 'center' }, 
+                              gap: { xs: 1.5, sm: 2 } 
+                            }}>
+                              <Box sx={{ flex: 1 }}>
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary" 
+                                  display="block"
+                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                                >
                                   Varian Terpilih
                                 </Typography>
-                                <Typography variant="h6" fontWeight="bold">
+                                <Typography 
+                                  variant="h6" 
+                                  fontWeight="bold"
+                                  sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                                >
                                   {selectedVariant.variant_name}
                                 </Typography>
-                                <Typography variant="caption" color="text.secondary">
+                                <Typography 
+                                  variant="caption" 
+                                  color="text.secondary"
+                                  sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                                >
                                   SKU: {selectedVariant.sku}
                                 </Typography>
                               </Box>
                               
-                              <Box sx={{ textAlign: 'right' }}>
-                                <Typography variant="h4" color="primary.main" fontWeight="bold">
+                              <Box sx={{ 
+                                textAlign: { xs: 'left', sm: 'right' },
+                                width: { xs: '100%', sm: 'auto' }
+                              }}>
+                                <Typography 
+                                  variant="h4" 
+                                  color="primary.main" 
+                                  fontWeight="bold"
+                                  sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
+                                >
                                   {formatPrice(Number(selectedVariant.price))}
                                 </Typography>
                                 <Chip
                                   label={`Stok: ${selectedVariant.stock} unit`}
                                   size="small"
                                   color={selectedVariant.stock > 0 ? 'success' : 'error'}
-                                  sx={{ mt: 0.5 }}
+                                  sx={{ 
+                                    mt: 0.5,
+                                    fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                    height: { xs: 24, sm: 28 }
+                                  }}
                                 />
                               </Box>
                             </Box>
@@ -852,38 +1179,69 @@ export default function ProductDetailPage() {
                         </Card>
                       )}
 
-                      <Divider sx={{ mb: 3 }} />
+                      <Divider sx={{ mb: { xs: 2, sm: 3 } }} />
                     </Box>
                   </React.Fragment>
                 )}
 
                 {/* ✅ Tampilkan info variant untuk produk dengan 1 variant */}
                 {hasVariants && product.product_variants && product.product_variants.length === 1 && selectedVariant && (
-                  <Box sx={{ mb: 3 }}>
+                  <Box sx={{ mb: { xs: 2, sm: 3 } }}>
                     <Card variant="outlined" sx={{ bgcolor: 'primary.50', borderColor: 'primary.main' }}>
-                      <CardContent>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
-                          <Box>
-                            <Typography variant="caption" color="text.secondary" display="block">
+                      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                        <Box sx={{ 
+                          display: 'flex', 
+                          flexDirection: { xs: 'column', sm: 'row' },
+                          justifyContent: 'space-between', 
+                          alignItems: { xs: 'flex-start', sm: 'center' }, 
+                          gap: { xs: 1.5, sm: 2 } 
+                        }}>
+                          <Box sx={{ flex: 1 }}>
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary" 
+                              display="block"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            >
                               Varian Tersedia
                             </Typography>
-                            <Typography variant="h6" fontWeight="bold">
+                            <Typography 
+                              variant="h6" 
+                              fontWeight="bold"
+                              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+                            >
                               {selectedVariant.variant_name}
                             </Typography>
-                            <Typography variant="caption" color="text.secondary">
+                            <Typography 
+                              variant="caption" 
+                              color="text.secondary"
+                              sx={{ fontSize: { xs: '0.7rem', sm: '0.75rem' } }}
+                            >
                               SKU: {selectedVariant.sku}
                             </Typography>
                           </Box>
                           
-                          <Box sx={{ textAlign: 'right' }}>
-                            <Typography variant="h4" color="primary.main" fontWeight="bold">
+                          <Box sx={{ 
+                            textAlign: { xs: 'left', sm: 'right' },
+                            width: { xs: '100%', sm: 'auto' }
+                          }}>
+                            <Typography 
+                              variant="h4" 
+                              color="primary.main" 
+                              fontWeight="bold"
+                              sx={{ fontSize: { xs: '1.5rem', sm: '2rem' } }}
+                            >
                               {formatPrice(Number(selectedVariant.price))}
                             </Typography>
                             <Chip
                               label={`Stok: ${selectedVariant.stock} unit`}
                               size="small"
                               color={selectedVariant.stock > 0 ? 'success' : 'error'}
-                              sx={{ mt: 0.5 }}
+                              sx={{ 
+                                mt: 0.5,
+                                fontSize: { xs: '0.7rem', sm: '0.75rem' },
+                                height: { xs: 24, sm: 28 }
+                              }}
                             />
                           </Box>
                         </Box>
@@ -893,95 +1251,154 @@ export default function ProductDetailPage() {
                 )}
 
                 {/* Quantity Selector */}
-                <Box sx={{ mb: 4 }}>
-                  <FormLabel component="legend" sx={{ mb: 1, fontWeight: 600 }}>
+                <Box sx={{ mb: { xs: 3, sm: 4 } }}>
+                  <FormLabel 
+                    component="legend" 
+                    sx={{ 
+                      mb: 1, 
+                      fontWeight: 600,
+                      fontSize: { xs: '0.875rem', sm: '1rem' }
+                    }}
+                  >
                     Jumlah:
                   </FormLabel>
-                  <TextField
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                    inputProps={{ 
-                      min: 1, 
-                      max: hasVariants && product.product_variants ? 
-                        (product.product_variants.length === 1 ? 
-                          product.product_variants[0].stock || 1 :
-                          (selectedVariant ? selectedVariant.stock || 1 : 1)
-                        ) :
-                        totalStock 
+                  <Box sx={{ 
+                    display: 'flex', 
+                    alignItems: 'center',
+                    gap: { xs: 1, sm: 1.5 },
+                    width: { xs: '100%', sm: 'fit-content' }
+                  }}>
+                    <Button
+                      variant="outlined"
+                      onClick={handleDecrement}
+                      disabled={quantity <= 1}
+                      sx={{
+                        minWidth: { xs: 40, sm: 44 },
+                        width: { xs: 40, sm: 44 },
+                        height: { xs: 40, sm: 44 },
+                        p: 0,
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          bgcolor: 'primary.light',
+                          color: 'primary.main',
+                        },
+                        '&:disabled': {
+                          borderColor: 'divider',
+                          opacity: 0.5,
+                        },
+                        '&:active': {
+                          transform: 'scale(0.95)',
+                        }
+                      }}
+                    >
+                      <Remove sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+                    </Button>
+                    
+                    <TextField
+                      type="number"
+                      value={quantity}
+                      onChange={(e) => {
+                        const value = parseInt(e.target.value) || 1;
+                        const maxQty = getMaxQuantity();
+                        setQuantity(Math.max(1, Math.min(value, maxQty)));
+                      }}
+                      inputProps={{ 
+                        min: 1, 
+                        max: getMaxQuantity(),
+                        style: { textAlign: 'center' }
+                      }}
+                      sx={{ 
+                        width: { xs: 80, sm: 100 },
+                        '& .MuiOutlinedInput-root': {
+                          '& input': {
+                            fontSize: { xs: '0.875rem', sm: '1rem' },
+                            py: { xs: 1.25, sm: 1 },
+                            textAlign: 'center',
+                            fontWeight: 600,
+                          }
+                        }
+                      }}
+                      size="small"
+                    />
+                    
+                    <Button
+                      variant="outlined"
+                      onClick={handleIncrement}
+                      disabled={quantity >= getMaxQuantity()}
+                      sx={{
+                        minWidth: { xs: 40, sm: 44 },
+                        width: { xs: 40, sm: 44 },
+                        height: { xs: 40, sm: 44 },
+                        p: 0,
+                        borderColor: 'divider',
+                        color: 'text.primary',
+                        '&:hover': {
+                          borderColor: 'primary.main',
+                          bgcolor: 'primary.light',
+                          color: 'primary.main',
+                        },
+                        '&:disabled': {
+                          borderColor: 'divider',
+                          opacity: 0.5,
+                        },
+                        '&:active': {
+                          transform: 'scale(0.95)',
+                        }
+                      }}
+                    >
+                      <Add sx={{ fontSize: { xs: '1.25rem', sm: '1.5rem' } }} />
+                    </Button>
+                  </Box>
+                  <Typography 
+                    variant="caption" 
+                    color="text.secondary"
+                    sx={{ 
+                      display: 'block',
+                      mt: 0.5,
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' }
                     }}
-                    sx={{ width: 120 }}
-                    size="small"
-                  />
+                  >
+                    Maksimal {getMaxQuantity()} unit
+                  </Typography>
                 </Box>
 
 
                 {/* Action Buttons */}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 4 }}>
-                  <Button
-                    variant="contained"
-                    size="large"
-                    startIcon={<ShoppingCart />}
-                    onClick={handleAddToCart}
-                    disabled={
-                      (totalStock || 0) === 0 || 
-                      addingToCart || 
-                      (hasMultipleVariants && !selectedVariant) || 
-                      (hasVariants && selectedVariant && selectedVariant.stock === 0) ||
-                      (hasVariants && product.product_variants && product.product_variants.length === 1 && product.product_variants[0].stock === 0)
+                <Button
+                  variant="contained"
+                  size="large"
+                  startIcon={<ShoppingCart />}
+                  onClick={handleAddToCart}
+                  disabled={
+                    (totalStock || 0) === 0 || 
+                    addingToCart || 
+                    (hasMultipleVariants && !selectedVariant) || 
+                    (hasVariants && selectedVariant && selectedVariant.stock === 0) ||
+                    (hasVariants && product.product_variants && product.product_variants.length === 1 && product.product_variants[0].stock === 0)
+                  }
+                  fullWidth
+                  sx={{
+                    px: { xs: 3, sm: 4 },
+                    py: { xs: 1.25, sm: 1.5 },
+                    borderRadius: 2,
+                    fontWeight: 600,
+                    fontSize: { xs: '0.875rem', sm: '1rem' },
+                    minHeight: { xs: 44, sm: 48 },
+                    mb: { xs: 2, sm: 4 },
+                    '&:active': {
+                      transform: 'scale(0.98)',
                     }
-                    sx={{
-                      px: 4,
-                      py: 1.5,
-                      borderRadius: 2,
-                      fontWeight: 600,
-                      fontSize: '1rem',
-                      minHeight: 48,
-                      flex: { xs: 1, sm: 'none' },
-                    }}
-                  >
-                    {addingToCart ? 'Menambahkan...' : 
-                     (totalStock || 0) === 0 ? 'Stok Habis' : 
-                     (hasMultipleVariants && !selectedVariant) ? 'Pilih Varian' :
-                     (hasVariants && selectedVariant && selectedVariant.stock === 0) ? 'Stok Habis' :
-                     (hasVariants && product.product_variants && product.product_variants.length === 1 && product.product_variants[0].stock === 0) ? 'Stok Habis' :
-                     'Tambah ke Keranjang'}
-                  </Button>
-                  
-                  <Stack direction="row" spacing={1} sx={{ justifyContent: { xs: 'center', sm: 'flex-start' } }}>
-                    <IconButton
-                      onClick={handleAddToWishlist}
-                      sx={{
-                        border: `1px solid ${theme.palette.grey[300]}`,
-                        color: theme.palette.primary.main,
-                        width: 48,
-                        height: 48,
-                        '&:hover': {
-                          backgroundColor: theme.palette.primary.light + '20',
-                          borderColor: theme.palette.primary.main,
-                        },
-                      }}
-                    >
-                      <Favorite />
-                    </IconButton>
-                    
-                    <IconButton
-                      onClick={handleShare}
-                      sx={{
-                        border: `1px solid ${theme.palette.grey[300]}`,
-                        color: theme.palette.primary.main,
-                        width: 48,
-                        height: 48,
-                        '&:hover': {
-                          backgroundColor: theme.palette.primary.light + '20',
-                          borderColor: theme.palette.primary.main,
-                        },
-                      }}
-                    >
-                      <Share />
-                    </IconButton>
-                  </Stack>
-                </Stack>
+                  }}
+                >
+                  {addingToCart ? 'Menambahkan...' : 
+                   (totalStock || 0) === 0 ? 'Stok Habis' : 
+                   (hasMultipleVariants && !selectedVariant) ? 'Pilih Varian' :
+                   (hasVariants && selectedVariant && selectedVariant.stock === 0) ? 'Stok Habis' :
+                   (hasVariants && product.product_variants && product.product_variants.length === 1 && product.product_variants[0].stock === 0) ? 'Stok Habis' :
+                   'Tambah ke Keranjang'}
+                </Button>
               </CardContent>
             </Card>
           </Box>

@@ -10,6 +10,7 @@ import {
   Button,
   Alert,
   useTheme,
+  useMediaQuery,
   Avatar,
   Checkbox,
 } from '@mui/material';
@@ -38,6 +39,7 @@ interface CartItemProps {
 
 export default function CartItem({ item, onUpdate, onRemove, selected = false, onSelectChange, selectable = false }: CartItemProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const [quantity, setQuantity] = useState(item.quantity);
   const [error, setError] = useState<string | null>(null);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
@@ -120,16 +122,13 @@ export default function CartItem({ item, onUpdate, onRemove, selected = false, o
     }
   };
 
-  // Get display image from variant (prioritize display_image, fallback to product images)
-  const displayImage = item.product_variant.display_image 
-    || item.product_variant.image 
-    || item.product_variant.product.product_images?.find(img => img.is_primary)?.image_name
-    || item.product_variant.product.product_images?.[0]?.image_name;
+  // Get display image from product images
+  const displayImage = item.product_variant.product.product_images?.[0]?.image_name || null;
 
   return (
     <Card
       sx={{
-        mb: 2,
+        mb: { xs: 1.5, sm: 2 },
         border: isProductDeleted ? `1px solid ${theme.palette.error.main}` : 'none',
         opacity: isProductDeleted ? 0.6 : 1,
         borderRadius: 2,
@@ -140,13 +139,14 @@ export default function CartItem({ item, onUpdate, onRemove, selected = false, o
         },
       }}
     >
-      <CardContent sx={{ p: 3 }}>
+      <CardContent sx={{ p: { xs: 1, sm: 3 } }}>
         {isProductDeleted && (
           <Alert 
             severity="error" 
             sx={{ 
-              mb: 3,
+              mb: { xs: 2, sm: 3 },
               borderRadius: 3,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
               '& .MuiAlert-message': {
                 fontWeight: 600,
               }
@@ -160,8 +160,9 @@ export default function CartItem({ item, onUpdate, onRemove, selected = false, o
           <Alert 
             severity="error" 
             sx={{ 
-              mb: 3,
+              mb: { xs: 2, sm: 3 },
               borderRadius: 3,
+              fontSize: { xs: '0.75rem', sm: '0.875rem' },
               '& .MuiAlert-message': {
                 fontWeight: 600,
               }
@@ -173,173 +174,237 @@ export default function CartItem({ item, onUpdate, onRemove, selected = false, o
         )}
 
         {/* Modern Layout */}
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          {/* Checkbox for selection */}
-          {selectable && (
-            <Box sx={{ flexShrink: 0 }}>
-              <Checkbox
-                checked={selected}
-                onChange={(e) => onSelectChange?.(item.id, e.target.checked)}
-                disabled={isProductDeleted}
-                sx={{
-                  color: 'primary.main',
-                  '&.Mui-checked': {
-                    color: 'primary.main',
-                  },
-                }}
-              />
-            </Box>
-          )}
-
-          {/* Product Image */}
-          <Box sx={{ flexShrink: 0 }}>
-            <Avatar
-              src={getProductImageUrl(displayImage)}
-              alt={item.product_variant.product.name}
-              sx={{
-                width: 80,
-                height: 80,
-                borderRadius: 2,
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-              }}
-              variant="rounded"
-            >
-              <ShoppingCartIcon sx={{ fontSize: 32 }} />
-            </Avatar>
-          </Box>
-
-          {/* Product Info */}
-          <Box sx={{ flex: 1, minWidth: 0 }}>
-            <Typography 
-              variant="h6" 
-              fontWeight={600} 
-              sx={{ 
-                mb: 1, 
-                color: 'text.primary',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                display: '-webkit-box',
-                WebkitLineClamp: 2,
-                WebkitBoxOrient: 'vertical',
-                lineHeight: 1.3,
-                fontSize: '1rem',
-              }}
-              title={item.product_variant.product.name}
-            >
-              {item.product_variant.product.name}
-            </Typography>
-            
-            {/* Variant Options */}
-            {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
-              <Stack direction="row" spacing={0.5} sx={{ mb: 1, flexWrap: 'wrap' }}>
-                {item.product_variant.variant_options.map((option, index) => (
-                  <Chip
-                    key={index}
-                    label={`${option.option_value}`}
-                    size="small"
-                    variant="outlined"
-                    sx={{ 
-                      fontSize: '0.7rem',
-                      height: 20,
-                      borderColor: 'primary.main',
-                      color: 'primary.main',
-                      '& .MuiChip-label': {
-                        px: 1,
-                      }
-                    }}
-                  />
-                ))}
-              </Stack>
-            )}
-
-            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem' }}>
-              Stok: {isProductDeleted ? 'Tidak tersedia' : `${item.product_variant.stock} unit`}
-            </Typography>
-          </Box>
-
-          {/* Price & Controls */}
+        <Box sx={{ 
+          display: 'flex', 
+          flexDirection: { xs: 'column', sm: 'row' },
+          alignItems: { xs: 'flex-start', sm: 'center' }, 
+          gap: { xs: 1, sm: 3 } 
+        }}>
+          {/* Checkbox & Product Image & Info Container */}
           <Box sx={{ 
             display: 'flex', 
-            alignItems: 'center',
-            gap: 2,
-            flexShrink: 0,
+            alignItems: 'center', // Always center vertically
+            gap: { xs: 1, sm: 3 },
+            flex: 1,
+            minWidth: 0,
+            width: { xs: '100%', sm: 'auto' }
           }}>
-            {/* Price */}
-            <Box sx={{ textAlign: 'right', minWidth: 100 }}>
-              <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mb: 0.5 }}>
-                {formatItemPrice(parseFloat(item.product_variant.price))}
-              </Typography>
-              <Typography variant="h6" color="primary.main" fontWeight={700} sx={{ fontSize: '1rem' }}>
-                {formatItemPrice(parseFloat(item.product_variant.price) * quantity)}
-              </Typography>
-            </Box>
+            {/* Checkbox for selection */}
+            {selectable && (
+              <Box sx={{ 
+                flexShrink: 0, 
+                display: 'flex', 
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Checkbox
+                  checked={selected}
+                  onChange={(e) => onSelectChange?.(item.id, e.target.checked)}
+                  disabled={isProductDeleted}
+                  sx={{
+                    color: 'primary.main',
+                    '&.Mui-checked': {
+                      color: 'primary.main',
+                    },
+                    padding: { xs: 0.5, sm: 1 },
+                  }}
+                />
+              </Box>
+            )}
 
-            {/* Quantity Controls */}
+            {/* Product Image & Price Container */}
             <Box sx={{ 
               display: 'flex', 
+              flexDirection: 'column',
               alignItems: 'center',
-              backgroundColor: 'grey.50',
-              borderRadius: 2,
-              p: 0.5,
-              gap: 0.5,
+              justifyContent: 'center',
+              gap: 1,
+              flexShrink: 0
             }}>
-              <IconButton
-                onClick={quantity === 1 ? handleRemoveClick : () => handleQuantityChange(quantity - 1)}
-                disabled={isProductDeleted}
-                size="small"
+              {/* Product Image */}
+              <Avatar
+                src={displayImage ? getProductImageUrl(displayImage) : undefined}
+                alt={item.product_variant.product.name}
                 sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 1,
-                  backgroundColor: quantity === 1 ? 'error.main' : 'white',
-                  color: quantity === 1 ? 'white' : 'text.primary',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                  '&:hover': {
-                    backgroundColor: quantity === 1 ? 'error.dark' : 'primary.light',
-                    color: quantity === 1 ? 'white' : 'primary.main',
-                  },
-                  '&:disabled': {
-                    opacity: 0.5,
-                    backgroundColor: 'grey.200',
-                  },
+                  width: { xs: 70, sm: 80 },
+                  height: { xs: 70, sm: 80 },
+                  borderRadius: 2,
+                  boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
                 }}
+                variant="rounded"
               >
-                {quantity === 1 ? (
-                  <DeleteIcon sx={{ fontSize: 14 }} />
-                ) : (
-                  <RemoveIcon sx={{ fontSize: 14 }} />
-                )}
-              </IconButton>
-
-              <Typography variant="body2" fontWeight={600} sx={{ minWidth: 24, textAlign: 'center', fontSize: '0.9rem' }}>
-                {quantity}
-              </Typography>
-
-              <IconButton
-                onClick={() => handleQuantityChange(quantity + 1)}
-                disabled={quantity >= item.product_variant.stock || isProductDeleted}
-                size="small"
-                sx={{
-                  width: 28,
-                  height: 28,
-                  borderRadius: 1,
-                  backgroundColor: 'white',
-                  color: 'text.primary',
-                  boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
-                  '&:hover': {
-                    backgroundColor: 'primary.light',
-                    color: 'primary.main',
-                  },
-                  '&:disabled': {
-                    opacity: 0.5,
-                    backgroundColor: 'grey.200',
-                  },
-                }}
-              >
-                <AddIcon sx={{ fontSize: 14 }} />
-              </IconButton>
+                <ShoppingCartIcon sx={{ fontSize: { xs: 28, sm: 32 } }} />
+              </Avatar>
+              
+             
             </Box>
+
+            {/* Product Info */}
+            <Box sx={{ flex: 1, minWidth: 0 }}>
+              <Typography variant="h6" fontWeight={600} sx={{ mb: 1, color: 'text.primary', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: { xs: '0.875rem', sm: '1rem' } }} title={item.product_variant.product.name}>{item.product_variant.product.name}</Typography>
+              
+              {/* Variant Options */}
+              {item.product_variant.variant_options && item.product_variant.variant_options.length > 0 && (
+                <Stack 
+                  direction="row" 
+                  spacing={0.5} 
+                  sx={{ 
+                    mb: 1, 
+                    flexWrap: 'wrap',
+                    gap: { xs: 0.5, sm: 0.5 }
+                  }}
+                >
+                  {item.product_variant.variant_options.map((option, index) => (
+                    <Chip
+                      key={index}
+                      label={`${option.option_value}`}
+                      size="small"
+                      variant="outlined"
+                      sx={{ 
+                        fontSize: { xs: '0.65rem', sm: '0.7rem' },
+                        height: { xs: 18, sm: 20 },
+                        borderColor: 'primary.main',
+                        color: 'primary.main',
+                        '& .MuiChip-label': {
+                          px: { xs: 0.75, sm: 1 },
+                        }
+                      }}
+                    />
+                  ))}
+                </Stack>
+              )}
+
+              {/* Stock and Price - split left (stock text & price) and right (button/qty controls) */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  flexDirection: 'row',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  mt: { xs: 1, sm: 1 }
+                }}
+              >
+                {/* Left: Stock info and Price stacked vertical */}
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                  <Typography 
+                    variant="body2" 
+                    color="text.secondary" 
+                    sx={{ 
+                      fontSize: { xs: '0.7rem', sm: '0.75rem' } 
+                    }}
+                  >
+                    Stok: {isProductDeleted ? 'Tidak tersedia' : `${item.product_variant.stock} unit`}
+                  </Typography>
+                  <Typography 
+                    variant="h6" 
+                    color="primary.main" 
+                    fontWeight={700} 
+                    sx={{ 
+                      fontSize: { xs: '0.75rem', sm: '0.875rem' },
+                      lineHeight: 1.2
+                    }}
+                  >
+                    {formatItemPrice(parseFloat(item.product_variant.price))}
+                  </Typography>
+                </Box>
+
+                {/* Right: Tombol/qty controls */}
+                <Box sx={{ ml: { xs: 1, sm: 2 }, minWidth: 100 }}>
+                  {/* Quantity Controls */}
+                  <Box sx={{ 
+                    display: 'flex', 
+                    flexDirection: 'row',
+                    justifyContent: 'flex-end',
+                    alignItems: 'center',
+                    gap: { xs: 1, sm: 1.5 }
+                  }}>
+                    <Box sx={{ 
+                      display: 'flex', 
+                      alignItems: 'center',
+                      backgroundColor: 'grey.50',
+                      borderRadius: 2,
+                      p: { xs: 0.5, sm: 0.5 },
+                      gap: { xs: 0.5, sm: 0.5 },
+                    }}>
+                      <IconButton
+                        onClick={quantity === 1 ? handleRemoveClick : () => handleQuantityChange(quantity - 1)}
+                        disabled={isProductDeleted}
+                        size="small"
+                        sx={{
+                          width: { xs: 24, sm: 28 },
+                          height: { xs: 24, sm: 28 },
+                          borderRadius: 1,
+                          backgroundColor: quantity === 1 ? 'error.main' : 'white',
+                          color: quantity === 1 ? 'white' : 'text.primary',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                          '&:hover': {
+                            backgroundColor: quantity === 1 ? 'error.dark' : 'primary.light',
+                            color: quantity === 1 ? 'white' : 'primary.main',
+                          },
+                          '&:disabled': {
+                            opacity: 0.5,
+                            backgroundColor: 'grey.200',
+                          },
+                          '&:active': {
+                            transform: 'scale(0.95)',
+                          }
+                        }}
+                      >
+                        {quantity === 1 ? (
+                          <DeleteIcon sx={{ fontSize: { xs: 14, sm: 14 } }} />
+                        ) : (
+                          <RemoveIcon sx={{ fontSize: { xs: 14, sm: 14 } }} />
+                        )}
+                      </IconButton>
+
+                      <Typography 
+                        variant="body2" 
+                        fontWeight={600} 
+                        sx={{ 
+                          minWidth: { xs: 24, sm: 24 }, 
+                          textAlign: 'center', 
+                          fontSize: { xs: '0.75rem', sm: '0.9rem' } 
+                        }}
+                      >
+                        {quantity}
+                      </Typography>
+
+                      <IconButton
+                        onClick={() => handleQuantityChange(quantity + 1)}
+                        disabled={quantity >= item.product_variant.stock || isProductDeleted}
+                        size="small"
+                        sx={{
+                          width: { xs: 24, sm: 28 },
+                          height: { xs: 24, sm: 28 },
+                          borderRadius: 1,
+                          backgroundColor: 'white',
+                          color: 'text.primary',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.1)',
+                          '&:hover': {
+                            backgroundColor: 'primary.light',
+                            color: 'primary.main',
+                          },
+                          '&:disabled': {
+                            opacity: 0.5,
+                            backgroundColor: 'grey.200',
+                          },
+                          '&:active': {
+                            transform: 'scale(0.95)',
+                          }
+                        }}
+                      >
+                        <AddIcon sx={{ fontSize: { xs: 14, sm: 14 } }} />
+                      </IconButton>
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+
+            </Box>
+            
           </Box>
+
+         
         </Box>
       </CardContent>
 

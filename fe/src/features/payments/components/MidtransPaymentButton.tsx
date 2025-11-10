@@ -155,7 +155,7 @@ export default function MidtransPaymentButton({
         {loading ? 'Memproses Pembayaran...' : 
          isLoading ? 'Memuat Snap Script...' : 
          order.payment_status === 'pending' ? 'Lanjutkan Pembayaran' : 
-         'Bayar dengan Midtrans'}
+         'Bayar'}
       </Button>
     </Box>
   );

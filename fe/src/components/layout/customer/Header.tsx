@@ -590,7 +590,7 @@ export default function Header() {
                     boxShadow: 'none !important',
                   }}
                 >
-                  Produk
+                  {t('header.products')}
                 </Button>
                 
                 <Button
@@ -885,7 +885,7 @@ export default function Header() {
               <ListItemIcon>
                 <ProductsIcon />
               </ListItemIcon>
-              <ListItemText primary="Produk" />
+              <ListItemText primary={t('header.products')} />
             </ListItemButton>
           </ListItem>
           

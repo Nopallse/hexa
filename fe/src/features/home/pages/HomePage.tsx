@@ -46,10 +46,12 @@ import { getCategoryImageUrl } from '@/utils/image';
 import { productApi } from '@/features/products/services/productApi';
 import { Product } from '@/features/products/types';
 import ProductCard from '@/features/products/components/ProductCard';
+import { useTranslation } from '@/hooks/useTranslation';
 
 export default function HomePage() {
   const theme = useTheme();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -66,22 +68,22 @@ export default function HomePage() {
     {
       id: 1,
       image: '/images/handmade-banner.jpg',
-      title: 'Handmade Collection',
-      subtitle: 'Discover unique crochet and macrame creations',
+      titleKey: 'home.banner.title1',
+      subtitleKey: 'home.banner.subtitle1',
       alt: 'Handmade Craft Collection - Three women showcasing colorful crochet products'
     },
     {
       id: 2,
       image: '/images/handmade-banner2.png',
-      title: 'Crafted with Love',
-      subtitle: 'Every piece tells a story of dedication and passion',
+      titleKey: 'home.banner.title2',
+      subtitleKey: 'home.banner.subtitle2',
       alt: 'Crafting process showing hands creating beautiful handmade items'
     },
     {
       id: 3,
       image: '/images/handmade-banner3.png',
-      title: 'Custom Design',
-      subtitle: 'Personalized creations tailored to your unique style',
+      titleKey: 'home.banner.title3',
+      subtitleKey: 'home.banner.subtitle3',
       alt: 'Custom handmade products showcase'
     }
   ];
@@ -93,7 +95,7 @@ export default function HomePage() {
         const response = await categoryApi.getCategories({ limit: 6 });
         setCategories(response.data);
       } catch (err) {
-        setError('Gagal memuat kategori');
+        setError(t('common.error'));
         console.error('Error fetching categories:', err);
       } finally {
         setLoading(false);
@@ -118,11 +120,11 @@ export default function HomePage() {
         if (response.success) {
           setFeaturedProducts(response.data);
         } else {
-          setFeaturedError('Gagal memuat produk');
+          setFeaturedError(t('home.errors.failedToLoadProducts'));
         }
       } catch (err) {
         console.error('Error fetching featured products:', err);
-        setFeaturedError('Gagal memuat produk');
+        setFeaturedError(t('home.errors.failedToLoadProducts'));
       } finally {
         setFeaturedLoading(false);
       }
@@ -146,11 +148,11 @@ export default function HomePage() {
         if (response.success) {
           setLatestProducts(response.data);
         } else {
-          setLatestError('Gagal memuat produk');
+          setLatestError(t('home.errors.failedToLoadProducts'));
         }
       } catch (err) {
         console.error('Error fetching latest products:', err);
-        setLatestError('Gagal memuat produk');
+        setLatestError(t('home.errors.failedToLoadProducts'));
       } finally {
         setLatestLoading(false);
       }
@@ -251,7 +253,7 @@ export default function HomePage() {
                       mb: 2,
             }}
           >
-                    {banner.title}
+                    {t(banner.titleKey)}
           </Typography>
           <Typography 
             variant="h5" 
@@ -264,7 +266,7 @@ export default function HomePage() {
                       mx: 'auto',
                     }}
                   >
-                    {banner.subtitle}
+                    {t(banner.subtitleKey)}
           </Typography>
                   <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
            
@@ -365,8 +367,8 @@ export default function HomePage() {
               fontFamily: '"Playfair Display", "Georgia", serif',
               letterSpacing: '-0.02em',
             }}
-          >
-            Handmade Collection
+            >
+            {t('home.sections.handmadeCollection')}
         </Typography>
           <Typography 
             variant="h6" 
@@ -550,8 +552,8 @@ export default function HomePage() {
                 background: `linear-gradient(45deg, ${theme.palette.primary.dark}, ${theme.palette.secondary.dark})`,
               },
             }}
-          >
-            Jelajahi Semua Produk
+            >
+            {t('home.buttons.exploreAllProducts')}
           </Button>
         </Box>
       </Container>
@@ -591,7 +593,7 @@ export default function HomePage() {
                 letterSpacing: '-0.02em',
               }}
             >
-              Featured Handmade
+              {t('home.sections.featuredHandmade')}
             </Typography>
             <Typography 
               variant="h6" 
@@ -637,10 +639,10 @@ export default function HomePage() {
             >
               <ShoppingBag sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" fontWeight={600} sx={{ mb: 1 }}>
-                Belum ada produk tersedia
+                {t('home.errors.noProductsAvailable')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Produk akan muncul di sini setelah ditambahkan
+                {t('home.errors.productsWillAppear')}
               </Typography>
             </Box>
           ) : (
@@ -676,7 +678,7 @@ export default function HomePage() {
                 borderRadius: 3,
               }}
             >
-              Lihat Semua Produk
+              {t('home.buttons.viewAllProducts')}
             </Button>
           </Box>
         </Container>
@@ -702,7 +704,7 @@ export default function HomePage() {
                 letterSpacing: '-0.02em',
                         }}
                       >
-              Latest Handmade
+              {t('home.sections.latestHandmade')}
                 </Typography>
                         <Typography
               variant="h6" 
@@ -747,10 +749,10 @@ export default function HomePage() {
             >
               <ShoppingBag sx={{ fontSize: 64, color: 'text.secondary', mb: 2 }} />
               <Typography variant="h6" color="text.secondary" fontWeight={600} sx={{ mb: 1 }}>
-                Belum ada produk tersedia
+                {t('home.errors.noProductsAvailable')}
               </Typography>
               <Typography variant="body2" color="text.secondary">
-                Produk akan muncul di sini setelah ditambahkan
+                {t('home.errors.productsWillAppear')}
               </Typography>
             </Box>
           ) : (
@@ -791,7 +793,7 @@ export default function HomePage() {
                 },
             }}
           >
-              View All Latest Products
+              {t('home.buttons.viewAllLatestProducts')}
           </Button>
         </Box>
       </Container>
@@ -815,8 +817,8 @@ export default function HomePage() {
               fontFamily: '"Playfair Display", "Georgia", serif',
               letterSpacing: '-0.02em',
             }}
-          >
-            Watch Our Craft
+            >
+            {t('home.sections.watchOurCraft')}
           </Typography>
           <Typography 
             variant="h6" 
@@ -829,7 +831,7 @@ export default function HomePage() {
               lineHeight: 1.6,
             }}
           >
-            Lihat bagaimana kami membuat setiap produk dengan tangan yang terampil
+            {t('home.sections.watchDescription')}
           </Typography>
         </Box>
 
@@ -887,7 +889,7 @@ export default function HomePage() {
                   color: 'text.primary',
                 }}
               >
-                The Art of Handmade
+                {t('home.sections.theArtOfHandmade')}
               </Typography>
               <Typography
                 variant="body1"
@@ -898,7 +900,7 @@ export default function HomePage() {
                   fontSize: '1.1rem',
                 }}
               >
-                Setiap produk yang kami buat adalah hasil dari keahlian tangan yang telah diasah selama bertahun-tahun. Dalam video ini, Anda dapat melihat proses pembuatan yang detail dan penuh dedikasi.
+                {t('home.sections.theArtDescription')}
               </Typography>
             </Box>
           </Grid>
@@ -910,10 +912,10 @@ export default function HomePage() {
         <Container maxWidth="lg">
           <Grid container spacing={4} justifyContent="center">
             {[
-              { icon: <ShoppingBag sx={{ fontSize: 40 }} />, value: '500+', label: 'Handmade Products' },
-              { icon: <CategoryIcon sx={{ fontSize: 40 }} />, value: '20+', label: 'Categories' },
-              { icon: <People sx={{ fontSize: 40 }} />, value: '10K+', label: 'Happy Customers' },
-              { icon: <ThumbUp sx={{ fontSize: 40 }} />, value: '99%', label: 'Satisfaction Rate' },
+              { icon: <ShoppingBag sx={{ fontSize: 40 }} />, value: '500+', label: t('home.stats.handmadeProducts') },
+              { icon: <CategoryIcon sx={{ fontSize: 40 }} />, value: '20+', label: t('home.stats.categories') },
+              { icon: <People sx={{ fontSize: 40 }} />, value: '10K+', label: t('home.stats.happyCustomers') },
+              { icon: <ThumbUp sx={{ fontSize: 40 }} />, value: '99%', label: t('home.stats.satisfactionRate') },
             ].map((stat, index) => (
               <Grid item xs={6} sm={3} md={3} key={index} textAlign="center">
                 <Box
@@ -960,7 +962,7 @@ export default function HomePage() {
                 letterSpacing: '-0.02em',
               }}
             >
-              Our Process
+              {t('home.sections.ourProcess')}
             </Typography>
             <Typography 
               variant="h6" 
@@ -973,34 +975,34 @@ export default function HomePage() {
                 lineHeight: 1.6,
               }}
             >
-              Dari ide hingga produk jadi, setiap langkah dilakukan dengan hati
+              {t('home.sections.ourProcessDescription')}
             </Typography>
           </Box>
 
-          <Grid container spacing={4}>
+          <Grid  container spacing={4}>
             {[
               {
                 step: '01',
-                title: 'Design',
-                description: 'Membuat desain unik yang sesuai dengan tren terkini',
+                title: t('home.process.design'),
+                description: t('home.process.designDescription'),
                 icon: <Star sx={{ fontSize: 40 }} />,
               },
               {
                 step: '02',
-                title: 'Material Selection',
-                description: 'Memilih bahan berkualitas terbaik untuk hasil optimal',
+                title: t('home.process.materialSelection'),
+                description: t('home.process.materialDescription'),
                 icon: <ShoppingBag sx={{ fontSize: 40 }} />,
               },
               {
                 step: '03',
-                title: 'Crafting',
-                description: 'Proses pembuatan dengan teknik kerajinan tradisional',
+                title: t('home.process.crafting'),
+                description: t('home.process.craftingDescription'),
                 icon: <Favorite sx={{ fontSize: 40 }} />,
               },
               {
                 step: '04',
-                title: 'Quality Check',
-                description: 'Pemeriksaan kualitas menyeluruh sebelum pengiriman',
+                title: t('home.process.qualityCheck'),
+                description: t('home.process.qualityDescription'),
                 icon: <Security sx={{ fontSize: 40 }} />,
               },
             ].map((process, index) => (
@@ -1090,8 +1092,8 @@ export default function HomePage() {
                         fontFamily: '"Playfair Display", "Georgia", serif',
               letterSpacing: '-0.02em',
             }}
-          >
-            What Our Customers Say
+            >
+            {t('home.sections.whatOurCustomersSay')}
           </Typography>
           <Typography 
             variant="h6" 
@@ -1104,7 +1106,7 @@ export default function HomePage() {
               lineHeight: 1.6,
             }}
           >
-            Pengalaman nyata dari pelanggan yang puas dengan produk handmade kami
+            {t('home.sections.whatOurCustomersSayDescription')}
           </Typography>
         </Box>
 
@@ -1164,7 +1166,7 @@ export default function HomePage() {
                     <Rating value={testimonial.rating} readOnly size="small" />
                     {testimonial.verified && (
                       <Chip
-                        label="Verified"
+                        label={t('home.testimonials.verified')}
                         size="small"
                         sx={{
                           ml: 2,
@@ -1196,7 +1198,7 @@ export default function HomePage() {
                       fontWeight: 500,
                     }}
                   >
-                    Produk: {testimonial.product}
+                    {t('home.testimonials.product')}: {testimonial.product}
                   </Typography>
                 </Box>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
@@ -1245,7 +1247,7 @@ export default function HomePage() {
                 letterSpacing: '-0.02em',
               }}
             >
-              Frequently Asked Questions
+              {t('home.sections.frequentlyAskedQuestions')}
             </Typography>
             <Typography 
               variant="h6" 
@@ -1258,31 +1260,31 @@ export default function HomePage() {
                 lineHeight: 1.6,
               }}
             >
-              Pertanyaan yang sering diajukan tentang produk handmade kami
+              {t('home.sections.faqDescription')}
             </Typography>
           </Box>
 
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             {[
               {
-                question: 'Apakah semua produk benar-benar handmade?',
-                answer: 'Ya, semua produk kami dibuat 100% dengan tangan oleh pengrajin berpengalaman. Kami tidak menggunakan mesin dalam proses pembuatan.',
+                question: t('home.faq.question1'),
+                answer: t('home.faq.answer1'),
               },
               {
-                question: 'Berapa lama waktu pembuatan produk?',
-                answer: 'Waktu pembuatan bervariasi tergantung kompleksitas produk. Produk sederhana membutuhkan 3-5 hari, sedangkan produk kompleks bisa memakan waktu 1-2 minggu.',
+                question: t('home.faq.question2'),
+                answer: t('home.faq.answer2'),
               },
               {
-                question: 'Apakah produk bisa dikustomisasi?',
-                answer: 'Tentu saja! Kami menerima custom order dengan warna, ukuran, dan desain sesuai keinginan Anda. Silakan hubungi customer service untuk konsultasi.',
+                question: t('home.faq.question3'),
+                answer: t('home.faq.answer3'),
               },
               {
-                question: 'Bagaimana cara merawat produk handmade?',
-                answer: 'Setiap produk dilengkapi dengan panduan perawatan. Umumnya, cuci dengan air dingin, hindari mesin cuci, dan keringkan dengan cara diangin-anginkan.',
+                question: t('home.faq.question4'),
+                answer: t('home.faq.answer4'),
               },
               {
-                question: 'Apakah ada garansi untuk produk?',
-                answer: 'Kami memberikan garansi kualitas 30 hari untuk semua produk. Jika ada kerusakan karena cacat produksi, kami akan menggantinya tanpa biaya tambahan.',
+                question: t('home.faq.question5'),
+                answer: t('home.faq.answer5'),
               },
             ].map((faq, index) => (
               <Paper
@@ -1341,8 +1343,8 @@ export default function HomePage() {
               fontFamily: '"Playfair Display", "Georgia", serif',
               letterSpacing: '-0.02em',
             }}
-          >
-            Follow Our Journey
+            >
+            {t('home.sections.followOurJourney')}
           </Typography>
           <Typography 
             variant="h6" 
@@ -1355,7 +1357,7 @@ export default function HomePage() {
               lineHeight: 1.6,
                       }}
                     >
-            Ikuti perjalanan kami di berbagai platform sosial media untuk melihat proses pembuatan dan inspirasi terbaru
+            {t('home.sections.followDescription')}
                 </Typography>
         </Box>
 
@@ -1471,7 +1473,7 @@ export default function HomePage() {
             color="text.secondary"
             sx={{ mb: 3 }}
           >
-            Jangan lupa tag kami di postingan Anda dengan hashtag
+            {t('home.social.dontForget')}
           </Typography>
           <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', flexWrap: 'wrap' }}>
             {['#HexaCrochet', '#HandmadeIndonesia', '#CrochetLove', '#MacrameArt'].map((hashtag, index) => (
@@ -1504,14 +1506,14 @@ export default function HomePage() {
                 letterSpacing: '-0.01em',
               }}
             >
-              Stay Updated
+              {t('home.sections.stayUpdated')}
             </Typography>
             <Typography
               variant="body1"
               color="text.secondary"
               sx={{ mb: 4, maxWidth: 500, mx: 'auto' }}
             >
-              Dapatkan informasi produk terbaru dan tips perawatan kerajinan tangan langsung di inbox Anda
+              {t('home.sections.stayUpdatedDescription')}
             </Typography>
             <Box
               component="form"
@@ -1528,7 +1530,7 @@ export default function HomePage() {
               <Box sx={{ flex: 1, minWidth: 0 }}>
                 <input
                   type="email"
-                  placeholder="Masukkan email Anda"
+                  placeholder={t('home.newsletter.enterEmail')}
                   style={{
                     width: '100%',
                     padding: '12px 16px',
@@ -1549,7 +1551,7 @@ export default function HomePage() {
                   whiteSpace: 'nowrap',
                 }}
               >
-                Subscribe
+                {t('home.buttons.subscribe')}
               </Button>
             </Box>
         </Box>
@@ -1585,7 +1587,7 @@ export default function HomePage() {
               letterSpacing: '-0.02em',
             }}
           >
-            Discover Handmade Beauty
+            {t('home.sections.discoverHandmadeBeauty')}
           </Typography>
           <Typography 
             variant="h6" 
@@ -1599,7 +1601,7 @@ export default function HomePage() {
               fontWeight: 300,
             }}
           >
-            Jelajahi koleksi kerajinan tangan unik kami dan temukan keindahan dalam setiap detail
+            {t('home.sections.discoverDescription')}
           </Typography>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} justifyContent="center">
           <Button
@@ -1622,7 +1624,7 @@ export default function HomePage() {
                 },
               }}
           >
-              Explore Collection
+              {t('home.buttons.exploreCollection')}
           </Button>
             <Button
               variant="outlined"
@@ -1643,7 +1645,7 @@ export default function HomePage() {
                 },
               }}
             >
-              Our Story
+              {t('home.buttons.ourStory')}
             </Button>
           </Stack>
         </Container>

@@ -10,6 +10,7 @@ import {
   useTheme,
   Link,
   Divider,
+  useMediaQuery,
 } from '@mui/material';
 import {
   Home,
@@ -28,9 +29,11 @@ import ShippingAddress from '../components/ShippingAddress';
 import ShippingMethodSelector from '../components/ShippingMethodSelector';
 import { useCurrencyConversion } from '@/hooks/useCurrencyConversion';
 import { ShippingMethod } from '../types/shipping';
+import { getProductImageUrl } from '@/utils/image';
 
 export default function CheckoutPage() {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const navigate = useNavigate();
   const location = useLocation();
   const { formatPrice, loading: currencyLoading, error: currencyError } = useCurrencyConversion();
@@ -220,93 +223,212 @@ export default function CheckoutPage() {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', py: 4 }}>
-      <Container maxWidth="xl">
+    <Box sx={{ minHeight: '100vh', py: { xs: 2, sm: 4 } }}>
+      <Container maxWidth="xl" sx={{ px: { xs: 2, sm: 3 } }}>
 
 
         {/* Page Header */}
-        <Box sx={{ mb: 3 }}>
-          <Typography variant="h4" fontWeight={600} sx={{ mb: 1, color: 'text.primary' }}>
+        <Box sx={{ mb: { xs: 2, sm: 3 } }}>
+          <Typography 
+            variant="h4" 
+            fontWeight={600} 
+            sx={{ 
+              mb: 1, 
+              color: 'text.primary',
+              fontSize: { xs: '1.5rem', sm: '2rem' }
+            }}
+          >
             Checkout
           </Typography>
-          <Typography variant="body1" color="text.secondary">
+          <Typography 
+            variant="body1" 
+            color="text.secondary"
+            sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+          >
             Lengkapi informasi pengiriman dan pembayaran
           </Typography>
         </Box>
 
         {/* Error Alert */}
         {error && (
-          <Alert severity="error" sx={{ mb: 4 }} onClose={() => setError(null)}>
+          <Alert 
+            severity="error" 
+            sx={{ 
+              mb: { xs: 2, sm: 4 },
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }} 
+            onClose={() => setError(null)}
+          >
             {error}
           </Alert>
         )}
 
         {/* Currency Loading State */}
         {currencyLoading && (
-          <Alert severity="info" sx={{ mb: 2 }}>
+          <Alert 
+            severity="info" 
+            sx={{ 
+              mb: 2,
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
+          >
             Loading exchange rates...
           </Alert>
         )}
 
         {/* Currency Error State */}
         {currencyError && (
-          <Alert severity="warning" sx={{ mb: 2 }}>
+          <Alert 
+            severity="warning" 
+            sx={{ 
+              mb: 2,
+              fontSize: { xs: '0.875rem', sm: '1rem' }
+            }}
+          >
             Failed to load exchange rates. Prices will be displayed in default currency.
           </Alert>
         )}
 
-        {/* Main Content */}
+        {/* Main Content - Mobile: vertical stack, Desktop: side by side */}
         <Box sx={{ 
           display: 'flex', 
           flexDirection: { xs: 'column', lg: 'row' }, 
-          gap: 4, 
+          gap: { xs: 2, sm: 4 }, 
           alignItems: 'flex-start' 
         }}>
-          {/* Checkout Form */}
+          {/* Checkout Form - Mobile order: 1 (alamat), 2 (product), 3 (shipping), 4 (summary) */}
           <Box sx={{ 
             flex: 1, 
             minWidth: 0,
+            width: '100%',
             order: { xs: 1, lg: 1 }
           }}>
-            <Stack spacing={4}>
-              {/* Address Selection */}
-              <ShippingAddress
-                selectedAddress={selectedAddress}
-                onAddressSelect={(addressId) => {
-                  setSelectedAddress(addressId);
-                  // Find address data from addresses list
-                  const addressData = addresses.find(addr => addr.id === addressId);
-                  if (addressData) {
-                    setSelectedAddressData(addressData);
-                  }
-                  // Reset shipping method when address changes
-                  setSelectedShippingMethod(null);
-                  setShippingCost(15000); // Reset to default
-                }}
-                onAddressesLoaded={(loadedAddresses) => {
-                  setAddresses(loadedAddresses);
-                  // The useEffect above will handle setting selectedAddressData
-                }}
-              />
+            <Stack spacing={{ xs: 2, sm: 4 }}>
+              {/* 1. Address Selection */}
+              <Box sx={{ order: { xs: 1, lg: 1 } }}>
+                <ShippingAddress
+                  selectedAddress={selectedAddress}
+                  onAddressSelect={(addressId) => {
+                    setSelectedAddress(addressId);
+                    // Find address data from addresses list
+                    const addressData = addresses.find(addr => addr.id === addressId);
+                    if (addressData) {
+                      setSelectedAddressData(addressData);
+                    }
+                    // Reset shipping method when address changes
+                    setSelectedShippingMethod(null);
+                    setShippingCost(15000); // Reset to default
+                  }}
+                  onAddressesLoaded={(loadedAddresses) => {
+                    setAddresses(loadedAddresses);
+                    // The useEffect above will handle setting selectedAddressData
+                  }}
+                />
+              </Box>
 
-              {/* Shipping Method Selection */}
-              <ShippingMethodSelector
-                selectedAddress={selectedAddressData}
-                cartItems={availableItems}
-                selectedMethod={selectedShippingMethod ? `${selectedShippingMethod.courier_code}_${selectedShippingMethod.courier_service_code}` : null}
-                onMethodSelect={(method: ShippingMethod) => {
-                  setSelectedShippingMethod(method);
-                  setShippingCost(method.price);
-                }}
-              />
+              {/* 2. Product List - Show in mobile */}
+              {isMobile && (
+                <Box sx={{ order: { xs: 2, lg: 2 } }}>
+                  <Card sx={{ borderRadius: 2, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>
+                    <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+                      <Typography 
+                        variant="h6" 
+                        fontWeight={600} 
+                        sx={{ 
+                          mb: 2,
+                          fontSize: { xs: '1rem', sm: '1.25rem' }
+                        }}
+                      >
+                        Produk ({availableItems.length})
+                      </Typography>
+                      <Stack spacing={2}>
+                        {availableItems.map((item) => {
+                          const primaryImage = item.product_variant.product.product_images?.[0]?.image_name;
+                          return (
+                            <Box
+                              key={item.id}
+                              sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 2,
+                                p: 1.5,
+                                borderRadius: 2,
+                                backgroundColor: 'grey.50',
+                              }}
+                            >
+                              <Box
+                                component="img"
+                                src={primaryImage ? getProductImageUrl(primaryImage) : undefined}
+                                alt={item.product_variant.product.name}
+                                sx={{
+                                  width: { xs: 50, sm: 60 },
+                                  height: { xs: 50, sm: 60 },
+                                  borderRadius: 1,
+                                  objectFit: 'cover',
+                                  flexShrink: 0,
+                                  backgroundColor: 'grey.100',
+                                }}
+                              />
+                              <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <Typography 
+                                  variant="subtitle2" 
+                                  fontWeight={600} 
+                                  sx={{ 
+                                    mb: 0.5,
+                                    fontSize: { xs: '0.875rem', sm: '0.9rem' },
+                                    overflow: 'hidden',
+                                    textOverflow: 'ellipsis',
+                                    whiteSpace: 'nowrap',
+                                  }}
+                                  title={item.product_variant.product.name}
+                                >
+                                  {item.product_variant.product.name}
+                                </Typography>
+                                <Typography 
+                                  variant="body2" 
+                                  color="text.secondary" 
+                                  sx={{ fontSize: { xs: '0.75rem', sm: '0.8rem' } }}
+                                >
+                                  Qty: {item.quantity}
+                                </Typography>
+                              </Box>
+                              <Typography
+                                variant="body2"
+                                fontWeight={600}
+                                color="primary.main"
+                                sx={{ fontSize: { xs: '0.875rem', sm: '0.9rem' } }}
+                              >
+                                {formatPrice(parseFloat(item.product_variant.price) * item.quantity)}
+                              </Typography>
+                            </Box>
+                          );
+                        })}
+                      </Stack>
+                    </CardContent>
+                  </Card>
+                </Box>
+              )}
+
+              {/* 3. Shipping Method Selection */}
+              <Box sx={{ order: { xs: 3, lg: 3 } }}>
+                <ShippingMethodSelector
+                  selectedAddress={selectedAddressData}
+                  cartItems={availableItems}
+                  selectedMethod={selectedShippingMethod ? `${selectedShippingMethod.courier_code}_${selectedShippingMethod.courier_service_code}` : null}
+                  onMethodSelect={(method: ShippingMethod) => {
+                    setSelectedShippingMethod(method);
+                    setShippingCost(method.price);
+                  }}
+                />
+              </Box>
             </Stack>
           </Box>
 
-          {/* Order Summary */}
+          {/* 4. Order Summary - Mobile order: 4, Desktop: 2 */}
           <Box sx={{ 
             width: { xs: '100%', lg: '400px' }, 
             flexShrink: 0,
-            order: { xs: 2, lg: 2 }
+            order: { xs: 4, lg: 2 }
           }}>
             <CheckoutSummary
               items={availableItems}

@@ -7,6 +7,7 @@ import {
   Divider,
   Box,
   useTheme,
+  useMediaQuery,
 } from '@mui/material';
 import {
   ShoppingCart as ShoppingCartIcon,
@@ -28,6 +29,7 @@ interface CartSummaryProps {
 
 export default function CartSummary({ items, onCartCleared, selectedItems = new Set() }: CartSummaryProps) {
   const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   const navigate = useNavigate();
   const [clearing, setClearing] = useState(false);
   const [showClearDialog, setShowClearDialog] = useState(false);
@@ -90,32 +92,49 @@ export default function CartSummary({ items, onCartCleared, selectedItems = new 
 
   return (
     <Card sx={{ 
-      position: 'sticky', 
-      top: 24,
+      position: { xs: 'static', lg: 'sticky' }, 
+      top: { lg: 24 },
       borderRadius: 2,
       boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
       border: 'none',
     }}>
-      <CardContent sx={{ p: 3 }}>
-        <Typography variant="h6" fontWeight={600} sx={{ mb: 3, color: 'text.primary' }}>
+      <CardContent sx={{ p: { xs: 2, sm: 3 } }}>
+        <Typography 
+          variant="h6" 
+          fontWeight={600} 
+          sx={{ 
+            mb: { xs: 2, sm: 3 }, 
+            color: 'text.primary',
+            fontSize: { xs: '1rem', sm: '1.25rem' }
+          }}
+        >
           Ringkasan Belanja
         </Typography>
 
-        <Stack spacing={2}>
+        <Stack spacing={{ xs: 1.5, sm: 2 }}>
           {/* Item Count */}
           <Box sx={{ 
             display: 'flex', 
             justifyContent: 'space-between',
             alignItems: 'center',
-            py: 2,
-            px: 2,
+            py: { xs: 1.5, sm: 2 },
+            px: { xs: 1.5, sm: 2 },
             backgroundColor: 'grey.50',
             borderRadius: 2,
           }}>
-            <Typography variant="body1" fontWeight={500}>
+            <Typography 
+              variant="body1" 
+              fontWeight={500}
+              sx={{ fontSize: { xs: '0.875rem', sm: '1rem' } }}
+            >
               Total Item ({totalItems})
             </Typography>
-            <Typography variant="h6" fontWeight={600} color="primary.main">
+            <Typography 
+              variant="h6" 
+              fontWeight={600} 
+              color="primary.main"
+              sx={{ fontSize: { xs: '1rem', sm: '1.25rem' } }}
+            >
               {totalPrice > 0 ? formatCartPrice(totalPrice) : 'Rp 0'}
             </Typography>
           </Box>
@@ -126,41 +145,34 @@ export default function CartSummary({ items, onCartCleared, selectedItems = new 
               display: 'flex', 
               justifyContent: 'space-between',
               alignItems: 'center',
-              py: 1.5,
-              px: 2,
+              py: { xs: 1.25, sm: 1.5 },
+              px: { xs: 1.5, sm: 2 },
               backgroundColor: 'error.light',
               borderRadius: 2,
             }}>
-              <Typography variant="body2" color="error.dark" fontWeight={500}>
+              <Typography 
+                variant="body2" 
+                color="error.dark" 
+                fontWeight={500}
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Item tidak tersedia ({deletedItems.length})
               </Typography>
-              <Typography variant="body2" color="error.dark" fontWeight={500}>
+              <Typography 
+                variant="body2" 
+                color="error.dark" 
+                fontWeight={500}
+                sx={{ fontSize: { xs: '0.75rem', sm: '0.875rem' } }}
+              >
                 Tidak dihitung
               </Typography>
             </Box>
           )}
 
-          {/* Total Price */}
-          <Box sx={{ 
-            display: 'flex', 
-            justifyContent: 'space-between',
-            alignItems: 'center',
-            py: 2,
-            px: 2,
-            backgroundColor: 'primary.main',
-            borderRadius: 2,
-            color: 'white',
-          }}>
-            <Typography variant="h6" fontWeight={600}>
-              Total Belanja
-            </Typography>
-            <Typography variant="h5" fontWeight={700}>
-              {formatPrice(totalPrice)}
-            </Typography>
-          </Box>
+       
 
           {/* Action Buttons */}
-          <Stack spacing={1.5}>
+          <Stack spacing={{ xs: 1, sm: 1.5 }}>
             <Button
               variant="contained"
               size="large"
@@ -169,10 +181,11 @@ export default function CartSummary({ items, onCartCleared, selectedItems = new 
               disabled={selectedItems.size === 0}
               fullWidth
               sx={{
-                py: 1.5,
+                py: { xs: 1.25, sm: 1.5 },
                 borderRadius: 2,
                 fontWeight: 600,
-                fontSize: '1rem',
+                fontSize: { xs: '0.875rem', sm: '1rem' },
+                minHeight: { xs: 44, sm: 48 },
                 backgroundColor: 'primary.main',
                 '&:hover': {
                   backgroundColor: 'primary.dark',
@@ -181,6 +194,9 @@ export default function CartSummary({ items, onCartCleared, selectedItems = new 
                   backgroundColor: 'grey.300',
                   color: 'grey.500',
                 },
+                '&:active': {
+                  transform: 'scale(0.98)',
+                }
               }}
             >
               {selectedItems.size === 0 ? 'Pilih Item untuk Checkout' : `Checkout (${selectedItems.size} item)`}
@@ -195,16 +211,20 @@ export default function CartSummary({ items, onCartCleared, selectedItems = new 
                 disabled={clearing}
                 fullWidth
                 sx={{
-                  py: 1.5,
+                  py: { xs: 1.25, sm: 1.5 },
                   borderRadius: 2,
                   fontWeight: 500,
-                  fontSize: '0.9rem',
+                  fontSize: { xs: '0.875rem', sm: '0.9rem' },
+                  minHeight: { xs: 44, sm: 48 },
                   borderColor: 'error.main',
                   color: 'error.main',
                   '&:hover': {
                     backgroundColor: 'error.light',
                     borderColor: 'error.dark',
                   },
+                  '&:active': {
+                    transform: 'scale(0.98)',
+                  }
                 }}
               >
                 {clearing ? 'Mengosongkan...' : 'Kosongkan Keranjang'}
